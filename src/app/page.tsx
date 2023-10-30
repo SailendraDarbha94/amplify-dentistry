@@ -15,8 +15,8 @@ export default function Home() {
         </div>
         <h1 className="max-w-4xl text-5xl font-bold md:text-6xl lg:text-7xl">
           Let the <span className="text-blue-600">Books</span> teach you{" "}
-          <span className="text-green-600">dentistry</span> with the power of{" "}
-          <span className="text-yellow-500">AI</span>{" "}
+          <span className="text-violet-500">dentistry</span> with the power of{" "}
+          <span className="text-green-500">AI</span>{" "}
         </h1>
         <p className="mt-5 max-w-prose text-zinc-700 sm:text-lg">
           AmpDent allows all dental students to benefit from our interactive
