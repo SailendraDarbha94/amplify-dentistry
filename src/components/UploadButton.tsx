@@ -28,10 +28,10 @@ const UploadDropzone = () => {
   const { mutate: startPolling } = trpc.getFile.useMutation(
     {
       onSuccess: (file) => {
-        // router.push(`/dashboard/${file.id}`)
+        router.push(`/dashboard/${file.id}`)
         toast({
           title: 'File Uploaded',
-          description: 'Please try again later',
+          description: 'Please wait for processing',
           variant: 'default',
         })
       },
@@ -176,7 +176,6 @@ const UploadButton = () => {
       </DialogTrigger>
 
       <DialogContent>
-        <pre>Hello World</pre>
         <UploadDropzone />
       </DialogContent>
     </Dialog>
