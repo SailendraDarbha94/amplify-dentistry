@@ -17,7 +17,7 @@ export function absoluteUrl(path: string) {
 
 export function constructMetadata({
   title = "Smartbag- the AI enabled SaaS Platform for students",
-  description = "Quill is an open-source software to make chatting to your PDF files easy.",
+  description = "SmartBag is an open-source software to make chatting to your PDF files easy.",
   image = "/light_logo.png",
   icons = "/favicon.ico",
   noIndex = false
@@ -48,7 +48,7 @@ export function constructMetadata({
       creator: "@joshtriedcoding"
     },
     icons,
-    metadataBase: new URL('https://quill-jet.vercel.app'),
+    //metadataBase: new URL('https://quill-jet.vercel.app'),
     themeColor: '#FFF',
     ...(noIndex && {
       robots: {

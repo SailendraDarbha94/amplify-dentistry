@@ -14,17 +14,17 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { Button } from './ui/button'
 import { useState } from 'react'
-// import { getUserSubscriptionPlan } from '@/lib/stripe'
+import { getUserSubscriptionPlan } from '@/lib/stripe'
 
-// interface PageProps {
-//   subscriptionPlan: Awaited<ReturnType<typeof getUserSubscriptionPlan>>
-// }
+interface PageProps {
+  subscriptionPlan: Awaited<ReturnType<typeof getUserSubscriptionPlan>>
+}
 
-const Dashboard = ({subscriptionPlan}: any) => {
+const Dashboard = ({subscriptionPlan}: PageProps) => {
   const [currentlyDeletingFile, setCurrentlyDeletingFile] =
     useState<string | null>(null)
 
-  const utils = trpc.useUtils()
+  const utils = trpc.useContext()
 
   const { data: files, isLoading } =
     trpc.getUserFiles.useQuery()
@@ -49,7 +49,7 @@ const Dashboard = ({subscriptionPlan}: any) => {
           My Files
         </h1>
 
-        <UploadButton />
+        <UploadButton isSubscribed={subscriptionPlan.isSubscribed} />
       </div>
 
       {/* display all user files */}
@@ -91,7 +91,7 @@ const Dashboard = ({subscriptionPlan}: any) => {
 
                   <div className='flex items-center gap-2'>
                     <MessageSquare className='h-4 w-4' />
-                    N/A
+                    mocked
                   </div>
 
                   <Button

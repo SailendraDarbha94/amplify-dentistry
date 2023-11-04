@@ -20,7 +20,7 @@ import { useState } from 'react'
 
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import SimpleBar from 'simplebar-react'
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@/lib/utils'
 import {
@@ -29,8 +29,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import PdfFullscreen from './PdfFullscreen'
 
+import SimpleBar from 'simplebar-react'
+import PdfFullscreen from './PdfFullscreen'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`
 
@@ -45,7 +46,9 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
   const [currPage, setCurrPage] = useState<number>(1)
   const [scale, setScale] = useState<number>(1)
   const [rotation, setRotation] = useState<number>(0)
-  const [renderedScale, setRenderedScale] = useState<number | null>(null)
+  const [renderedScale, setRenderedScale] = useState<
+    number | null
+  >(null)
 
   const isLoading = renderedScale !== scale
 
@@ -138,8 +141,7 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
         </div>
 
         <div className='space-x-2'>
-          {/* TODO fix bug in the zoom  functionlaity */}
-          {/* <DropdownMenu>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 className='gap-1.5'
@@ -160,7 +162,6 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
                 150%
               </DropdownMenuItem>
               <DropdownMenuItem
-
                 onSelect={() => setScale(2)}>
                 200%
               </DropdownMenuItem>
@@ -169,7 +170,7 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
                 250%
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu> */}
+          </DropdownMenu>
 
           <Button
             onClick={() => setRotation((prev) => prev + 90)}
@@ -177,7 +178,7 @@ const PdfRenderer = ({ url }: PdfRendererProps) => {
             aria-label='rotate 90 degrees'>
             <RotateCw className='h-4 w-4' />
           </Button>
-          
+
           <PdfFullscreen fileUrl={url} />
         </div>
       </div>

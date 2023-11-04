@@ -1,4 +1,4 @@
-  'use client'
+'use client'
 
 import { useState } from 'react'
 import {
@@ -16,24 +16,27 @@ import { useToast } from './ui/use-toast'
 import { trpc } from '@/app/_trpc/client'
 import { useRouter } from 'next/navigation'
 
-const UploadDropzone = () => {
+const UploadDropzone = ({
+  isSubscribed,
+}: {
+  isSubscribed: boolean
+}) => {
   const router = useRouter()
 
-  const [isUploading, setIsUploading] = useState<boolean>(false)
-  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [isUploading, setIsUploading] =
+    useState<boolean>(false)
+  const [uploadProgress, setUploadProgress] =
+    useState<number>(0)
   const { toast } = useToast()
 
-  const { startUpload } = useUploadThing('pdfUploader')
+  const { startUpload } = useUploadThing(
+    isSubscribed ? 'proPlanUploader' : 'freePlanUploader'
+  )
 
   const { mutate: startPolling } = trpc.getFile.useMutation(
     {
       onSuccess: (file) => {
         router.push(`/dashboard/${file.id}`)
-        toast({
-          title: 'File Uploaded',
-          description: 'Please wait for processing',
-          variant: 'default',
-        })
       },
       retry: true,
       retryDelay: 500,
@@ -109,7 +112,7 @@ const UploadDropzone = () => {
                   or drag and drop
                 </p>
                 <p className='text-xs text-zinc-500'>
-                  PDF (up to {false ? "16" : "4"}MB)
+                  PDF (up to {isSubscribed ? "16" : "4"}MB)
                 </p>
               </div>
 
@@ -138,7 +141,7 @@ const UploadDropzone = () => {
                   {uploadProgress === 100 ? (
                     <div className='flex gap-1 items-center justify-center text-sm text-zinc-700 text-center pt-2'>
                       <Loader2 className='h-3 w-3 animate-spin' />
-                      Processing...
+                      Redirecting...
                     </div>
                   ) : null}
                 </div>
@@ -158,7 +161,11 @@ const UploadDropzone = () => {
   )
 }
 
-const UploadButton = () => {
+const UploadButton = ({
+  isSubscribed,
+}: {
+  isSubscribed: boolean
+}) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   return (
@@ -176,7 +183,7 @@ const UploadButton = () => {
       </DialogTrigger>
 
       <DialogContent>
-        <UploadDropzone />
+        <UploadDropzone isSubscribed={isSubscribed} />
       </DialogContent>
     </Dialog>
   )
