@@ -26,6 +26,9 @@ const Dashboard = ({subscriptionPlan}: PageProps) => {
 
   const utils = trpc.useContext()
 
+  const { data: allFiles } = trpc.getallFiles.useQuery() 
+  console.log(allFiles)
+  
   const { data: files, isLoading } =
     trpc.getUserFiles.useQuery()
 

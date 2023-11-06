@@ -21,9 +21,13 @@ const Navbar = () => {
           <Link
             href='/'
             className='flex z-40 font-semibold'>
-            <span>quill.</span>
+            <span>AmpDent.</span>
           </Link>
-
+          {/* <Link
+            href='/ampdash'
+            className='flex z-40 font-semibold'>
+            <span>Years.</span>
+          </Link> */}
           <MobileNav isAuth={!!user} />
 
           <div className='hidden items-center space-x-4 sm:flex'>

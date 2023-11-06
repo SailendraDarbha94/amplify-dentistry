@@ -60,7 +60,7 @@ export const ChatContextProvider = ({
       if (!response.ok) {
         throw new Error('Failed to send message')
       }
-
+      //console.log(response)
       return response.body
     },
     onMutate: async ({ message }) => {
