@@ -47,10 +47,26 @@ export const appRouter = router({
     return files
   }),
   getFirstBook: publicProcedure.query(async () => {
-    const files = await db.file.findMany({
+    const file = await db.file.findFirst({
       where: {
-        name: "Cracking-Codes-with-Python.pdf" && "Resume 2021.pdf"
+        name: "Anatomy.pdf"
       }
+    })
+    return file
+  }),
+  getSecondBook: publicProcedure.query(async () => {
+    const file = await db.file.findFirst({
+      where: { name: "Dental Anatomy.pdf" }
+    })
+    return file
+  }),
+  getBooks: publicProcedure.query(async () => {
+    const files = await db.file.findMany({
+      where: { 
+        name: {
+          contains: "Anatomy"
+        }
+       }
     })
     return files
   }),

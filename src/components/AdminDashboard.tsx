@@ -7,8 +7,9 @@ import Skeleton from "react-loading-skeleton";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getUserSubscriptionPlan } from "@/lib/stripe";
+import Book from "./Book";
 
 const Dashboard = () => {
   const [currentlyDeletingFile, setCurrentlyDeletingFile] = useState<
@@ -17,12 +18,21 @@ const Dashboard = () => {
 
   const utils = trpc.useContext();
 
-  const { data: books, isLoading } = trpc.getallFiles.useQuery();
+  const { data: allFiles, isLoading } = trpc.getBooks.useQuery()
 
-  const { data: allFiles } = trpc.getFirstBook.useQuery();
 
+
+  //const { data: books } = trpc.getBooks.useQuery();
+  //let books:any[] 
   //console.log(allFiles)
+  // useEffect(() => {
+  //   const { data: firstBook } = trpc.getFirstBook.useQuery();
+  //   books.push(firstBook);
+  //   const { data: secondBook } = trpc.getSecondBook.useQuery();
+  //   books.push(secondBook);
 
+  //   console.log(books)
+  // }, [])
   //   const { data: files, isLoading } =
   //     trpc.getUserFiles.useQuery()
 
@@ -41,7 +51,7 @@ const Dashboard = () => {
   return (
     <main className="mx-auto max-w-7xl md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
-        <h1 className="mb-3 font-bold text-5xl text-gray-900">All Files</h1>
+        <h1 className="mb-3 font-bold text-5xl text-gray-900">All Books</h1>
 
         <UploadButton isSubscribed={true} />
       </div>

@@ -19,9 +19,9 @@ const Navbar = () => {
       <MaxWidthWrapper>
         <div className='flex h-14 items-center justify-between border-b border-zinc-200'>
           <Link
-            href='/'
+            href={!user ? '/' : '/admin'}
             className='flex z-40 font-semibold'>
-            <span>AmpDent.</span>
+            <span>AmpDent</span>
           </Link>
           {/* <Link
             href='/ampdash'

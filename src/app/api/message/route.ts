@@ -84,7 +84,7 @@ export const POST = async (req: NextRequest) => {
 
   const response = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
-    temperature: 0.7,
+    temperature: 0.9,
     stream: true,
     messages: [
       {
@@ -95,7 +95,7 @@ export const POST = async (req: NextRequest) => {
       {
         role: 'user',
         //content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
-        content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer try to look at provided file again.
+        content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format.
         
   \n----------------\n
   
