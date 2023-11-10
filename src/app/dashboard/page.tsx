@@ -1,4 +1,5 @@
 import Dashboard from '@/components/Dashboard'
+import Years from '@/components/Years'
 import { db } from '@/db'
 import { getUserSubscriptionPlan } from '@/lib/stripe'
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server'
@@ -20,7 +21,8 @@ const Page = async () => {
 
   const subscriptionPlan = await getUserSubscriptionPlan()
 
-  return <Dashboard subscriptionPlan={subscriptionPlan} />
+  // return <Dashboard subscriptionPlan={subscriptionPlan} />
+  return <Years />
 }
 
 export default Page
