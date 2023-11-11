@@ -3,10 +3,14 @@
 import { format } from "date-fns";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 
 const Book = ({ id, name }: any) => {
+
+  // useEffect(() => {
+  //   console.log("triggering once?")
+  // })
   return (
     <li
       key={id}
@@ -39,9 +43,9 @@ const Book = ({ id, name }: any) => {
                 Theory
               </Button>
             </Link>
-            <Link href="#" className="flex flex-col gap-2">
+            <Link href={`/years/${name}`} className="flex flex-col gap-2">
               <Button
-                disabled
+                //disabled
                 onClick={() => {
                   console.log(name);
                 }}

@@ -9,34 +9,37 @@ import { useToast } from "@/components/ui/use-toast";
 import { useEffect, useLayoutEffect, useState } from "react";
 import Question from "@/components/Question";
 import { createContext } from "vm";
-import { PROMPT } from "@/config/prompts";
+
 import { Button } from "@/components/ui/button";
 import { openai } from "@/lib/openai";
 import { Loader2 } from "lucide-react";
-
+import { promptsGenerator } from "@/lib/utils";
+import Skeleton from "react-loading-skeleton";
+interface Questions {
+  questions: QuestionItem[]
+}
 const Page = () => {
+  
+  const subject = "Anatomy of the head and neck"
   const [res, setRes] = useState<QuestionItem[]>()
-  const [loading, setLoading] = useState<boolean>(false)
-  const questioner = async () => {
-    setLoading(true)
+  const questioner = async (query:string) => {
+
     const response =  await fetch('/api/questions', {
       method: 'POST',
+      body: JSON.stringify(promptsGenerator(query))
     })
-    //console.log(response)
-    //console.log("hello")
+
     if(response.status === 200){
-      setLoading(false)
-      const data:QuestionItem[] = await response.json()
-      setRes(data)
+
+      const data:Questions = await response.json()
+      setRes(data.questions)
     }
   };
+
 
   const [grade, setGrade] = useState<string>("N/A");
   const [marks, setMarks] = useState<number>(0);
 
-  const apicall = () => {
-    questioner();
-  };
   useEffect(() => {
     switch (marks) {
       case 2:
@@ -57,9 +60,6 @@ const Page = () => {
       case 18:
         setGrade("A");
         break;
-      // default:
-      //   setGrade('N/A')
-      //   break
     }
   }, [grade, marks]);
   const addMarks = () => {
@@ -70,24 +70,15 @@ const Page = () => {
       <div className="mx-auto w-full max-w-8xl grow lg:flex lg:px-1 xl:px-2">
         {/* TODO: create years component */}
         <div className="w-full text-center">
-          <Button onClick={apicall}>
-            {loading ? (
-              <Loader2 />
-            ) : (
-              <p>
-                Call
-              </p>
-            )}
-          </Button>
           <div className="sticky h-14 top-0 z-40 bg-blue-600 rounded-lg p-2 text-white flex justify-between mx-4 md:mx-14">
             <h2 className="text-xl p-2">Grade : {grade}</h2>
             <h2 className="text-xl p-2">Total Marks : {marks}</h2>
           </div>
-          {publicHealthQuestions.map((question: QuestionItem) => {
+          {res ? (res.map((question: QuestionItem) => {
             return (
               <Question key={question.id} {...question} addMarks={addMarks} />
             );
-          })}
+          })) : <Skeleton height={100} className="my-2" count={3} />}
         </div>
       </div>
     </div>

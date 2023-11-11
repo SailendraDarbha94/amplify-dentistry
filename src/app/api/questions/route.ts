@@ -8,13 +8,14 @@ import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { NextRequest, NextResponse } from "next/server";
 
 import { OpenAIStream, StreamingTextResponse } from "ai";
-import { PROMPT } from "@/config/prompts";
 
 export const POST = async (req: NextRequest) => {
   // endpoint for asking a prompting ai to get 10 mcqs
 
-  //const body = await req.json();
-  //console.log(body)
+  const body = await req.json();
+  //console.log("req.body = ",req.body)
+
+  //console.log("json version", body)
   const { getUser } = getKindeServerSession();
   const user = getUser();
 
@@ -56,7 +57,7 @@ export const POST = async (req: NextRequest) => {
       {
         role: 'user',
         //content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
-        content: PROMPT,
+        content: body,
       },
     ],
   })
