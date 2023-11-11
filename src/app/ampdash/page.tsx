@@ -1,115 +1,95 @@
 "use client";
-
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Toast } from "@/components/ui/toast";
+  QuestionItem,
+  anatomyQuestions,
+  orthodonticQuestions,
+  publicHealthQuestions,
+} from "@/config/mcqs";
 import { useToast } from "@/components/ui/use-toast";
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import Question from "@/components/Question";
+import { createContext } from "vm";
+import { PROMPT } from "@/config/prompts";
+import { Button } from "@/components/ui/button";
+import { openai } from "@/lib/openai";
+import { Loader2 } from "lucide-react";
 
 const Page = () => {
-  const options: string[] = ["Class I", "Class II", "Class III", "NOTA"];
-  const answer = "Class II";
-  const [answered, setAnswered] = useState<boolean>(false);
-  const [correctAnswered, setCorrectAnswered] = useState<boolean>(false);
-  const { toast } = useToast();
-  const checkAnswer = async (ans: string) => {
-    setAnswered(true);
-    if (ans === answer) {
-      setCorrectAnswered(true);
-      toast({
-        title: "Correct answer",
-        description: "You got 2 marks",
-      });
-    } else {
-      toast({
-        title: "Wrong answer",
-        description: "Try again",
-      });
+  const [res, setRes] = useState<QuestionItem[]>()
+  const [loading, setLoading] = useState<boolean>(false)
+  const questioner = async () => {
+    setLoading(true)
+    const response =  await fetch('/api/questions', {
+      method: 'POST',
+    })
+    //console.log(response)
+    //console.log("hello")
+    if(response.status === 200){
+      setLoading(false)
+      const data:QuestionItem[] = await response.json()
+      setRes(data)
     }
   };
 
+  const [grade, setGrade] = useState<string>("N/A");
+  const [marks, setMarks] = useState<number>(0);
+
+  const apicall = () => {
+    questioner();
+  };
+  useEffect(() => {
+    switch (marks) {
+      case 2:
+        setGrade("F");
+        break;
+      case 4:
+        setGrade("E");
+        break;
+      case 8:
+        setGrade("D");
+        break;
+      case 12:
+        setGrade("C");
+        break;
+      case 16:
+        setGrade("B");
+        break;
+      case 18:
+        setGrade("A");
+        break;
+      // default:
+      //   setGrade('N/A')
+      //   break
+    }
+  }, [grade, marks]);
+  const addMarks = () => {
+    setMarks((marks) => marks + 2);
+  };
   return (
     <div className="flex-1 justify-between flex flex-col h-[calc(100vh-3.5rem)]">
       <div className="mx-auto w-full max-w-8xl grow lg:flex lg:px-1 xl:px-2">
         {/* TODO: create years component */}
-        <div className="bg-red-300 w-full text-center">
-          <Card className="md:mx-12">
-            <CardHeader>
-              <CardTitle>Question</CardTitle>
-              <CardDescription className="text-lg">
-                a dental arch relation where the lower dental arch is positioned
-                posteriorly in relation to the upper dental arch
-              </CardDescription>
-            </CardHeader>
-            {!answered ? (
-              <CardContent>
-                <div className="flex flex-wrap justify-center">
-                  {/* {options.map((option) => {
-                return (
-                  <Button className="w-1/3 m-2 p-2" onClick={(e:any) => checkAnswer(e.target.textContent)}>
-                    {option}
-                  </Button>
-                )
-              })} */}
-                  <Button
-                    className="w-1/3 m-2 p-2"
-                    onClick={(e: any) => {
-                      checkAnswer(e.target.textContent);
-                    }}
-                  >
-                    Class I
-                  </Button>
-                  <Button
-                    className="w-1/3 m-2 p-2"
-                    onClick={(e: any) => {
-                      checkAnswer(e.target.textContent);
-                    }}
-                  >
-                    Class II
-                  </Button>
-                  <Button
-                    className="w-1/3 m-2 p-2"
-                    onClick={(e: any) => {
-                      checkAnswer(e.target.textContent);
-                    }}
-                  >
-                    Class III
-                  </Button>
-                  <Button
-                    className="w-1/3 m-2 p-2"
-                    onClick={(e: any) => {
-                      checkAnswer(e.target.textContent);
-                    }}
-                  >
-                    None of the above
-                  </Button>
-                </div>
-              </CardContent>
-            ) : null}
-            <CardFooter className="justify-center">
-              {answered ? (
-                correctAnswered ? (
-                  <p className="bg-green-300 rounded-lg p-2 text-black shadow-lg">
-                    Correct Answer
-                  </p>
-                ) : (
-                  <p className="bg-red-400 rounded-lg p-2 text-black shadow-lg">
-                    Wrong Answer
-                  </p>
-                )
-              ) : null}
-            </CardFooter>
-          </Card>
+        <div className="w-full text-center">
+          <Button onClick={apicall}>
+            {loading ? (
+              <Loader2 />
+            ) : (
+              <p>
+                Call
+              </p>
+            )}
+          </Button>
+          <div className="sticky h-14 top-0 z-40 bg-blue-600 rounded-lg p-2 text-white flex justify-between mx-4 md:mx-14">
+            <h2 className="text-xl p-2">Grade : {grade}</h2>
+            <h2 className="text-xl p-2">Total Marks : {marks}</h2>
+          </div>
+          {publicHealthQuestions.map((question: QuestionItem) => {
+            return (
+              <Question key={question.id} {...question} addMarks={addMarks} />
+            );
+          })}
         </div>
       </div>
-      <div className="bg-red-400">world</div>
     </div>
   );
 };
