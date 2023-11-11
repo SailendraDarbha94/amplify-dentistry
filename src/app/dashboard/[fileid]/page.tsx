@@ -2,7 +2,7 @@ import ChatWrapper from '@/components/chat/ChatWrapper'
 import PdfRenderer from '@/components/PdfRenderer'
 import { Loader2, MessageSquare, Plus, Trash, BookOpen } from "lucide-react";
 import { db } from '@/db'
-import { getUserSubscriptionPlan } from '@/lib/stripe'
+// import { getUserSubscriptionPlan } from '@/lib/stripe'
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server'
 import { notFound, redirect } from 'next/navigation'
 
