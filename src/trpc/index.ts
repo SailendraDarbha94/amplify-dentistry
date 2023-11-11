@@ -46,25 +46,45 @@ export const appRouter = router({
     const files = await db.file.findMany()
     return files
   }),
-  getFirstBook: publicProcedure.query(async () => {
-    const file = await db.file.findFirst({
-      where: {
-        name: "Anatomy.pdf"
-      }
-    })
-    return file
-  }),
-  getSecondBook: publicProcedure.query(async () => {
-    const file = await db.file.findFirst({
-      where: { name: "Dental Anatomy.pdf" }
-    })
-    return file
-  }),
-  getBooks: publicProcedure.query(async () => {
+  getFirstYearBooks: publicProcedure.query(async () => {
+    const names = ['Anatomy.pdf', 'Physiology.pdf', 'Dental Anatomy & Histology.pdf', 'Biochemistry.pdf']
     const files = await db.file.findMany({
-      where: { 
+      where: {
         name: {
-          contains: "Anatomy"
+          in: names
+        }
+       }
+    })
+    return files
+  }),
+  getSecondYearBooks: publicProcedure.query(async () => {
+    const names = ['Dental Materials.pdf']
+    const files = await db.file.findMany({
+      where: {
+        name: {
+          in: names
+        }
+       }
+    })
+    return files
+  }),
+  getThirdYearBooks: publicProcedure.query(async () => {
+    const names = ['General Medicine.pdf']
+    const files = await db.file.findMany({
+      where: {
+        name: {
+          in: names
+        }
+       }
+    })
+    return files
+  }),
+  getFourthYearBooks: publicProcedure.query(async () => {
+    const names = ['Orthodontics.pdf']
+    const files = await db.file.findMany({
+      where: {
+        name: {
+          in: names
         }
        }
     })

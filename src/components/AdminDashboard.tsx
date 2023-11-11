@@ -18,7 +18,7 @@ const Dashboard = () => {
 
   const utils = trpc.useContext();
 
-  const { data: allFiles, isLoading } = trpc.getBooks.useQuery()
+  const { data: allFiles, isLoading } = trpc.getallFiles.useQuery()
 
 
 
