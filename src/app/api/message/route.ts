@@ -22,7 +22,7 @@ export const POST = async (req: NextRequest) => {
   if (!userId)
     return new Response('Unauthorized', { status: 401 })
 
-  const { fileId, message } =
+  const { fileId, message } = 
     SendMessageValidator.parse(body)
 
   const file = await db.file.findFirst({
