@@ -42,6 +42,54 @@ export const appRouter = router({
 
     return { success: true }
   }),
+  getallFiles: publicProcedure.query(async (param:any) => {
+    const files = await db.file.findMany()
+    return files
+  }),
+  getFirstYearBooks: publicProcedure.query(async () => {
+    const names = ['Anatomy.pdf', 'Physiology.pdf', 'Dental Anatomy & Histology.pdf', 'Biochemistry.pdf']
+    const files = await db.file.findMany({
+      where: {
+        name: {
+          in: names
+        }
+       }
+    })
+    return files
+  }),
+  getSecondYearBooks: publicProcedure.query(async () => {
+    const names = ['Dental Materials.pdf', 'Microbiology.pdf', 'Pharmacology.pdf']
+    const files = await db.file.findMany({
+      where: {
+        name: {
+          in: names
+        }
+       }
+    })
+    return files
+  }),
+  getThirdYearBooks: publicProcedure.query(async () => {
+    const names = ['General Medicine.pdf', 'Oral Pathology.pdf']
+    const files = await db.file.findMany({
+      where: {
+        name: {
+          in: names
+        }
+       }
+    })
+    return files
+  }),
+  getFourthYearBooks: publicProcedure.query(async () => {
+    const names = ['Orthodontics.pdf', 'Public Health Dentistry.pdf']
+    const files = await db.file.findMany({
+      where: {
+        name: {
+          in: names
+        }
+       }
+    })
+    return files
+  }),
   getUserFiles: privateProcedure.query(async ({ ctx }) => {
     const { userId } = ctx
 
@@ -70,8 +118,7 @@ export const appRouter = router({
   //     if (!dbUser)
   //       throw new TRPCError({ code: 'UNAUTHORIZED' })
 
-  //     const subscriptionPlan =
-  //       await getUserSubscriptionPlan()
+  //     const subscriptionPlan = await getUserSubscriptionPlan()
 
   //     if (
   //       subscriptionPlan.isSubscribed &&
