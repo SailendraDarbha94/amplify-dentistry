@@ -27,7 +27,8 @@ const Page = ({ params }: PageProps) => {
   //     throw new Error("User not found");
   //   }
 
-  const [res, setRes] = useState<QuestionItem[]>();
+  const [data, setData] = useState<QuestionItem[]>();
+
   const [grade, setGrade] = useState<string>("N/A");
   const [marks, setMarks] = useState<number>(0);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -74,24 +75,47 @@ const Page = ({ params }: PageProps) => {
     setMarks((marks) => marks + 2);
     setGrades();
   };
+  const PROMPT  = `generate 10 quiz questions in the subject of ${subject.split(".")[0]} for 
+  dental students in this JSON format as fast as you can  questions : {
+  id: 1,
+  question: "multiple choice question",
+  answer: "text content of answer",
+  options: [ "option 1", "option 2", "option 3", "option 4" ]
+  }
+make sure that the options should not have more than 2-3 words in them and make sure that the answer matches the correct option`
   useEffect(() => {
+    let ignore = false
     async function fetchData() {
+    //const PROPMT = await promptsGenerator(subject.split(".")[0])
     const progressInterval = startSimulatedProgress()
       const response = await fetch("/api/questions", {
         method: "POST",
-        body: JSON.stringify(promptsGenerator(subject.split(".")[0])),
+        body: JSON.stringify(PROMPT),
       });
 
       if (response.status === 200) {
-        const data: Questions = await response.json();
-        setRes(data.questions);
+        console.log("Success")
+        const data = await response.json();
+        const sanitized = await JSON.parse(data)
+        //console.log(sanitized)
+        const questions = await sanitized.questions
+        await setData(questions);
+        console.log(questions)
         clearInterval(progressInterval)
         setUploadProgress(100)
       }
     };
-    fetchData();
-    console.log("triggering once?")
-  }, [res]);
+    if(!ignore){
+      fetchData();
+    }
+    //console.log(res)
+    return () => {ignore = true}
+  }, []);
+
+  // useEffect(() => {
+  //   console.log("effect workign")
+  //   console.log(res)
+  // },[res])
 
   return (
     <div className="flex-1 justify-between flex flex-col h-[calc(100vh-3.5rem)]">
@@ -102,8 +126,13 @@ const Page = ({ params }: PageProps) => {
             <h2 className="text-xl p-2">Grade : {grade}</h2>
             <h2 className="text-xl p-2">Total Marks : {marks}</h2>
           </div>
-          {res ? (
-            res.map((question: QuestionItem) => {
+          {/* {data && data.map((question: QuestionItem) => {
+              return (
+                <Question key={question.id} {...question} addMarks={addMarks} />
+              );
+            })} */}
+          {data ? (
+            data.map((question: QuestionItem) => {
               return (
                 <Question key={question.id} {...question} addMarks={addMarks} />
               );

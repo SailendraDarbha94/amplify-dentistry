@@ -6,9 +6,7 @@ import { useEffect } from "react";
 
 const Page = () => {
   const { data: allFiles, isLoading } = trpc.getFirstYearBooks.useQuery();
-  useEffect(() => {
-    console.log("triggering once?")
-  })
+
   return (
     <main className="mx-auto max-w-7xl md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
@@ -24,12 +22,14 @@ const Page = () => {
                 new Date(a.createdAt).getTime()
             )
             .map((file) => (
-              <Book {...file} />
+              <Book key={file.id} id={file.id} name={file.name} />
             ))}
         </ul>
-      ) : isLoading ? (
+      )
+       : isLoading ? (
         <Skeleton height={100} className="my-2" count={3} />
-      ) : null}
+      ) 
+      : null}
     </main>
   );
 };

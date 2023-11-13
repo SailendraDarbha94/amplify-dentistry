@@ -56,7 +56,7 @@ const Question = ({ question, answer, options, addMarks }: {question:string, ans
                     return (
                       <Button
                         key={option}
-                        className="md:w-1/3 m-2 p-2"
+                        className="md:w-1/3 w-full m-2 p-2"
                         onClick={(e: any) => {
                           checkAnswer(e.target.textContent);
                         }}

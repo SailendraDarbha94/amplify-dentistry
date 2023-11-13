@@ -1,3 +1,5 @@
+
+//@ts-nocheck
 import { db } from "@/db";
 import { openai } from "@/lib/openai";
 import { getPineconeClient } from "@/lib/pinecone";
@@ -8,14 +10,33 @@ import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { NextRequest, NextResponse } from "next/server";
 
 import { OpenAIStream, StreamingTextResponse } from "ai";
+import OpenAI from "openai";
+
+
+const openais = new OpenAI();
+
+
+const PROMPT = `quickly generate 10 quiz questions in the subject of General Anatomy of Head & Neck aimed at 
+dental students in this JSON format  
+{
+  questions : {
+    id: 1,
+    question: "multiple choice question",
+    answer: "text content of answer",
+    options: [ "option 1", "option 2", "option 3", "option 4" ]
+    } 
+}
+make sure that the options should not have more than 2-3 words in them,
+make sure that the answer is strictly matching the correct option`
 
 export const POST = async (req: NextRequest) => {
   // endpoint for asking a prompting ai to get 10 mcqs
 
+  //testing somthing above
   const body = await req.json();
   //console.log("req.body = ",req.body)
 
-  //console.log("json version", body)
+  console.log("json version", body)
   const { getUser } = getKindeServerSession();
   const user = getUser();
 
@@ -44,38 +65,60 @@ export const POST = async (req: NextRequest) => {
   //       fileId,
   //     },
   //   })
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    temperature: 0.8,
-    stream: true,
-    messages: [
-      {
-        role: 'system',
-        content:
-          'Use the following pieces of context to answer the users question in JSON format.',
-      },
-      {
-        role: 'user',
-        //content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
-        content: body,
-      },
-    ],
-  })
+  let responser:any = null
+
+    const completion = await openais.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant designed to output JSON.",
+        },
+        { role: "user", content: PROMPT },
+      ],
+      model: "gpt-3.5-turbo-1106",
+      response_format: { type: "json_object" },
+      stream: false
+    });
+    if(completion.choices[0].message.content?.length != 0){
+      console.log(completion.choices[0].message.content)
+      responser = JSON.stringify(completion.choices[0].message.content)
+      return new Response(responser)
+    } else {
+      return new Response("Error Generating quiz", { status: 500 });
+    }
+  
+  // const response = await openai.chat.completions.create({
+  //   model: 'gpt-3.5-turbo',
+  //   temperature: 0.7,
+  //   stream: true,
+  //   messages: [
+  //     {
+  //       role: 'system',
+  //       content:
+  //         'Use the following pieces of context to answer the users question in JSON format.',
+  //     },
+  //     {
+  //       role: 'user',
+  //       //content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
+  //       content: body,
+  //     },
+  //   ],
+  // })
   //let data:any;
-  const stream = OpenAIStream(response, {
-    async onCompletion(completion) {
-        //data = await JSON.parse(completion)
-    //console.log("completed message: ", completion)
-    //   await db.message.create({
-    //     data: {
-    //       text: completion,
-    //       isUserMessage: false,
-    //       fileId,
-    //       userId,
-    //     },
-    //   })
-    },
-  })
+  // const stream = OpenAIStream(response, {
+  //   async onCompletion(completion) {
+  //       data = await JSON.parse(completion)
+  //   console.log("completed message: ", completion)
+  //     await db.message.create({
+  //       data: {
+  //         text: completion,
+  //         isUserMessage: false,
+  //         fileId,
+  //         userId,
+  //       },
+  //     })
+  //   },
+  // })
   // 1: vectorize message
   //   const embeddings = new OpenAIEmbeddings({
   //     openAIApiKey: process.env.OPENAI_API_KEY,
@@ -151,8 +194,9 @@ export const POST = async (req: NextRequest) => {
   //     },
   //   })
   //console.log(response);
-  //return new NextResponse(data, {status: 200});
-  return new StreamingTextResponse(stream)
+  //return new NextResponse(responser, {status: 200});
+  //return new StreamingTextResponse(stream)
+  //return new Response.json(responser)
 };
 
 

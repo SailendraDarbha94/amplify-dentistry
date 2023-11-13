@@ -6,7 +6,8 @@ import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 
-const Book = ({ id, name }: any) => {
+
+const Book = ({id, name}:{id:string, name:string}) => {
 
   // useEffect(() => {
   //   console.log("triggering once?")

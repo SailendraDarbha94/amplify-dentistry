@@ -9,7 +9,7 @@ import { PDFLoader } from 'langchain/document_loaders/fs/pdf'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 import { PineconeStore } from 'langchain/vectorstores/pinecone'
 import { getPineconeClient } from '@/lib/pinecone'
-// import { getUserSubscriptionPlan } from '@/lib/stripe'
+//import { getUserSubscriptionPlan } from '@/lib/stripe'
 import { PLANS } from '@/config/stripe'
 
 const f = createUploadthing()
@@ -20,7 +20,7 @@ const middleware = async () => {
 
   if (!user || !user.id) throw new Error('Unauthorized')
 
-  // const subscriptionPlan = await getUserSubscriptionPlan()
+  //const subscriptionPlan = await getUserSubscriptionPlan()
 
   return { userId: user.id }
 }
@@ -55,7 +55,7 @@ const onUploadComplete = async ({
   })
 
   try {
-    const response = await 
+    const response = await fetch(
       `https://uploadthing-prod.s3.us-west-2.amazonaws.com/${file.key}`
     )
 
@@ -68,7 +68,7 @@ const onUploadComplete = async ({
     const pagesAmt = pageLevelDocs.length
 
     //const { subscriptionPlan } = metadata
-    //const { isSubscribed } = subscriptionPlan
+    //const { isSubscribed } = 
 
     const isProExceeded =
       pagesAmt >
@@ -94,7 +94,7 @@ const onUploadComplete = async ({
 
     // vectorize and index entire document
     const pinecone = await getPineconeClient()
-    const pineconeIndex = pinecone.Index('amplifydentistry')
+    const pineconeIndex = pinecone.Index('quill')
 
     const embeddings = new OpenAIEmbeddings({
       openAIApiKey: process.env.OPENAI_API_KEY,
@@ -130,10 +130,10 @@ const onUploadComplete = async ({
 }
 
 export const ourFileRouter = {
-  freePlanUploader: f({ pdf: { maxFileSize: '32MB' } })
+  freePlanUploader: f({ pdf: { maxFileSize: '64MB' } })
     .middleware(middleware)
     .onUploadComplete(onUploadComplete),
-  proPlanUploader: f({ pdf: { maxFileSize: '64MB' } })
+  proPlanUploader: f({ pdf: { maxFileSize: '128MB' } })
     .middleware(middleware)
     .onUploadComplete(onUploadComplete),
 } satisfies FileRouter
