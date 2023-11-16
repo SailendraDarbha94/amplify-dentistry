@@ -64,7 +64,7 @@ const Navbar = () => {
                     variant: 'ghost',
                     size: 'sm',
                   })}>
-                  Dashboard
+                  Home
                 </Link>
 
                 <UserAccountNav

@@ -42,7 +42,7 @@ const ChatWrapper = ({
               Loading...
             </h3>
             <p className='text-zinc-500 text-sm'>
-              We&apos;re preparing your PDF.
+              We&apos;re preparing your Book.
             </p>
           </div>
         </div>
@@ -58,7 +58,7 @@ const ChatWrapper = ({
           <div className='flex flex-col items-center gap-2'>
             <Loader2 className='h-8 w-8 text-blue-500 animate-spin' />
             <h3 className='font-semibold text-xl'>
-              Processing PDF...
+              Processing Book...
             </h3>
             <p className='text-zinc-500 text-sm'>
               This won&apos;t take long.
@@ -77,7 +77,7 @@ const ChatWrapper = ({
           <div className='flex flex-col items-center gap-2'>
             <XCircle className='h-8 w-8 text-red-500' />
             <h3 className='font-semibold text-xl'>
-              Too many pages in PDF
+              Too many pages in Book
             </h3>
             <p className='text-zinc-500 text-sm'>
               Your{' '}
@@ -90,7 +90,7 @@ const ChatWrapper = ({
                     ?.pagesPerPdf
                 : PLANS.find((p) => p.name === 'Free')
                     ?.pagesPerPdf}{' '}
-              pages per PDF.
+              pages per Book.
             </p>
             <Link
               href='/dashboard'
