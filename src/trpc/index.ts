@@ -58,7 +58,7 @@ export const appRouter = router({
     return files
   }),
   getSecondYearBooks: publicProcedure.query(async () => {
-    const names = ['Dental Materials.pdf', 'Microbiology.pdf', 'Pharmacology.pdf']
+    const names = ['Dental Materials.pdf', 'Microbiology.pdf', 'Pharmacology.pdf', 'Pathology.pdf', 'Pre-Clinical Prosthodontics.pdf']
     const files = await db.file.findMany({
       where: {
         name: {
@@ -69,7 +69,7 @@ export const appRouter = router({
     return files
   }),
   getThirdYearBooks: publicProcedure.query(async () => {
-    const names = ['General Medicine.pdf', 'Oral Pathology.pdf']
+    const names = ['General Medicine.pdf', 'Oral Pathology.pdf', 'General Surgery.pdf']
     const files = await db.file.findMany({
       where: {
         name: {
@@ -80,7 +80,7 @@ export const appRouter = router({
     return files
   }),
   getFourthYearBooks: publicProcedure.query(async () => {
-    const names = ['Orthodontics.pdf', 'Public Health Dentistry.pdf']
+    const names = ['Orthodontics.pdf', 'Public Health Dentistry.pdf', 'Pedodontics.pdf', 'Periodontics.pdf', 'Oral Surgery.pdf', 'Oral Medicine & Radiology.pdf', 'Prosthodontics.pdf', 'Endodontics.pdf']
     const files = await db.file.findMany({
       where: {
         name: {

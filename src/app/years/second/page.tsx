@@ -20,7 +20,7 @@ const Page = () => {
                 new Date(a.createdAt).getTime()
             )
             .map((file) => (
-              <Book {...file} />
+<Book key={file.id} id={file.id} name={file.name} />
             ))}
         </ul>
       ) : isLoading ? (

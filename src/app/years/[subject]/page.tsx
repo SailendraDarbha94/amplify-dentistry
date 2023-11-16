@@ -110,7 +110,7 @@ make sure that the options should not have more than 2-3 words in them and make 
     }
     //console.log(res)
     return () => {ignore = true}
-  }, []);
+  });
 
   // useEffect(() => {
   //   console.log("effect workign")

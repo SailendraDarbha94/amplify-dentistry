@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from './ui/avatar'
 import Image from 'next/image'
 import { Icons } from './Icons'
 import Link from 'next/link'
-import { Gem } from 'lucide-react'
+import { Gem, FileSignature } from 'lucide-react'
 import { LogoutLink } from '@kinde-oss/kinde-auth-nextjs/server'
 
 interface UserAccountNavProps {
@@ -72,7 +72,7 @@ const UserAccountNav = async ({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem asChild>
-          <Link href='/dashboard'>Dashboard</Link>
+          <Link href='/dashboard'>Home</Link>
         </DropdownMenuItem>
 
         {/* <DropdownMenuItem asChild>
@@ -87,7 +87,12 @@ const UserAccountNav = async ({
             </Link>
           )}
         </DropdownMenuItem> */}
-
+        <DropdownMenuItem asChild>
+            <Link href='/feedback'>
+              Feedback
+              <FileSignature className='text-blue-600 h-4 w-4 ml-2' />
+            </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
 
         <DropdownMenuItem className='cursor-pointer'>

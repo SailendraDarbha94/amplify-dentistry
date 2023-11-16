@@ -87,11 +87,11 @@ export default function Home() {
         <div className='mb-12 px-6 lg:px-8'>
           <div className='mx-auto max-w-2xl sm:text-center'>
             <h2 className='mt-2 font-bold text-4xl text-gray-900 sm:text-5xl'>
-              Start chatting in minutes
+              Start learning in minutes
             </h2>
             <p className='mt-4 text-lg text-gray-600'>
-              Chatting to your PDF files and Books has never been
-              easier than with AmpDent.
+              Learning from Dental Books has never been
+              easier than ever with AmplifyDentistry
             </p>
           </div>
         </div>
@@ -106,7 +106,10 @@ export default function Home() {
               <span className='text-xl font-semibold'>
                 Sign up for an account
               </span>
-              <span className='mt-2 text-zinc-700'>
+              <span className="mt-2 text-zinc-700">
+                It is free for now(In Public Beta) so hurry up!
+              </span>
+              {/* <span className='mt-2 text-zinc-700'>
                 Either starting out with a free plan or
                 choose our{' '}
                 <Link
@@ -115,7 +118,7 @@ export default function Home() {
                   pro plan
                 </Link>
                 .
-              </span>
+              </span> */}
             </div>
           </li>
           <li className='md:flex-1'>
@@ -124,11 +127,10 @@ export default function Home() {
                 Step 2
               </span>
               <span className='text-xl font-semibold'>
-                Upload your PDF file
+                Learn Theory
               </span>
               <span className='mt-2 text-zinc-700'>
-                We&apos;ll process your file and make it
-                ready for you to chat with.
+                Choose an year to reveal the subjects of that Year, then click theory to ask any questions regarding that subject
               </span>
             </div>
           </li>
@@ -138,9 +140,10 @@ export default function Home() {
                 Step 3
               </span>
               <span className='text-xl font-semibold'>
-                Start asking questions
+                Practice Quiz questions
               </span>
               <span className='mt-2 text-zinc-700'>
+                Choose a subject you want to practice then click on Practical button
                 It&apos;s that simple. Try out AmpDent today -
                 it really takes less than a minute.
               </span>
@@ -152,7 +155,7 @@ export default function Home() {
           <div className='mt-16 flow-root sm:mt-24'>
             <div className='-m-2 rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:-m-4 lg:rounded-2xl lg:p-4'>
               <Image
-                src='/file-upload-preview.jpg'
+                src='/quiz-preview.png'
                 alt='uploading preview'
                 width={1419}
                 height={732}

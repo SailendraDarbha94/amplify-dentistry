@@ -16,27 +16,27 @@ import OpenAI from "openai";
 const openais = new OpenAI();
 
 
-const PROMPT = `quickly generate 10 quiz questions in the subject of General Anatomy of Head & Neck aimed at 
-dental students in this JSON format  
-{
-  questions : {
-    id: 1,
-    question: "multiple choice question",
-    answer: "text content of answer",
-    options: [ "option 1", "option 2", "option 3", "option 4" ]
-    } 
-}
-make sure that the options should not have more than 2-3 words in them,
-make sure that the answer is strictly matching the correct option`
+
 
 export const POST = async (req: NextRequest) => {
   // endpoint for asking a prompting ai to get 10 mcqs
-
+  // const PROMPT = `quickly generate 10 quiz questions in the subject of Anatomy aimed at 
+  // dental students in this JSON format  
+  // {
+  //   questions : {
+  //     id: 1,
+  //     question: "multiple choice question",
+  //     answer: "text content of answer",
+  //     options: [ "option 1", "option 2", "option 3", "option 4" ]
+  //     } 
+  // }
+  // make sure that the options should not have more than 2-3 words in them,
+  // make sure that the answer is strictly matching the correct option`
   //testing somthing above
   const body = await req.json();
-  //console.log("req.body = ",req.body)
+  //console.log("req.json = ",body)
 
-  console.log("json version", body)
+  //console.log("json version", body)
   const { getUser } = getKindeServerSession();
   const user = getUser();
 
@@ -73,7 +73,7 @@ export const POST = async (req: NextRequest) => {
           role: "system",
           content: "You are a helpful assistant designed to output JSON.",
         },
-        { role: "user", content: PROMPT },
+        { role: "user", content: body },
       ],
       model: "gpt-3.5-turbo-1106",
       response_format: { type: "json_object" },
