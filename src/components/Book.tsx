@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { trpc } from "@/app/_trpc/client";
+import Image from "next/image";
 
 
 const Book = ({id, name}:{id:string, name:string}) => {
@@ -17,7 +18,7 @@ const Book = ({id, name}:{id:string, name:string}) => {
       key={id}
       className="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow transition hover:shadow-lg"
     >
-      <img
+      <Image
         src="/coursebook.png"
         alt="book"
         className="h-24 w-18 my-2 mx-auto rounded-xl"
