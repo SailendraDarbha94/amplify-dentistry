@@ -124,7 +124,7 @@ import { useState } from 'react'
           <h3 className='font-semibold text-xl'>
             Pretty empty around here
           </h3>
-          <p>Let&apos;s upload your first PDF.</p>
+          <p>Let&apos;s upload your first Book.</p>
         </div>
       )}
     </main>
