@@ -34,33 +34,37 @@ const Book = ({ id, name }: { id: string; name: string }) => {
         {/* <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" /> */}
 
         <div className="flex-1 truncate">
-          <div className="flex justify-around items-center space-x-3">
-            <Link href={`/dashboard/${id}`} className="flex flex-col gap-2">
-              <Button
-                onClick={() => {
-                  setLoading(true);
-                }}
-                size="lg"
-                className="w-full"
-                variant="default"
-              >
-                {loading ? <Loader2 className='h-8 w-8 animate-spin text-zinc-800' /> : <span>Theory</span>}
-              </Button>
-            </Link>
-            <Link href={`/years/${name}`} className="flex flex-col gap-2">
-              <Button
-                //disabled
-                onClick={() => {
-                  setLoading(true);
-                }}
-                size="lg"
-                className="w-full"
-                variant="default"
-              >
-                {loading ? <Loader2 className='h-8 w-8 animate-spin text-zinc-800' /> : <span>Practical</span>}
-              </Button>
-            </Link>
-          </div>
+          {loading ? (
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
+          ) : (
+            <div className="flex justify-around items-center space-x-3">
+              <Link href={`/dashboard/${id}`} className="flex flex-col gap-2">
+                <Button
+                  onClick={() => {
+                    setLoading(true);
+                  }}
+                  size="lg"
+                  className="w-full"
+                  variant="default"
+                >
+                  Theory
+                </Button>
+              </Link>
+              <Link href={`/years/${name}`} className="flex flex-col gap-2">
+                <Button
+                  //disabled
+                  onClick={() => {
+                    setLoading(true);
+                  }}
+                  size="lg"
+                  className="w-full"
+                  variant="default"
+                >
+                  Practical
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </li>

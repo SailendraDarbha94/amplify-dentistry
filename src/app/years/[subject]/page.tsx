@@ -83,34 +83,38 @@ const Page = ({ params }: PageProps) => {
   options: [ "option 1", "option 2", "option 3", "option 4" ]
   }
 make sure that the options should not have more than 2-3 words in them and make sure that the answer matches the correct option`
-  useEffect(() => {
-    let ignore = false
-    async function fetchData() {
-    //const PROPMT = await promptsGenerator(subject.split(".")[0])
-    const progressInterval = startSimulatedProgress()
-      const response = await fetch("/api/questions", {
-        method: "POST",
-        body: JSON.stringify(PROMPT),
-      });
 
-      if (response.status === 200) {
-        //console.log("Success")
-        const data = await response.json();
-        const sanitized = await JSON.parse(data)
-        //console.log(sanitized)
-        const questions = await sanitized.questions
-        await setData(questions);
-        //console.log(questions)
-        clearInterval(progressInterval)
-        setUploadProgress(100)
-      }
-    };
-    if(!ignore){
-      fetchData();
+async function fetchData() {
+  //const PROPMT = await promptsGenerator(subject.split(".")[0])
+  const progressInterval = startSimulatedProgress()
+    const response = await fetch("/api/questions", {
+      method: "POST",
+      body: JSON.stringify(PROMPT),
+    });
+
+    if (response.status === 200) {
+      //console.log("Success")
+      const data = await response.json();
+      const sanitized = await JSON.parse(data)
+      //console.log(sanitized)
+      const questions = await sanitized.questions
+      await setData(questions);
+      //console.log(questions)
+      clearInterval(progressInterval)
+      setUploadProgress(100)
     }
+  };
+
+  
+  useEffect(() => {
+    //let ignore = false
+
+    //if(!ignore){
+      fetchData();
+    //}
     //console.log(res)
-    return () => {ignore = true}
-  });
+    //return () => {ignore = true}
+  }, []);
 
   // useEffect(() => {
   //   console.log("effect workign")

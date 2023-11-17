@@ -14,98 +14,80 @@ const Years = () => {
         </h1>
       </div>
 
-      <div className="mt-16 flex flex-col items-center gap-2">
-        <div className="flex p-1 w-11/12  md:w-8/12 justify-between">
-          <a
-            href="/years/first"
-            className="border-b-2 border-r-2 mx-1 p-1 border-black w-1/2"
-            onClick={() => setLoading(true)}
-          >
-            {loading ? (
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
-            ) : (
+      {loading ? (
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
+      ) : (
+        <div className="mt-16 flex flex-col items-center gap-2">
+          <div className="flex p-1 w-11/12  md:w-8/12 justify-between">
+            <a
+              href="/years/first"
+              className="border-b-2 border-r-2 mx-1 p-1 border-black w-1/2"
+              onClick={() => setLoading(true)}
+            >
               <Icon
                 icon="healthicons:tooth"
                 className="ml-auto md:h-10 md:w-10 h-8 w-8"
               />
-            )}
-          </a>
-          <a
-            href="/years/second"
-            className="flex w-1/2 border-b-2 border-l-2 p-1 mx-1 border-black"
-            onClick={() => setLoading(true)}
-          >
-            {loading ? (
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
-            ) : (
-              <>
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-              </>
-            )}
-          </a>
+            </a>
+            <a
+              href="/years/second"
+              className="flex w-1/2 border-b-2 border-l-2 p-1 mx-1 border-black"
+              onClick={() => setLoading(true)}
+            >
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+            </a>
+          </div>
+          <div className="flex p-1 w-11/12  md:w-8/12 justify-between">
+            <a
+              href="/years/fourth"
+              className="border-t-2 border-r-2 p-1 flex mx-1 justify-end border-black w-1/2"
+              onClick={() => setLoading(true)}
+            >
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+            </a>
+            <a
+              href="/years/third"
+              className="flex w-1/2 border-t-2 p-1 border-l-2 mx-1 border-black"
+              onClick={() => setLoading(true)}
+            >
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+              <Icon
+                className="md:h-10 md:w-10 h-8 w-8"
+                icon="healthicons:tooth"
+              />
+            </a>
+          </div>
         </div>
-        <div className="flex p-1 w-11/12  md:w-8/12 justify-between">
-          <a
-            href="/years/fourth"
-            className="border-t-2 border-r-2 p-1 flex mx-1 justify-end border-black w-1/2"
-            onClick={() => setLoading(true)}
-          >
-            {loading ? (
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
-            ) : (
-              <>
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-              </>
-            )}
-          </a>
-          <a
-            href="/years/third"
-            className="flex w-1/2 border-t-2 p-1 border-l-2 mx-1 border-black"
-            onClick={() => setLoading(true)}
-          >
-            {loading ? (
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
-            ) : (
-              <>
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-                <Icon
-                  className="md:h-10 md:w-10 h-8 w-8"
-                  icon="healthicons:tooth"
-                />
-              </>
-            )}
-          </a>
-        </div>
-      </div>
+      )}
     </main>
   );
 };
