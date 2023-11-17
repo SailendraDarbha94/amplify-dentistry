@@ -35,7 +35,7 @@ const Book = ({ id, name }: { id: string; name: string }) => {
 
         <div className="flex-1 truncate">
           {loading ? (
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-800 mx-auto" />
           ) : (
             <div className="flex justify-around items-center space-x-3">
               <Link href={`/dashboard/${id}`} className="flex flex-col gap-2">
