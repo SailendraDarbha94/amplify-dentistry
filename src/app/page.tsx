@@ -20,8 +20,7 @@ export default function Home() {
         </h1>
         <p className='mt-5 max-w-prose text-zinc-700 sm:text-lg'>
           Ampdent allows you to have conversations with any
-          Dental Book. Simply upload your books or browse ous and start
-          learning right away.
+          Dental Book. This allows you to ask any doubts you have directly to your book.
         </p>
 
         <Link

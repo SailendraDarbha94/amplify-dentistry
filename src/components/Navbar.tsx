@@ -19,29 +19,24 @@ const Navbar = () => {
       <MaxWidthWrapper>
         <div className='flex h-14 items-center justify-between border-b border-zinc-200'>
           <Link
-            // href={!user ? '/' : '/admin'}
-            href={'/'}
+            href='/'
             className='flex z-40 font-semibold'>
-            <span>AmpDent</span>
+            <span>AmplifyDentistry</span>
           </Link>
-          {/* <Link
-            href='/ampdash'
-            className='flex z-40 font-semibold'>
-            <span>Years.</span>
-          </Link> */}
+
           <MobileNav isAuth={!!user} />
 
           <div className='hidden items-center space-x-4 sm:flex'>
             {!user ? (
               <>
-                <Link
+                {/* <Link
                   href='/pricing'
                   className={buttonVariants({
                     variant: 'ghost',
                     size: 'sm',
                   })}>
                   Pricing
-                </Link>
+                </Link> */}
                 <LoginLink
                   className={buttonVariants({
                     variant: 'ghost',
