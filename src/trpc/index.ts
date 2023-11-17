@@ -173,7 +173,7 @@ export const appRouter = router({
       const file = await db.file.findFirst({
         where: {
           id: fileId,
-          userId,
+          //userId,
         },
       })
 
@@ -183,6 +183,7 @@ export const appRouter = router({
         take: limit + 1,
         where: {
           fileId,
+          userId
         },
         orderBy: {
           createdAt: 'desc',
