@@ -15,7 +15,7 @@ import OpenAI from "openai";
 
 const openais = new OpenAI();
 
-
+export const maxDuration = 1500;
 
 
 export const POST = async (req: NextRequest) => {

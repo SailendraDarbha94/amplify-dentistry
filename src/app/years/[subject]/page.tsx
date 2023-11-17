@@ -28,7 +28,7 @@ const Page = ({ params }: PageProps) => {
   //   }
 
   const [data, setData] = useState<QuestionItem[]>();
-
+  const [bug, setBug] = useState(false);
   const [grade, setGrade] = useState<string>("N/A");
   const [marks, setMarks] = useState<number>(0);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -75,46 +75,52 @@ const Page = ({ params }: PageProps) => {
     setMarks((marks) => marks + 2);
     setGrades();
   };
-  const PROMPT  = `generate 10 quiz questions in the subject of ${subject.split(".")[0]} for 
+  const PROMPT = `generate 10 quiz questions in the subject of ${
+    subject.split(".")[0]
+  } for 
   dental students in this JSON format as fast as you can  questions : {
   id: 1,
   question: "multiple choice question",
   answer: "text content of answer",
   options: [ "option 1", "option 2", "option 3", "option 4" ]
   }
-make sure that the options should not have more than 2-3 words in them and make sure that the answer matches the correct option`
+make sure that the options should not have more than 2-3 words in them and make sure that the answer matches the correct option`;
 
-async function fetchData() {
-  //const PROPMT = await promptsGenerator(subject.split(".")[0])
-  const progressInterval = startSimulatedProgress()
+  async function fetchData() {
+    //const PROPMT = await promptsGenerator(subject.split(".")[0])
+    const progressInterval = startSimulatedProgress();
     const response = await fetch("/api/questions", {
       method: "POST",
       body: JSON.stringify(PROMPT),
     });
 
-    if(!response.ok) {
-      throw new Error('An Error occurred while fetching data')
+    if (response.status === 504) {
+      throw new Error("Timeout Error, please try again");
+      setBug(true);
+    }
+    if (!response.ok) {
+      setBug(true);
+      throw new Error("An Error occurred while fetching data");
     }
 
     if (response.status === 200) {
       //console.log("Success")
       const data = await response.json();
-      const sanitized = await JSON.parse(data)
+      const sanitized = await JSON.parse(data);
       //console.log(sanitized)
-      const questions = await sanitized.questions
+      const questions = await sanitized.questions;
       await setData(questions);
       //console.log(questions)
-      clearInterval(progressInterval)
-      setUploadProgress(100)
+      clearInterval(progressInterval);
+      setUploadProgress(100);
     }
-  };
-
+  }
 
   useEffect(() => {
     //let ignore = false
 
     //if(!ignore){
-      fetchData();
+    fetchData();
     //}
     //console.log(res)
     //return () => {ignore = true}
@@ -147,7 +153,6 @@ async function fetchData() {
             })
           ) : (
             <div className="w-full mt-4 max-w-md mx-auto">
-
               <h3 className="text-xl font-semibold">
                 Please wait a few seconds while we generate new MCQs for you
               </h3>
