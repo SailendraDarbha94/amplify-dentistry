@@ -15,7 +15,9 @@ const Years = () => {
       </div>
 
       {loading ? (
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
+        <div className="flex h-10 p-4 justify-center items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
+        </div>
       ) : (
         <div className="mt-16 flex flex-col items-center gap-2">
           <div className="flex p-1 w-11/12  md:w-8/12 justify-between">

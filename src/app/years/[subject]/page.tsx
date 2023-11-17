@@ -102,10 +102,12 @@ async function fetchData() {
       //console.log(questions)
       clearInterval(progressInterval)
       setUploadProgress(100)
+    } else {
+      throw new Error('An Error occurred while fetching data')
     }
   };
 
-  
+
   useEffect(() => {
     //let ignore = false
 
