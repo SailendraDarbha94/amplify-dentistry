@@ -92,6 +92,10 @@ async function fetchData() {
       body: JSON.stringify(PROMPT),
     });
 
+    if(!response.ok) {
+      throw new Error('An Error occurred while fetching data')
+    }
+
     if (response.status === 200) {
       //console.log("Success")
       const data = await response.json();
@@ -102,8 +106,6 @@ async function fetchData() {
       //console.log(questions)
       clearInterval(progressInterval)
       setUploadProgress(100)
-    } else {
-      throw new Error('An Error occurred while fetching data')
     }
   };
 
