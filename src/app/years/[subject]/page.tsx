@@ -130,7 +130,7 @@ async function fetchData() {
       <div className="mx-auto w-full max-w-8xl grow lg:flex lg:px-1 xl:px-2">
         {/* TODO: create years component */}
         <div className="w-full text-center">
-          <div className="sticky h-14 top-0 z-40 bg-blue-600 rounded-lg p-2 text-white flex justify-between mx-4 md:mx-14">
+          <div className="sticky h-14 top-0 z-20 bg-blue-600 rounded-lg p-2 text-white flex justify-between mx-4 md:mx-14">
             <h2 className="text-xl p-2">Grade : {grade}</h2>
             <h2 className="text-xl p-2">Total Marks : {marks}</h2>
           </div>
