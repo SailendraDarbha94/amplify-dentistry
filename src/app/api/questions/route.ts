@@ -80,8 +80,8 @@ export const POST = async (req: NextRequest) => {
       stream: false
     });
     if(completion.choices[0].message.content?.length != 0){
-      console.log(completion.choices[0].message.content)
-      responser = JSON.stringify(completion.choices[0].message.content)
+      //console.log(completion.choices[0].message.content)
+      responser = await JSON.stringify(completion.choices[0].message.content)
       return new Response(responser)
     } else {
       return new Response("Error Generating quiz", { status: 500 });
