@@ -84,7 +84,7 @@ const Page = ({ params }: PageProps) => {
   answer: "text content of answer",
   options: [ "option 1", "option 2", "option 3", "option 4" ]
   }
-make sure that the options should not have more than 2-3 words in them and make sure that the answer matches the correct option`;
+  make sure that the options should not have more than 2-3 words in them and make sure that the answer matches the correct option`;
 
   async function fetchData() {
     //const PROPMT = await promptsGenerator(subject.split(".")[0])
@@ -95,8 +95,8 @@ make sure that the options should not have more than 2-3 words in them and make 
     });
 
     if (response.status === 504) {
-      throw new Error("Timeout Error, please try again");
       setBug(true);
+      throw new Error("Timeout Error, please try again");
     }
     if (!response.ok) {
       setBug(true);
@@ -135,36 +135,44 @@ make sure that the options should not have more than 2-3 words in them and make 
     <div className="flex-1 justify-between flex flex-col h-[calc(100vh-3.5rem)]">
       <div className="mx-auto w-full max-w-8xl grow lg:flex lg:px-1 xl:px-2">
         {/* TODO: create years component */}
-        <div className="w-full text-center">
-          <div className="sticky h-14 top-0 z-20 bg-blue-600 rounded-lg p-2 text-white flex justify-between mx-4 md:mx-14">
-            <h2 className="text-xl p-2">Grade : {grade}</h2>
-            <h2 className="text-xl p-2">Total Marks : {marks}</h2>
-          </div>
-          {/* {data && data.map((question: QuestionItem) => {
+        {bug ? (
+          <p>Error occurred! please try again</p>
+        ) : (
+          <div className="w-full text-center">
+            <div className="sticky h-14 top-0 z-20 bg-blue-600 rounded-lg p-2 text-white flex justify-between mx-4 md:mx-14">
+              <h2 className="text-xl p-2">Grade : {grade}</h2>
+              <h2 className="text-xl p-2">Total Marks : {marks}</h2>
+            </div>
+            {/* {data && data.map((question: QuestionItem) => {
               return (
                 <Question key={question.id} {...question} addMarks={addMarks} />
               );
             })} */}
-          {data ? (
-            data.map((question: QuestionItem) => {
-              return (
-                <Question key={question.id} {...question} addMarks={addMarks} />
-              );
-            })
-          ) : (
-            <div className="w-full mt-4 max-w-md mx-auto">
-              <h3 className="text-xl font-semibold">
-                Please wait a few seconds while we generate new MCQs for you
-              </h3>
-              <Progress
-                indicatorColor={uploadProgress === 99 ? "bg-green-500" : ""}
-                value={uploadProgress}
-                className="h-1 w-full bg-zinc-200"
-              />
-              <Skeleton height={100} className="my-2" count={3} />
-            </div>
-          )}
-        </div>
+            {data ? (
+              data.map((question: QuestionItem) => {
+                return (
+                  <Question
+                    key={question.id}
+                    {...question}
+                    addMarks={addMarks}
+                  />
+                );
+              })
+            ) : (
+              <div className="w-full mt-4 max-w-md mx-auto">
+                <h3 className="text-xl font-semibold">
+                  Please wait a few seconds while we generate new MCQs for you
+                </h3>
+                <Progress
+                  indicatorColor={uploadProgress === 99 ? "bg-green-500" : ""}
+                  value={uploadProgress}
+                  className="h-1 w-full bg-zinc-200"
+                />
+                <Skeleton height={100} className="my-2" count={3} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

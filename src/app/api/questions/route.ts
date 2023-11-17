@@ -1,4 +1,3 @@
-
 //@ts-nocheck
 import { db } from "@/db";
 import { openai } from "@/lib/openai";
@@ -12,23 +11,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { OpenAIStream, StreamingTextResponse } from "ai";
 import OpenAI from "openai";
 
-
 const openais = new OpenAI();
 
-export const maxDuration = 300;
-
+export const maxDuration = 50;
 
 export const POST = async (req: NextRequest) => {
   // endpoint for asking a prompting ai to get 10 mcqs
-  // const PROMPT = `quickly generate 10 quiz questions in the subject of Anatomy aimed at 
-  // dental students in this JSON format  
+  // const PROMPT = `quickly generate 10 quiz questions in the subject of Anatomy aimed at
+  // dental students in this JSON format
   // {
   //   questions : {
   //     id: 1,
   //     question: "multiple choice question",
   //     answer: "text content of answer",
   //     options: [ "option 1", "option 2", "option 3", "option 4" ]
-  //     } 
+  //     }
   // }
   // make sure that the options should not have more than 2-3 words in them,
   // make sure that the answer is strictly matching the correct option`
@@ -65,28 +62,32 @@ export const POST = async (req: NextRequest) => {
   //       fileId,
   //     },
   //   })
-  let responser:any = null
+  //let responser:any = null
 
-    const completion = await openais.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant designed to output JSON.",
-        },
-        { role: "user", content: body },
-      ],
-      model: "gpt-3.5-turbo-1106",
-      response_format: { type: "json_object" },
-      stream: false
-    });
-    if(completion.choices[0].message.content?.length != 0){
-      //console.log(completion.choices[0].message.content)
-      responser = await JSON.stringify(completion.choices[0].message.content)
-      return new Response(responser)
-    } else {
-      return new Response("Error Generating quiz", { status: 500 });
-    }
-  
+  const completion = await openais.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content: "You are a helpful assistant designed to output JSON.",
+      },
+      { role: "user", content: body },
+    ],
+    model: "gpt-3.5-turbo-1106",
+    response_format: { type: "json_object" },
+    stream: false,
+  });
+  console.log(completion.choices)
+  if (completion.choices[0].message.content?.length != 0) {
+    //console.log(completion.choices[0].message.content)
+    const responser = await JSON.stringify(
+      completion.choices[0].message.content
+    );
+
+    return new Response(responser);
+  } else {
+    return new Response("Error Generating quiz", { status: 500 });
+  }
+
   // const response = await openai.chat.completions.create({
   //   model: 'gpt-3.5-turbo',
   //   temperature: 0.7,
@@ -157,29 +158,29 @@ export const POST = async (req: NextRequest) => {
   //     content: msg.text,
   //   }))
 
-//   const response = await openai.chat.completions.create({
-//     model: "gpt-3.5-turbo",
-//     temperature: 0.8,
-//     stream: false,
-//     messages: [
-//       {
-//         role: "system",
-//         content:
-//           "Use the following pieces of context to answer the users question in JSON format.",
-//       },
-//       {
-//         role: "user",
+  //   const response = await openai.chat.completions.create({
+  //     model: "gpt-3.5-turbo",
+  //     temperature: 0.8,
+  //     stream: false,
+  //     messages: [
+  //       {
+  //         role: "system",
+  //         content:
+  //           "Use the following pieces of context to answer the users question in JSON format.",
+  //       },
+  //       {
+  //         role: "user",
 
-//         content: `Use the following pieces of context to answer the users question in JSON format.
-        
-//   \n----------------\n
-  
-//   CONTEXT:
-  
-//   USER INPUT: ${body}`,
-//       },
-//     ],
-//   });
+  //         content: `Use the following pieces of context to answer the users question in JSON format.
+
+  //   \n----------------\n
+
+  //   CONTEXT:
+
+  //   USER INPUT: ${body}`,
+  //       },
+  //     ],
+  //   });
 
   //   const stream = OpenAIStream(response, {
   //     async onCompletion(completion) {
@@ -198,6 +199,3 @@ export const POST = async (req: NextRequest) => {
   //return new StreamingTextResponse(stream)
   //return new Response.json(responser)
 };
-
-
-
