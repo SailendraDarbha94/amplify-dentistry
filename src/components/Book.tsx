@@ -6,10 +6,10 @@ import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
 
-
-const Book = ({id, name}:{id:string, name:string}) => {
-
+const Book = ({ id, name }: { id: string; name: string }) => {
+  const [loading, setLoading] = useState(false);
   // useEffect(() => {
   //   console.log("triggering once?")
   // })
@@ -20,6 +20,8 @@ const Book = ({id, name}:{id:string, name:string}) => {
     >
       <Image
         src="/coursebook.png"
+        width={100}
+        height={200}
         alt="book"
         className="h-24 w-18 my-2 mx-auto rounded-xl"
       />
@@ -36,26 +38,26 @@ const Book = ({id, name}:{id:string, name:string}) => {
             <Link href={`/dashboard/${id}`} className="flex flex-col gap-2">
               <Button
                 onClick={() => {
-                  console.log(name);
+                  setLoading(true);
                 }}
                 size="lg"
                 className="w-full"
                 variant="default"
               >
-                Theory
+                {loading ? <Loader2 className='h-8 w-8 animate-spin text-zinc-800' /> : <span>Theory</span>}
               </Button>
             </Link>
             <Link href={`/years/${name}`} className="flex flex-col gap-2">
               <Button
                 //disabled
                 onClick={() => {
-                  console.log(name);
+                  setLoading(true);
                 }}
                 size="lg"
                 className="w-full"
                 variant="default"
               >
-                Practical
+                {loading ? <Loader2 className='h-8 w-8 animate-spin text-zinc-800' /> : <span>Practical</span>}
               </Button>
             </Link>
           </div>
