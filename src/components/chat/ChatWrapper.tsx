@@ -28,7 +28,7 @@ const ChatWrapper = ({
           data?.status === 'SUCCESS' ||
           data?.status === 'FAILED'
             ? false
-            : 500,
+            : 2500,
       }
     )
 

@@ -94,13 +94,13 @@ make sure that the options should not have more than 2-3 words in them and make 
       });
 
       if (response.status === 200) {
-        console.log("Success")
+        //console.log("Success")
         const data = await response.json();
         const sanitized = await JSON.parse(data)
         //console.log(sanitized)
         const questions = await sanitized.questions
         await setData(questions);
-        console.log(questions)
+        //console.log(questions)
         clearInterval(progressInterval)
         setUploadProgress(100)
       }
