@@ -104,7 +104,7 @@ const Years = () => {
                 </div>
               ) : (
                 notices?.map((notice: any) => {
-                  return <Notice {...notice} />;
+                  return <Notice key={notice.id} {...notice} />;
                 })
               )}
             </div>
