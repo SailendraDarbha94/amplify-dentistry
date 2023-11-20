@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, FileSignature, Menu } from "lucide-react";
+import { ArrowRight, FileSignature, Home, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -74,16 +74,18 @@ const MobileNav = ({ isAuth }: { isAuth: boolean }) => {
                     className="flex items-center w-full font-semibold"
                     href="/dashboard"
                   >
-                    Home
+                    Home 
+                    <Home className="text-blue-600 h-4 w-4 ml-auto" />
                   </Link>
                 </li>
                 <li>
                   <Link
                     onClick={() => closeOnCurrent("/dashboard")}
                     href="/feedback"
+                    className="flex items-center w-full font-semibold"
                   >
                     Feedback
-                    <FileSignature className="text-blue-600 h-4 w-4 ml-2" />
+                    <FileSignature className="text-blue-600 h-4 w-4 ml-auto" />
                   </Link>
                 </li>
                 <li className="my-3 h-px w-full bg-gray-300" />

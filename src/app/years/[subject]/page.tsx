@@ -1,11 +1,14 @@
 "use client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useState } from "react";
 import { promptsGenerator } from "@/lib/utils";
 import { QuestionItem } from "@/config/mcqs";
 import Question from "@/components/Question";
 import Skeleton from "react-loading-skeleton";
 import { Progress } from "@/components/ui/progress";
+import Grade from "@/components/Grade";
+
+export const MarksContext = createContext(0)
 
 interface PageProps {
   params: {
@@ -130,7 +133,7 @@ const Page = ({ params }: PageProps) => {
   //   console.log("effect workign")
   //   console.log(res)
   // },[res])
-
+  
   return (
     <div className="flex-1 justify-between flex flex-col h-[calc(100vh-3.5rem)]">
       <div className="mx-auto w-full max-w-8xl grow lg:flex lg:px-1 xl:px-2">
@@ -139,10 +142,9 @@ const Page = ({ params }: PageProps) => {
           <p>Error occurred! please try again</p>
         ) : (
           <div className="w-full text-center">
-            <div className="sticky h-14 top-0 z-20 bg-blue-600 rounded-lg p-2 text-white flex justify-between mx-4 md:mx-14">
-              <h2 className="text-xl p-2">Grade : {grade}</h2>
-              <h2 className="text-xl p-2">Total Marks : {marks}</h2>
-            </div>
+            <MarksContext.Provider value={marks}>
+              <Grade />
+            </MarksContext.Provider>
             {/* {data && data.map((question: QuestionItem) => {
               return (
                 <Question key={question.id} {...question} addMarks={addMarks} />
