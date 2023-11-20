@@ -46,6 +46,10 @@ export const appRouter = router({
     const files = await db.file.findMany()
     return files
   }),
+  getAllNotices: publicProcedure.query(async (param:any) => {
+    const notices = await db.notice.findMany()
+    return notices
+  }),
   getFirstYearBooks: publicProcedure.query(async () => {
     const names = ['Anatomy.pdf', 'Physiology.pdf', 'Dental Anatomy & Histology.pdf', 'Biochemistry.pdf']
     const files = await db.file.findMany({
@@ -240,7 +244,6 @@ export const appRouter = router({
 
       return file
     }),
-
   deleteFile: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

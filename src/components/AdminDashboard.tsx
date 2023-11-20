@@ -10,20 +10,21 @@ import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 // import { getUserSubscriptionPlan } from "@/lib/stripe";
 import Book from "./Book";
+import { Input } from "./ui/input";
+import { db } from "@/db";
+import { toast } from "./ui/use-toast";
 
-const Dashboard = () => {
+const Dashboard = ({ mail }: { mail: string | null }) => {
   const [currentlyDeletingFile, setCurrentlyDeletingFile] = useState<
     string | null
   >(null);
 
   const utils = trpc.useContext();
 
-  const { data: allFiles, isLoading } = trpc.getallFiles.useQuery()
-
-
+  const { data: allFiles, isLoading } = trpc.getallFiles.useQuery();
 
   //const { data: books } = trpc.getBooks.useQuery();
-  //let books:any[] 
+  //let books:any[]
   //console.log(allFiles)
   // useEffect(() => {
   //   const { data: firstBook } = trpc.getFirstBook.useQuery();
@@ -47,13 +48,57 @@ const Dashboard = () => {
       setCurrentlyDeletingFile(null);
     },
   });
+  const [title, setTitle] = useState<string>("");
+  const [notice, setNotice] = useState<string>("");
+  const createNotice = async () => {
 
+    const res = await fetch('/api/notice', {
+      method: 'POST',
+      body: JSON.stringify({
+        title,
+        notice,
+        mail
+      })
+    })
+    
+    if(res) {
+      toast({
+        title: "Notice Created",
+        description: "please ensure that the notice is visible once"
+      })
+      console.log(res)
+      setTitle('')
+      setNotice('')
+    }
+    return true
+  };
   return (
     <main className="mx-auto max-w-7xl md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
-        <h1 className="mb-3 font-bold text-5xl text-gray-900">All Books</h1>
+        <h1 className="mb-3 font-bold text-5xl text-gray-900">Admin Dashboard</h1>
 
         <UploadButton isSubscribed={true} />
+      </div>
+      <div className="flex flex-col justify-center items-center m-2 p-2">
+        <div className="flex w-full items-center">
+          <pre>Notice Title</pre>
+          <Input
+            value={title}
+            onChange={(e: any) => setTitle(e.target.value)}
+            className="mx-2 p-2 w-full"
+          />
+        </div>
+        <div className="flex w-full justify-center items-center">
+          <pre>Notice Text:</pre>
+          <Input
+          value={notice}
+            onChange={(e: any) => setNotice(e.target.value)}
+            className="mx-2 p-2 w-full"
+          />
+        </div>
+        <Button className="w-80 m-2 p-2" onClick={createNotice}>
+          Create Notice
+        </Button>
       </div>
       {/* display all user files */}
       {allFiles && allFiles?.length !== 0 ? (

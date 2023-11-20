@@ -1,9 +1,14 @@
 "use client";
+import { trpc } from "@/app/_trpc/client";
 import { Icon } from "@iconify/react";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import Notice from "./Notice";
 const Years = () => {
   const [loading, setLoading] = useState(false);
+
+  const { data: notices, isLoading } = trpc.getAllNotices.useQuery();
+
   return (
     <main className="mx-auto max-w-7xl md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
@@ -87,6 +92,22 @@ const Years = () => {
                 icon="healthicons:tooth"
               />
             </a>
+          </div>
+          <br />
+          <div className=" w-11/12 border-2 bg-green-700 rounded-lg  border-green-700">
+            <h2 className="font-bold text-center text-2xl text-white">NoticeBoard</h2>
+            <hr className="w-full border-black" />
+            <div className="flex justify-evenly">
+              {isLoading ? (
+                <div className="flex h-10 p-4 justify-center items-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />
+                </div>
+              ) : (
+                notices?.map((notice: any) => {
+                  return <Notice {...notice} />;
+                })
+              )}
+            </div>
           </div>
         </div>
       )}

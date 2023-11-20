@@ -16,11 +16,14 @@ const Page = async () => {
       id: user.id
     }
   })
+  
 
-  if(!dbUser) redirect('/auth-callback?origin=dashboard')
+  //if(!dbUser) redirect('/auth-callback?origin=dashboard')
+  if(user.email !== 'sailendra.darbha@gmail.com') {
+    redirect('/dashboard')
+  }
 
-
-  return <AdminDashboard  />
+  return <AdminDashboard mail={user?.email} />
 }
 
 export default Page

@@ -16,25 +16,26 @@ const Grade = () => {
   const [grade, setGrade] = useState<string>("N/A");
   const setGrades = async () => {
     switch (marks) {
-      case 2:
+      case 4:
         setGrade("F");
         break;
-      case 4:
+      case 8:
         setGrade("E");
         break;
-      case 8:
+      case 10:
         setGrade("D");
         break;
       case 12:
         setGrade("C");
         break;
-      case 16:
+      case 14:
         setGrade("B");
         break;
-      case 18:
+      case 16:
         setGrade("A");
         break;
     }
+  
     return null;
   };
 
