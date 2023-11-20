@@ -60,7 +60,7 @@ const Book = ({ id, name }: { id: string; name: string }) => {
                   className="w-full"
                   variant="default"
                 >
-                  Practical
+                  Viva
                 </Button>
               </Link>
             </div>
