@@ -1,5 +1,5 @@
 "use client";
-import { MarksContext } from "@/app/years/[subject]/page";
+
 import {
   Card,
   CardContent,
@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useContext, useEffect, useState } from "react";
+import { MarksContext } from "./MarksContext";
 
 const Grade = () => {
   const marks = useContext(MarksContext)

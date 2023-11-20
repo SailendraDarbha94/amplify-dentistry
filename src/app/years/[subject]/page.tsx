@@ -7,8 +7,9 @@ import Question from "@/components/Question";
 import Skeleton from "react-loading-skeleton";
 import { Progress } from "@/components/ui/progress";
 import Grade from "@/components/Grade";
+import { MarksContext } from "@/components/MarksContext";
 
-export const MarksContext = createContext(0)
+//export const MarksContext = createContext(0)
 
 interface PageProps {
   params: {
