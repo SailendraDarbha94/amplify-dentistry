@@ -1,9 +1,11 @@
 "use client";
 
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/server";
 import { ArrowRight, FileSignature, Home, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { DropdownMenuSeparator } from "./ui/dropdown-menu";
 
 const MobileNav = ({ isAuth }: { isAuth: boolean }) => {
   const [isOpen, setOpen] = useState<boolean>(false);
@@ -74,7 +76,7 @@ const MobileNav = ({ isAuth }: { isAuth: boolean }) => {
                     className="flex items-center w-full font-semibold"
                     href="/dashboard"
                   >
-                    Home 
+                    Home
                     <Home className="text-blue-600 h-4 w-4 ml-auto" />
                   </Link>
                 </li>
@@ -89,13 +91,14 @@ const MobileNav = ({ isAuth }: { isAuth: boolean }) => {
                   </Link>
                 </li>
                 <li className="my-3 h-px w-full bg-gray-300" />
-                <li>
-                  <Link
+                <DropdownMenuSeparator />
+                <li className="my-3 h-px w-full bg-gray-300">
+                  {/* <Link
                     className="flex items-center w-full font-semibold"
                     href="/sign-out"
-                  >
-                    Sign out
-                  </Link>
+                  > */}
+                    <LogoutLink>Log out</LogoutLink>
+                  {/* </Link> */}
                 </li>
               </>
             )}
