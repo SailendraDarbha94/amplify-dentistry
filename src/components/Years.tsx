@@ -97,7 +97,7 @@ const Years = () => {
           <div className=" w-11/12 border-2 bg-green-700 rounded-lg  border-green-700">
             <h2 className="font-bold text-center text-2xl text-white">NoticeBoard</h2>
             <hr className="w-full border-black" />
-            <div className="flex justify-evenly overflow-x-scroll">
+            <div className="flex justify-evenly overflow-scroll">
               {isLoading ? (
                 <div className="flex h-10 p-4 justify-center items-center">
                   <Loader2 className="h-8 w-8 animate-spin text-zinc-800" />

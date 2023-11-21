@@ -17,15 +17,15 @@ interface Props {
 
 const Notice = ({ title, notice, author }: Props) => {
   return (
-    <Card className="text-center bg-yellow-300 border-yellow-300 min-w-fit max-h-80">
+    <Card className="text-center bg-yellow-300 border-yellow-300 text-sm min-w-sm max-h-80">
       <CardHeader>
-        <CardTitle className="text-lg font-bold">{title}</CardTitle>
+        <CardTitle className="text-md font-bold">{title}</CardTitle>
         <CardDescription>
           <hr className="w-full border-green-800" />
         </CardDescription>
       </CardHeader>
       <CardContent className="">
-        <p className="font-semibold">{notice}</p>
+        <p className="">{notice}</p>
       </CardContent>
       <CardFooter className="">
         <p className="ml-auto text-sm">Posted By {author}</p>
