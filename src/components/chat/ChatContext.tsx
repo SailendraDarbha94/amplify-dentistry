@@ -37,7 +37,7 @@ export const ChatContextProvider = ({
   const [message, setMessage] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
-  const utils = trpc.useContext()
+  const utils = trpc.useUtils()
 
   const { toast } = useToast()
 
@@ -56,11 +56,11 @@ export const ChatContextProvider = ({
           message,
         }),
       })
-
+      
       if (!response.ok) {
         throw new Error('Failed to send message')
       }
-      //console.log(response)
+
       return response.body
     },
     onMutate: async ({ message }) => {

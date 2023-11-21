@@ -11,12 +11,10 @@ import { PLANS } from '@/config/stripe'
 
 interface ChatWrapperProps {
   fileId: string
-  isSubscribed: boolean
 }
 
 const ChatWrapper = ({
   fileId,
-  isSubscribed,
 }: ChatWrapperProps) => {
   const { data, isLoading } =
     trpc.getFileUploadStatus.useQuery(
@@ -79,7 +77,7 @@ const ChatWrapper = ({
             <h3 className='font-semibold text-xl'>
               Too many pages in Book
             </h3>
-            <p className='text-zinc-500 text-sm'>
+            {/* <p className='text-zinc-500 text-sm'>
               Your{' '}
               <span className='font-medium'>
                 {isSubscribed ? 'Pro' : 'Free'}
@@ -91,7 +89,7 @@ const ChatWrapper = ({
                 : PLANS.find((p) => p.name === 'Free')
                     ?.pagesPerPdf}{' '}
               pages per Book.
-            </p>
+            </p> */}
             <Link
               href='/dashboard'
               className={buttonVariants({
@@ -110,7 +108,7 @@ const ChatWrapper = ({
 
   return (
     <ChatContextProvider fileId={fileId}>
-      <div className='relative min-h-[calc(100vh-3.5rem)] bg-zinc-50 flex divide-y divide-zinc-200 flex-col justify-between gap-2'>
+      <div className='relative min-h-full bg-zinc-50 flex divide-y divide-zinc-200 flex-col justify-between gap-2'>
         <div className='flex-1 justify-between flex flex-col mb-28'>
           <Messages fileId={fileId} />
         </div>
