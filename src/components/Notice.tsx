@@ -17,7 +17,7 @@ interface Props {
 
 const Notice = ({ title, notice, author }: Props) => {
   return (
-    <Card className="text-center bg-yellow-300 border-yellow-300 text-sm min-w-sm max-h-80">
+    <Card className="text-center mx-2 bg-yellow-300 border-yellow-300 text-sm min-w-sm max-h-80">
       <CardHeader>
         <CardTitle className="text-md font-bold">{title}</CardTitle>
         <CardDescription>
