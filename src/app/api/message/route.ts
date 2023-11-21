@@ -22,13 +22,12 @@ export const POST = async (req: NextRequest) => {
   if (!userId)
     return new Response('Unauthorized', { status: 401 })
 
-  const { fileId, message } = 
+  const { fileId, message } =
     SendMessageValidator.parse(body)
 
   const file = await db.file.findFirst({
     where: {
-      id: fileId,
-      //userId,
+      id: fileId
     },
   })
 
@@ -84,7 +83,7 @@ export const POST = async (req: NextRequest) => {
 
   const response = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
-    temperature: 0.8,
+    temperature: 0.6,
     stream: true,
     messages: [
       {
@@ -94,8 +93,7 @@ export const POST = async (req: NextRequest) => {
       },
       {
         role: 'user',
-        //content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
-        content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format.
+        content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
         
   \n----------------\n
   
