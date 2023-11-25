@@ -9,9 +9,20 @@ export default function Home() {
   return (
     <>
       <MaxWidthWrapper className="mb-12 mt-28 sm:mt-40 flex flex-col items-center justify-center text-center">
+        <div className="mx-auto flex max-w-fit items-center justify-center space-x-2 overflow-hidden rounded-xl border border-gray-200 bg-white px-7 py-2 mb-4 backdrop-blur border-none">
+          <div className="aspect-square h-full w-full">
+            <Image
+              height={400}
+              width={200}
+              src="/logo.png"
+              alt="profile picture"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
         <div className="mx-auto mb-4 flex max-w-fit items-center justify-center space-x-2 overflow-hidden rounded-full border border-gray-200 bg-white px-7 py-2 shadow-md backdrop-blur transition-all hover:border-gray-300 hover:bg-white/50">
           <p className="text-sm font-semibold text-gray-700">
-            AmpDent is now in public beta!
+            Amplify Dentistry is now in public beta!
           </p>
         </div>
         <h1 className="max-w-4xl text-5xl font-bold md:text-6xl lg:text-7xl">
@@ -19,8 +30,8 @@ export default function Home() {
           simple steps.
         </h1>
         <p className="mt-5 max-w-prose text-zinc-700 sm:text-lg">
-          Ampdent allows you to have conversations with any Dental Book. This
-          allows you to ask any doubts you have directly to your book.
+          Our platform allows you to have conversations with any Dental Book.
+          This allows you to ask any doubts you have directly to your book.
         </p>
 
         {/* <Link
