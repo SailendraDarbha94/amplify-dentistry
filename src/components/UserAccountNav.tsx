@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from './ui/avatar'
 import Image from 'next/image'
 import { Icons } from './Icons'
 import Link from 'next/link'
-import { Gem, FileSignature } from 'lucide-react'
+import { Gem, FileSignature, Home } from 'lucide-react'
 import { LogoutLink } from '@kinde-oss/kinde-auth-nextjs/server'
 
 interface UserAccountNavProps {
@@ -32,7 +32,7 @@ const UserAccountNav = async ({
       <DropdownMenuTrigger
         asChild
         className='overflow-visible'>
-        <Button className='rounded-full h-8 w-8 aspect-square bg-slate-400'>
+        <Button className='h-8 w-8 aspect-square'>
           <Avatar className='relative w-8 h-8'>
             {imageUrl ? (
               <div className='relative aspect-square h-full w-full'>
@@ -40,6 +40,7 @@ const UserAccountNav = async ({
                   fill
                   src='/light_logo.png'
                   alt='profile picture'
+                  className='bg-white'
                   referrerPolicy='no-referrer'
                 />
               </div>
@@ -72,7 +73,8 @@ const UserAccountNav = async ({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem asChild>
-          <Link href='/dashboard'>Home</Link>
+          <Link href='/dashboard'>Home<Home className="text-blue-600 h-4 w-4 mx-2" /></Link>
+          
         </DropdownMenuItem>
 
         {/* <DropdownMenuItem asChild>
