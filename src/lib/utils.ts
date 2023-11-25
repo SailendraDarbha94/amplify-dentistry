@@ -13,7 +13,7 @@ export function absoluteUrl(path: string) {
 }
 
 export function constructMetadata({
-  title = "AmpDent - the SaaS for dental students",
+  title = "AmpDent - a platform for dental community",
   description = "Ampdent is a unique and innovative platform to help Dental students study in a more engaging & interactive way.",
   image = "/thumbnail.png",
   icons = "/favicon.ico",
