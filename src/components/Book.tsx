@@ -15,7 +15,7 @@ const Book = ({ id, name }: { id: string; name: string }) => {
   return (
     <li
     key={id}
-    className="col-span-1 h-96 max-h-96 max-w-xs divide-y divide-gray-200 rounded-lg bg-white shadow transition hover:shadow-lg mx-4 md:mx-0"
+    className="col-span-1 h-96 mx-auto max-h-96 max-w-xs divide-y divide-gray-200 rounded-lg bg-white shadow transition hover:shadow-lg md:mx-0"
   >
     <Image
       src={`/subjects/${name.split(".")[0]}.png`}
