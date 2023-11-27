@@ -90,7 +90,6 @@ const MobileNav = ({ isAuth }: { isAuth: boolean }) => {
                     <FileSignature className="text-blue-600 h-4 w-4 ml-auto" />
                   </Link>
                 </li>
-                <li className="my-3 h-px w-full bg-gray-300" />
                 <DropdownMenuSeparator />
                 <li className="my-3 h-px w-full bg-gray-300">
                   {/* <Link

@@ -95,7 +95,6 @@ const UserAccountNav = async ({
               <FileSignature className='text-blue-600 h-4 w-4 ml-2' />
             </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
 
         <DropdownMenuItem className='cursor-pointer'>
             <LogoutLink>Log out</LogoutLink>
