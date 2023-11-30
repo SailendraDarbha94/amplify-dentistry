@@ -74,12 +74,7 @@ const Page = () => {
             <h2 className="text-xl p-2">Grade : {grade}</h2>
             <h2 className="text-xl p-2">Total Marks : {marks}</h2>
           </div>
-          {res ? (res.map((question: QuestionItem) => {
-            return (
-              <p key={question.id}>this page is for testing new features</p>
-              // <Question key={question.id} {...question} addMarks={addMarks} />
-            );
-          })) : <Skeleton height={100} className="my-2" count={3} />}
+          <Skeleton height={100} className="my-2" count={3} />
         </div>
       </div>
     </div>
