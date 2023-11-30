@@ -76,7 +76,8 @@ const Page = () => {
           </div>
           {res ? (res.map((question: QuestionItem) => {
             return (
-              <Question key={question.id} {...question} addMarks={addMarks} />
+              <p>this page is for testing new features</p>
+              // <Question key={question.id} {...question} addMarks={addMarks} />
             );
           })) : <Skeleton height={100} className="my-2" count={3} />}
         </div>

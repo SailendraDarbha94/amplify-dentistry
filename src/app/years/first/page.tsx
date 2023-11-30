@@ -3,10 +3,17 @@ import { trpc } from "@/app/_trpc/client";
 import Skeleton from "react-loading-skeleton";
 import Book from "@/components/Book";
 import { useEffect } from "react";
+import { db } from "@/db";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { redirect } from "next/navigation";
 
 const Page = () => {
   const { data: allFiles, isLoading } = trpc.getFirstYearBooks.useQuery();
+  const { getUser } = getKindeServerSession()
+  const user = getUser()
 
+  if (!user || !user.id) redirect('/auth-callback?origin=dashboard')
+  
   return (
     <main className="mx-auto max-w-7xl md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
