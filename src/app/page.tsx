@@ -30,8 +30,11 @@ export default function Home() {
           simple steps.
         </h1>
         <p className="mt-5 max-w-prose text-zinc-700 sm:text-lg">
-          Our platform allows you to have conversations with any Dental Book.
-          This allows you to ask any doubts you have directly to your book.
+          Our platform aspires to make learning dentistry an interactive and
+          rewarding experience. By leveraging the power of Gen AI, we help
+          students ask their questions directly to their books, we help students
+          practice quiz questions, and we have so much more planned for the
+          entire dental community in future.
         </p>
 
         {/* <Link
@@ -176,6 +179,34 @@ export default function Home() {
               />
             </div>
           </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-6 lg:px-8">
+          <p className="text-xl font-semibold text-center -mb-16 mt-16">Difference between ChatGPT and Us</p>
+          <div className="mt-16 flex flex-col md:flex-row justify-between sm:mt-24">
+            <div className="rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:rounded-2xl lg:p-4">
+              <Image
+                src="/ampdentgpt.png"
+                alt="uploading preview"
+                width={800}
+                height={600}
+                quality={100}
+                className="rounded-md bg-white p-2 sm:p-8 md:p-20 shadow-2xl ring-1 ring-gray-900/10"
+              />
+            </div>
+            <div className="rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:rounded-2xl lg:p-4">
+              <Image
+                src="/chatgpt.png"
+                alt="uploading preview"
+                width={800}
+                height={600}
+                quality={100}
+                className="rounded-md bg-white p-2 sm:p-8 md:p-20 shadow-2xl ring-1 ring-gray-900/10"
+              />
+            </div>
+          </div>
+          <p className="m-2 p-2 text-gray-600">
+            While ChatGPT can be confused with typos or it may not have an accurate context of what you may be asking, Our platform knows the context of the subject related to which you may be having doubts and will answer accordingly.
+          </p>
         </div>
       </div>
     </>
