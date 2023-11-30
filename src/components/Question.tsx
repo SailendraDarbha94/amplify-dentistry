@@ -13,7 +13,7 @@ import { Toast } from "@/components/ui/toast";
 import { useToast } from "@/components/ui/use-toast";
 import { useContext, useState } from "react";
 
-const Question = ({ question, answer, options, addMarks }: {question:string, answer:string, options:string[], addMarks:Function }) => {
+const Question = ({ question, answer, options, addMarks, attemptQ }: {question:string, answer:string, options:string[], addMarks:Function, attemptQ: Function }) => {
 
   const [answered, setAnswered] = useState<boolean>(false);
   const [correctAnswered, setCorrectAnswered] = useState<boolean>(false);
@@ -21,6 +21,7 @@ const Question = ({ question, answer, options, addMarks }: {question:string, ans
   const { toast } = useToast();
 
   const checkAnswer = async (ans: string) => {
+    attemptQ()
     setAnswered(true);
     if (ans === answer) {
       setCorrectAnswered(true);

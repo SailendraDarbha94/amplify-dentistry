@@ -1,6 +1,12 @@
 "use client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { createContext, useContext, useEffect, useLayoutEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
 import { promptsGenerator } from "@/lib/utils";
 import { QuestionItem } from "@/config/mcqs";
 import Question from "@/components/Question";
@@ -8,6 +14,8 @@ import Skeleton from "react-loading-skeleton";
 import { Progress } from "@/components/ui/progress";
 import Grade from "@/components/Grade";
 import { MarksContext } from "@/components/MarksContext";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 
 //export const MarksContext = createContext(0)
 
@@ -79,6 +87,14 @@ const Page = ({ params }: PageProps) => {
     setMarks((marks) => marks + 2);
     setGrades();
   };
+  const [testing, setTesting] = useState<boolean>(false);
+  const [attempts, setAttempts] = useState<number>(0);
+  const attemptQ = async () => {
+    setAttempts((attempt: number) => attempt + 1);
+    if (attempts === 9) {
+      setTesting(true);
+    }
+  };
   const PROMPT = `generate 10 quiz questions in the subject of ${
     subject.split(".")[0]
   } for 
@@ -134,13 +150,27 @@ const Page = ({ params }: PageProps) => {
   //   console.log("effect workign")
   //   console.log(res)
   // },[res])
-  
+
   return (
     <div className="flex-1 justify-between flex flex-col h-[calc(100vh-3.5rem)]">
       <div className="mx-auto w-full max-w-8xl grow lg:flex lg:px-1 xl:px-2">
         {/* TODO: create years component */}
-        {bug ? (
-          <p>Error occurred! please try again</p>
+        {testing ? (
+          <div className="w-full text-center font-bold text-3xl mt-24">
+            You have finished the quiz !
+            <br />
+            <p className="m-2 p-2">
+              <Link
+                href="/dashboard"
+                className={buttonVariants({
+                  variant: "default",
+                  size: "sm",
+                })}
+              >
+                Home
+              </Link>
+            </p>
+          </div>
         ) : (
           <div className="w-full text-center">
             <MarksContext.Provider value={marks}>
@@ -158,6 +188,7 @@ const Page = ({ params }: PageProps) => {
                     key={question.id}
                     {...question}
                     addMarks={addMarks}
+                    attemptQ={attemptQ}
                   />
                 );
               })
