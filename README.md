@@ -3,6 +3,8 @@ Clone the repo
 
 Then, run npm install
 
+it will take time please wait
+
 Then, to run the development server:
 
 ```bash
