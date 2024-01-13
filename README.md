@@ -3,6 +3,9 @@ Clone the repo
 
 Then, run npm install
 
+need to make static pages independent of chatGPT
+
+
 it will take time please wait
 
 Then, to run the development server:
