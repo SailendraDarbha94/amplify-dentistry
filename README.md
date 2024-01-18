@@ -5,7 +5,7 @@ Then, run npm install
 
 need to make static pages independent of chatGPT
 
-
+need to make this deploy worthy again
 it will take time please wait
 
 Then, to run the development server:
