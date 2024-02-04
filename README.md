@@ -3,6 +3,8 @@ Clone the repo
 
 Then, run npm install
 
+changes coming soon
+
 need to make static pages independent of chatGPT
 
 need to make this deploy worthy again
