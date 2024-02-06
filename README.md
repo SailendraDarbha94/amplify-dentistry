@@ -1,6 +1,8 @@
 ## Getting Started
 Clone the repo 
 
+
+changing the name first
 Then, run npm install
 
 changes coming soon
