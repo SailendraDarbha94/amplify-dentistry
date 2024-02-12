@@ -1,7 +1,7 @@
 ## Getting Started
 Clone the repo 
 
-
+enough is wnough 
 changing the name first
 Then, run npm install
 
