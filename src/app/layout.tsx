@@ -8,6 +8,7 @@ import 'react-loading-skeleton/dist/skeleton.css'
 import 'simplebar-react/dist/simplebar.min.css'
 
 import { Toaster } from '@/components/ui/toaster'
+import Navigatron from '@/components/Navigatron'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,7 +28,8 @@ export default function RootLayout({
             inter.className
           )}>
           <Toaster />
-          <Navbar />
+          {/* <Navbar /> */}
+          <Navigatron />
           {children}
         </body>
       </Providers>
