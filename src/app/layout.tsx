@@ -28,8 +28,8 @@ export default function RootLayout({
             inter.className
           )}>
           <Toaster />
-          {/* <Navbar /> */}
-          <Navigatron />
+          <Navbar />
+          {/* <Navigatron /> */}
           {children}
         </body>
       </Providers>
