@@ -6,28 +6,44 @@ import { ArrowRight } from "lucide-react";
 import UserAccountNav from "./UserAccountNav";
 import MobileNav from "./MobileNav";
 import { useAuthContext } from "@/context/AuthContext";
+import { Button } from "@nextui-org/react";
+import { getAuth } from "firebase/auth";
+import firebase_app from "@/firebase/config";
+import { toast } from "./ui/use-toast";
+import { useRouter } from "next/navigation";
 
 const Navbar = () => {
   const { user }: any = useAuthContext();
-
+  const auth = getAuth(firebase_app);
+  const router = useRouter()
+  const logouter = async () => {
+    try {
+      await auth.signOut();
+      router.push("/");
+    } catch (err) {
+      if(err){
+        console.error("error occured", err)
+      }
+    }
+  };
   return (
     <nav className="sticky h-14 inset-x-0 top-0 z-30 w-full border-b border-gray-200 bg-white/75 backdrop-blur-lg transition-all">
       <MaxWidthWrapper>
         <div className="flex h-14 items-center justify-between border-b border-zinc-200">
           <Link href="/" className="flex z-40 font-bold">
-            <span className="text-xl">AmplifyDentistry</span>
+            <span className="text-lg">AmplifyDentistry</span>
           </Link>
           {user ? (
             <div className="flex">
               <Link
                 href="/auth/sign-up"
-                className="flex z-40 mx-2 font-semibold "
+                className="flex z-40 text-blue-700 mx-2 font-semibold "
               >
-                <span>ClassRooms</span>
-              </Link>
-              <Link href="/auth/login" className="flex z-40 mx-2 font-semibold">
                 <span>Profile</span>
               </Link>
+              <Button size="md" color="danger" className="text-red-500 font-semibold" onClick={logouter}>
+                LogOut
+              </Button>
             </div>
           ) : (
             <div className="flex">

@@ -31,18 +31,11 @@ export const AuthContextProvider = ({ children }: any) => {
 
   const authenticator = () => {
     signInWithRedirect(auth, provider);
-    
+    auth.setPersistence
   };
   return (
     <AuthContext.Provider value={{ user }}>
-      {loading ? <div>Loading...        <Button
-          onClick={authenticator}
-          color="primary"
-          size="lg"
-          className="m-2 p-2 rounded-xl"
-        >
-          Click me
-        </Button></div> : children}
+      {loading ? <div>Loading...</div> : children}
     </AuthContext.Provider>
   );
 };

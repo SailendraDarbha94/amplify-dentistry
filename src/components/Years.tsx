@@ -6,9 +6,15 @@ import { useState } from "react";
 import Notice from "./Notice";
 const Years = () => {
   const [loading, setLoading] = useState(false);
-
-  const { data: notices, isLoading } = trpc.getAllNotices.useQuery();
-
+  const isLoading = false;
+  //const { data: notices, isLoading } = trpc.getAllNotices.useQuery();
+  const notices:any[] = [
+    {
+      title: "Resumption of Services",
+      notice: "This is to inform you all that Amplify Dentistry will be resuming services soon",
+      author: "AmpDent"
+    }
+  ] 
   return (
     <main className="mx-auto max-w-7xl md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:gap-0">
@@ -104,7 +110,7 @@ const Years = () => {
                 </div>
               ) : (
                 notices?.map((notice: any) => {
-                  return <Notice key={notice.id} {...notice} />;
+                  return <Notice key={notice.title} {...notice} />;
                 })
               )}
             </div>
