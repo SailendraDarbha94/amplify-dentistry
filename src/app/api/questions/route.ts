@@ -11,7 +11,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { OpenAIStream, StreamingTextResponse } from "ai";
 import OpenAI from "openai";
 
-const openais = new OpenAI();
+
+const openais = new OpenAI({
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+});
 
 export const maxDuration = 50;
 
@@ -34,12 +37,6 @@ export const POST = async (req: NextRequest) => {
   //console.log("req.json = ",body)
 
   //console.log("json version", body)
-  const { getUser } = getKindeServerSession();
-  const user = getUser();
-
-  const { id: userId } = user;
-
-  if (!userId) return new Response("Unauthorized", { status: 401 });
 
   //   const { fileId, message } =
   //     SendMessageValidator.parse(body)
@@ -72,7 +69,7 @@ export const POST = async (req: NextRequest) => {
       },
       { role: "user", content: body },
     ],
-    model: "gpt-3.5-turbo-1106",
+    model: "gpt-3.5-turbo",
     response_format: { type: "json_object" },
     stream: false,
   });

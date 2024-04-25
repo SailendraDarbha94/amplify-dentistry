@@ -161,7 +161,7 @@ const Page = ({ params }: PageProps) => {
             <br />
             <p className="m-2 p-2">
               <Link
-                href="/dashboard"
+                href="/years"
                 className={buttonVariants({
                   variant: "default",
                   size: "sm",
