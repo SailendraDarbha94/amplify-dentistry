@@ -4,7 +4,7 @@ Clone the repo
 enough is wnough 
 changing the name first
 Then, run npm install
-
+then i will not do anything... what is wrong with me
 changes coming soon
 
 need to make static pages independent of chatGPT
