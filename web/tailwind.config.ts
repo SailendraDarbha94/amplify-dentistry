@@ -14,6 +14,10 @@ const config: Config = {
       pExtraBold: ["pExtraBold", "sans-serif"]
     },
     extend: {
+      colors: {
+        primary: "#2560FF",
+        primaryMore: "#174CDD"
+      },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":
