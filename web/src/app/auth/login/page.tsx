@@ -1,25 +1,53 @@
 "use client";
 
-import { auth } from "@/lib/firebase";
-import {
-  browserLocalPersistence,
-  browserSessionPersistence,
-  inMemoryPersistence,
-  setPersistence,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+
+
+import app from "@/lib/firebase";
+
+import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signInWithEmailAndPassword } from "firebase/auth";
+
+
+// import {
+//   browserLocalPersistence,
+//   browserSessionPersistence,
+//   getAuth,
+//   inMemoryPersistence,
+//   setPersistence,
+//   signInWithEmailAndPassword,
+// } from "firebase/auth";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const Page = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const router = useRouter();
+  
+  const somethingElse = async () => {
+    const auth = await getAuth(app)
+    setPersistence(auth, browserLocalPersistence).then(() => {
+      signInWithEmailAndPassword(auth, email, password).then((cb) => {
+        console.log(cb)
+      })
+    })
+  }
 
+  const checkingUser = async () => {
+    const users = await getAuth(app)
+    onAuthStateChanged(users, user => {
+      console.log(user)
+    })
+  }
 
+  useEffect(() => {
+    const users =  getAuth(app)
+    onAuthStateChanged(users, user => {
+      console.log(user)
+    })
+  },[])
   const newLoginUser = async () => {
-    const res = await fetch('/api/auth', {
+    const res = await fetch('/api/auth/login', {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -29,30 +57,45 @@ const Page = () => {
         password: password
       }),
     })
-    const { data }= await res.json()
+    const { data } = await res.json()
     console.log(data)
+    if (data === "success"){
+      const cook = document.cookie
+      //console.log(cook)
+      router.push('/')
+    }
   }
+  
 
   const loginUser = async () => {
     if (!email || !password) {
       alert("Please enter credentials");
     } else {
-      await setPersistence(auth, browserLocalPersistence).then(() => {
-        signInWithEmailAndPassword(auth, email, password)
-          .then((userCredential) => {
-            //alert("USER LOGGED IN");
-            console.log("USER LOGGED IN", userCredential);
-            router.push("/home");
-          })
-          .catch((err) => {
-            setEmail("");
-            setPassword("");
-            alert("ERROR OCCURED! Please try again later");
-            console.log(err);
-          });
-      });
+      console.log("something")
+      // await setPersistence(auth, browserLocalPersistence).then(() => {
+      //   signInWithEmailAndPassword(auth, email, password)
+      //     .then((userCredential) => {
+      //       //alert("USER LOGGED IN");
+      //       console.log("USER LOGGED IN", userCredential);
+      //       router.push("/home");
+      //     })
+      //     .catch((err) => {
+      //       setEmail("");
+      //       setPassword("");
+      //       alert("ERROR OCCURED! Please try again later");
+      //       console.log(err);
+      //     });
+      // });
     }
   };
+  async function kickUser() {
+    const auth = await  getAuth(app);
+    await auth.signOut().then(() => {
+      console.log("siogned out")
+    })
+
+  }
+
   return (
     <main>
       <section className="bg-gray-50 dark:bg-gray-900 font-pMedium p-4">
@@ -135,10 +178,24 @@ const Page = () => {
                 </div> */}
                 <button
                   //type="submit"
-                  onClick={newLoginUser}
+                  onClick={somethingElse}
                   className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                 >
                   Login
+                </button>
+                <button
+                  //type="submit"
+                  onClick={checkingUser}
+                  className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                >
+                  Check user
+                </button>
+                <button
+                  //type="submit"
+                  onClick={kickUser}
+                  className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                >
+                  Logout
                 </button>
                 <p className="text-sm font-light text-gray-500 dark:text-gray-400">
                   Don&apos;t have an account yet?{" "}
