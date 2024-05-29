@@ -1,21 +1,13 @@
 "use client";
-
-
-
 import app from "@/lib/firebase";
-
-import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signInWithEmailAndPassword } from "firebase/auth";
-
-
-// import {
-//   browserLocalPersistence,
-//   browserSessionPersistence,
-//   getAuth,
-//   inMemoryPersistence,
-//   setPersistence,
-//   signInWithEmailAndPassword,
-// } from "firebase/auth";
-
+import {
+  browserLocalPersistence,
+  getAuth,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -23,81 +15,52 @@ const Page = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const router = useRouter();
-  
-  const somethingElse = async () => {
-    const auth = await getAuth(app)
-    setPersistence(auth, browserLocalPersistence).then(() => {
-      signInWithEmailAndPassword(auth, email, password).then((cb) => {
-        console.log(cb)
-      })
-    })
-  }
+  // const somethingElse = async () => {
+  //   const auth = await getAuth(app)
+  //   setPersistence(auth, browserLocalPersistence).then(() => {
+  //     signInWithEmailAndPassword(auth, email, password).then((cb) => {
+  //       console.log(cb)
+  //     })
+  //   })
+  // }
 
-  const checkingUser = async () => {
-    const users = await getAuth(app)
-    onAuthStateChanged(users, user => {
-      console.log(user)
-    })
+  const logouter = async () => {
+    const auth = await getAuth(app);
+    await signOut(auth)
   }
-
-  useEffect(() => {
-    const users =  getAuth(app)
-    onAuthStateChanged(users, user => {
-      console.log(user)
-    })
-  },[])
-  const newLoginUser = async () => {
-    const res = await fetch('/api/auth/login', {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email,
-        password: password
-      }),
-    })
-    const { data } = await res.json()
-    console.log(data)
-    if (data === "success"){
-      const cook = document.cookie
-      //console.log(cook)
-      router.push('/')
-    }
-  }
-  
-
   const loginUser = async () => {
-    if (!email || !password) {
-      alert("Please enter credentials");
-    } else {
-      console.log("something")
-      // await setPersistence(auth, browserLocalPersistence).then(() => {
-      //   signInWithEmailAndPassword(auth, email, password)
-      //     .then((userCredential) => {
-      //       //alert("USER LOGGED IN");
-      //       console.log("USER LOGGED IN", userCredential);
-      //       router.push("/home");
-      //     })
-      //     .catch((err) => {
-      //       setEmail("");
-      //       setPassword("");
-      //       alert("ERROR OCCURED! Please try again later");
-      //       console.log(err);
-      //     });
-      // });
+    // const res = await fetch('/api/auth/login', {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify({
+    //     email: email,
+    //     password: password
+    //   }),
+    // })
+    // const { data } = await res.json()
+    // console.log(data)
+    // if (data === "success"){
+    //   router.push('/')
+    // }
+    try {
+      const auth = await getAuth(app);
+      setPersistence(auth, browserLocalPersistence).then(() => {
+        signInWithEmailAndPassword(auth, email, password).then((cb) => {
+          console.log(cb);
+          if(cb.user){
+            router.push('/home')
+          }
+        });
+      });
+    } catch (err) {
+      console.log("Error Occured", err);
     }
   };
-  async function kickUser() {
-    const auth = await  getAuth(app);
-    await auth.signOut().then(() => {
-      console.log("siogned out")
-    })
-
-  }
 
   return (
-    <main>
+    <main className="min-h-screen">
       <section className="bg-gray-50 dark:bg-gray-900 font-pMedium p-4">
         <div className="flex flex-col items-center justify-center mx-auto md:min-h-screen lg:py-0">
           <a
@@ -178,21 +141,14 @@ const Page = () => {
                 </div> */}
                 <button
                   //type="submit"
-                  onClick={somethingElse}
+                  onClick={loginUser}
                   className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                 >
                   Login
                 </button>
                 <button
                   //type="submit"
-                  onClick={checkingUser}
-                  className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-                >
-                  Check user
-                </button>
-                <button
-                  //type="submit"
-                  onClick={kickUser}
+                  onClick={logouter}
                   className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                 >
                   Logout

@@ -2,7 +2,7 @@ import app from "@/lib/firebase"
 import { getAuth } from "firebase/auth"
 
 export async function POST(req:Request) {
-    let res=null;
+    let res:any = null;
     try {
         const auth = getAuth(app)
         await auth.signOut().then(() => {

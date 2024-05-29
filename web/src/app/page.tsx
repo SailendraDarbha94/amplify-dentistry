@@ -1,17 +1,4 @@
-"use client"
-import app from "@/lib/firebase";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import Image from "next/image";
-import { useEffect } from "react";
-
-export default function Home() {
-
-  useEffect(() => {
-    const users =  getAuth(app)
-    onAuthStateChanged(users, user => {
-      console.log(user)
-    })
-  },[])
+const Page = () => {
   return (
     <main className="flex min-h-screen tracking-wider flex-col items-center justify-between p-4 md:p-14 lg:p-24">
       <section className="bg-white rounded-lg dark:bg-gray-900 mb-10">
@@ -249,3 +236,4 @@ export default function Home() {
     </main>
   );
 }
+export default Page
