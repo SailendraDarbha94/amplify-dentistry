@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { onAuthStateChanged } from "firebase/auth";
 import auth from "@/lib/firebase";
+import ToastContextProvider from "@/providers/ToastContextProvider";
+import NavBar from "@/components/NavBar";
 
 export const metadata: Metadata = {
   title: "Amplify Dentistry",
@@ -15,7 +17,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ToastContextProvider>
+          <div className="z-0 sticky top-2 right-0">
+            <NavBar />
+          </div>
+          {children}
+        </ToastContextProvider>
+      </body>
     </html>
   );
 }

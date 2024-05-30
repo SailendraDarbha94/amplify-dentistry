@@ -11,6 +11,10 @@
   src: url("../../public/fonts/Poppins-Medium.ttf");
 }
 @font-face {
+  font-family: "pSemiBold";
+  src: url("../../public/fonts/Poppins-SemiBold.ttf");
+}
+@font-face {
   font-family: "pBold";
   src: url("../../public/fonts/Poppins-Bold.ttf");
 }

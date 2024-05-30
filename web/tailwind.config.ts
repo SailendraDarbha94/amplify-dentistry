@@ -11,12 +11,14 @@ const config: Config = {
       pLight: ["pLight", "sans-serif"],
       pMedium: ["pMedium", "sans-serif"],
       pBold: ["pBold", "sans-serif"],
+      pSemiBold: ["pSemiBold", "sans-serif"],
       pExtraBold: ["pExtraBold", "sans-serif"]
     },
     extend: {
       colors: {
         primary: "#2560FF",
-        primaryMore: "#174CDD"
+        primaryMore: "#174CDD",
+        navbar: "#20D3FA"
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

@@ -1,5 +1,6 @@
 "use client";
 import app from "@/lib/firebase";
+import { ToastContext } from "@/providers/ToastContextProvider";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,9 +10,10 @@ import {
   signOut,
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
 const Page = () => {
+  const [loading, setLoading] = useState<boolean>(false);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const router = useRouter();
@@ -23,11 +25,7 @@ const Page = () => {
   //     })
   //   })
   // }
-
-  const logouter = async () => {
-    const auth = await getAuth(app);
-    await signOut(auth)
-  }
+  const { toast } = useContext(ToastContext);
   const loginUser = async () => {
     // const res = await fetch('/api/auth/login', {
     //   method: "POST",
@@ -44,24 +42,35 @@ const Page = () => {
     // if (data === "success"){
     //   router.push('/')
     // }
+    setLoading(true);
     try {
       const auth = await getAuth(app);
       setPersistence(auth, browserLocalPersistence).then(() => {
         signInWithEmailAndPassword(auth, email, password).then((cb) => {
           console.log(cb);
-          if(cb.user){
-            router.push('/home')
+          if (cb.user) {
+            toast({
+              message: "User Logged In",
+              type: "success"
+            })
+            setTimeout(() => {
+              router.push("/home");
+            }, 1500);
           }
         });
       });
     } catch (err) {
+      toast({
+        message: "An Error Occured! Please try again later",
+        type: "error"
+      })
       console.log("Error Occured", err);
     }
   };
 
   return (
     <main className="min-h-screen">
-      <section className="bg-gray-50 dark:bg-gray-900 font-pMedium p-4">
+      <section className=" dark:bg-gray-900 font-pMedium p-4">
         <div className="flex flex-col items-center justify-center mx-auto md:min-h-screen lg:py-0">
           <a
             href="#"
@@ -144,15 +153,15 @@ const Page = () => {
                   onClick={loginUser}
                   className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                 >
-                  Login
+                  {loading ? <span className="animate-pulse">Loading...</span> : <span>Login</span>}
                 </button>
-                <button
+                {/* <button
                   //type="submit"
                   onClick={logouter}
                   className="w-full text-white bg-primary hover:bg-primaryMore focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                 >
-                  Logout
-                </button>
+                  {loading ? <div>Loading...</div> : <span>Logout</span>}
+                </button> */}
                 <p className="text-sm font-light text-gray-500 dark:text-gray-400">
                   Don&apos;t have an account yet?{" "}
                   <a

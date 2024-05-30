@@ -1,10 +1,13 @@
 "use client";
 import { Icon } from "@iconify/react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import Notice from "./Notice";
+import { ToastContext } from "@/providers/ToastContextProvider";
 const Years = () => {
   const [loading, setLoading] = useState(false);
   const isLoading = false;
+
+  const {toast} = useContext(ToastContext);
   //const { data: notices, isLoading } = trpc.getAllNotices.useQuery();
   const notices: any[] = [
     {
@@ -15,9 +18,9 @@ const Years = () => {
     },
   ];
   return (
-    <main className="mx-auto max-w-7xl md:p-10">
+    <main className="mx-auto max-w-7xl p-4 md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-black pb-5 sm:flex-row sm:items-center sm:gap-0">
-        <h1 className="mb-3 font-bold text-5xl text-gray-900">
+        <h1 className="my-3 text-center w-full text-5xl font-pSemiBold">
           Home
           {/* <hr />
           <span className="text-sm block m-2 p-2">Choose an Year</span> */}
@@ -33,8 +36,8 @@ const Years = () => {
           <div className="flex p-1 w-11/12  md:w-8/12 justify-between">
             <a
               href="/years/first"
-              className="border-b-2 border-r-2 mx-1 p-1 border-black w-1/2"
-              onClick={() => setLoading(true)}
+              className="border-b-2 border-r-2 mx-1 p-1 dark:border-white border-black w-1/2"
+              onClick={() => toast({ message: "something", type: "success"})}
             >
               <Icon
                 icon="healthicons:tooth"
@@ -43,7 +46,7 @@ const Years = () => {
             </a>
             <a
               href="/years/second"
-              className="flex w-1/2 border-b-2 border-l-2 p-1 mx-1 border-black"
+              className="flex w-1/2 border-b-2 border-l-2 p-1 mx-1 dark:border-white border-black"
               onClick={() => setLoading(true)}
             >
               <Icon
@@ -59,7 +62,7 @@ const Years = () => {
           <div className="flex p-1 w-11/12  md:w-8/12 justify-between">
             <a
               href="/years/fourth"
-              className="border-t-2 border-r-2 p-1 flex mx-1 justify-end border-black w-1/2"
+              className="border-t-2 border-r-2 p-1 flex mx-1 justify-end dark:border-white border-black w-1/2"
               onClick={() => setLoading(true)}
             >
               <Icon
@@ -81,7 +84,7 @@ const Years = () => {
             </a>
             <a
               href="/years/third"
-              className="flex w-1/2 border-t-2 p-1 border-l-2 mx-1 border-black"
+              className="flex w-1/2 border-t-2 p-1 border-l-2 mx-1 dark:border-white border-black"
               onClick={() => setLoading(true)}
             >
               <Icon
@@ -99,7 +102,7 @@ const Years = () => {
             </a>
           </div>
           <br />
-          <div className=" w-11/12 border-2 border-black bg-transparent rounded-lg">
+          <div className=" w-11/12 border-2 border-black dark:border-white bg-transparent rounded-lg">
             <h2 className="font-pExtraBold text-center text-2xl text-white bg-black">
               NoticeBoard
             </h2>
