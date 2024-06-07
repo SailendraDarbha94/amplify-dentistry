@@ -43,16 +43,16 @@ const NavBar = () => {
         <>
           <div
             id="topNavBar"
-            className="bg-transparent z-10 text-black shadow-lg h-14 hidden md:flex m-2 items-center justify-between rounded-xl"
+            className="bg-sky-50 border-2 border-black z-10 text-black shadow-lg h-14 hidden md:flex m-2 items-center justify-between rounded-xl"
           >
             <a
               href="#"
-              className="h-full p-2 rounded-tl-xl rounded-bl-xl border-r-2 border-black flex items-center bg-navbar"
+              className="h-full p-2 rounded-tl-xl rounded-bl-xl border-r-2 border-black flex items-center"
             >
               <img src="/logo-image.png" alt="logo" className="h-full w-10" />
               <p className=" font-pBold">AmplifyDentistry</p>
             </a>
-            <div className="h-full rounded-tr-xl font-pSemiBold rounded-br-xl border-l-2 border-black flex items-center z-30 bg-navbar">
+            <div className="h-full rounded-tr-xl font-pSemiBold rounded-br-xl border-l-2 border-black flex items-center z-30">
               <button
                 className="border-r-2 border-black h-full px-3"
                 onClick={() => router.push("/test-view")}
@@ -75,6 +75,7 @@ const NavBar = () => {
               className="h-full p-2 rounded-tl-lg rounded-bl-lg border-r-2 border-black flex items-center "
             >
               <img src="/logo-image.png" alt="logo" className="h-full w-10" />
+              <p className=" font-pBold">AmplifyDentistry</p>
             </a>
             <div className="h-full rounded-tr-lg font-pSemiBold rounded-br-lg border-l-2 border-black flex items-center">
               <button

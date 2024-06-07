@@ -31,7 +31,6 @@ const Page = () => {
   return (
     <main className="min-h-screen z-0">
       <Years />
-      <Years />
     </main>
   );
 };
