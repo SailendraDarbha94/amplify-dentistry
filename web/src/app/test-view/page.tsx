@@ -1,48 +1,31 @@
 "use client";
-
-import { useState } from "react";
-
+import styles from "./styles.module.css";
+import bgImage from "../../../public/images/background.webp";
+import Crossword from "./CrossWord";
 const Page = () => {
-    const [loading, setLoading] = useState<boolean>(false);
-    const [content, setContent] = useState<string>("");
-    const [prompt, setPrompt] = useState<string>("");
-
-    const chat = async () => {
-        setLoading(true)
-        try {
-          const res = await fetch("/api/chat", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              _prompt: prompt,
-            }),
-          });
-          const { data } = await res.json();
-          if (data) {
-            setPrompt("");
-            setContent(data.choices[0].message.content)
-            setLoading(false)
-          }
-        } catch (err) {
-          console.error(err);
-          setLoading(false)
-        }
-      };
-
   return (
-    <div className="w-full min-h-screen">
-      <h1>Page</h1>
-      <button className="m-4 p-2 rounded-xl text-cyan-400 bg-blue-700 text-center" onClick={chat}>
-        {loading ? (<p>loading...</p>):(<p>click me</p>)}
-      </button>
-      <label htmlFor="something">input</label>
-      <input className="w-80 rounded-md bg-slate-50 border-2 border-blue-500 mx-2 h-10 focus-visible:outline-none" id="something" type="text" value={prompt} onChange={e => setPrompt(e.target.value)} />
-
-      {content ? (<div>
-        {content}
-      </div>):null}
+    <div className={styles.dashboard}>
+      <div
+        style={{
+          backgroundImage: `url(${bgImage.src})`,
+          position: "fixed",
+          minHeight: "100vh",
+          top: "0",
+          left: "0",
+          width: "100%",
+          zIndex: "-1",
+          backgroundPosition: "center",
+          backgroundSize: "cover",
+          backgroundAttachment: "fixed",
+          overflow: "hidden",
+        }}
+      />
+      <div>
+        <header className="font-pBold p-4">
+          <h1 className={styles.title}>First Year</h1>
+        </header>
+      </div>
+      <Crossword crossWordName="firstCrossword" finalScore={46} />
     </div>
   );
 };

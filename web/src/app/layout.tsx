@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { onAuthStateChanged } from "firebase/auth";
-import auth from "@/lib/firebase";
 import ToastContextProvider from "@/providers/ToastContextProvider";
 import NavBar from "@/components/NavBar";
 
