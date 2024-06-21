@@ -1,29 +1,18 @@
 "use client";
 import { Icon } from "@iconify/react";
 import { useContext, useState } from "react";
-import Notice from "./Notice";
 import { ToastContext } from "@/providers/ToastContextProvider";
+import NoticeBoard from "./NoticeBoard";
 const Years = () => {
   const [loading, setLoading] = useState(false);
-  const isLoading = false;
+  const { toast } = useContext(ToastContext);
 
-  const {toast} = useContext(ToastContext);
-  //const { data: notices, isLoading } = trpc.getAllNotices.useQuery();
-  const notices: any[] = [
-    {
-      title: "Resumption of Services",
-      notice:
-        "This is to inform you all that Amplify Dentistry will be resuming services soon",
-      author: "AmpDent",
-    },
-  ];
+
   return (
     <main className="mx-auto max-w-7xl p-4 md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-black pb-5 sm:flex-row sm:items-center sm:gap-0">
         <h1 className="my-3 text-center w-full text-5xl font-pSemiBold">
           Home
-          {/* <hr />
-          <span className="text-sm block m-2 p-2">Choose an Year</span> */}
         </h1>
       </div>
 
@@ -37,7 +26,7 @@ const Years = () => {
             <a
               href="/test-view"
               className="border-b-2 border-r-2 mx-1 p-1 dark:border-white border-black w-1/2"
-              onClick={() => toast({ message: "something", type: "success"})}
+              onClick={() => toast({ message: "something", type: "success" })}
             >
               <Icon
                 icon="healthicons:tooth"
@@ -102,23 +91,8 @@ const Years = () => {
             </a>
           </div>
           <br />
-          <div className=" w-11/12 border-2 border-black dark:border-white bg-transparent rounded-lg">
-            <h2 className="font-pExtraBold text-center text-2xl text-white bg-black">
-              NoticeBoard
-            </h2>
-            <hr className="w-full border-black" />
-            <div className="flex justify-evenly overflow-scroll">
-              {isLoading ? (
-                <div className="flex h-10 p-4 justify-center items-center">
-                  <h2 className="text-2xl font-pBold">Loading...</h2>
-                  {/* <Loader2 className="h-8 w-8 animate-spin text-zinc-800" /> */}
-                </div>
-              ) : (
-                notices?.map((notice: any) => {
-                  return <Notice key={notice.title} {...notice} />;
-                })
-              )}
-            </div>
+          <div className="w-full">
+            <NoticeBoard />
           </div>
         </div>
       )}
