@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "pLight";
+  src: url("../../public/fonts/Poppins-Light.ttf");
+}
+@font-face {
+  font-family: "pMedium";
+  src: url("../../public/fonts/Poppins-Medium.ttf");
+}
+@font-face {
+  font-family: "pSemiBold";
+  src: url("../../public/fonts/Poppins-SemiBold.ttf");
+}
+@font-face {
+  font-family: "pBold";
+  src: url("../../public/fonts/Poppins-Bold.ttf");
+}
+@font-face {
+  font-family: "pExtraBold";
+  src: url("../../public/fonts/Poppins-ExtraBold.ttf");
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 32, 211, 250;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
