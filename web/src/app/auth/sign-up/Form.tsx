@@ -1,8 +1,9 @@
 "use client";
 
 import app from "@/lib/firebase";
+import { ToastContext } from "@/providers/ToastContextProvider";
 import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { useState } from "react";
+import { useContext, useState } from "react";
 
 interface User {
   name: string;
@@ -13,7 +14,7 @@ interface User {
 
 const Form = ({ saveUserData }: any) => {
   const auth = getAuth(app);
-
+  const { toast } = useContext(ToastContext);
   const emptyUserFormData: User = {
     name: "",
     email: "",
@@ -58,6 +59,10 @@ const Form = ({ saveUserData }: any) => {
 
     } catch (err) {
       setLoading(false);
+      toast({
+        message: "An Error Occured! Please try again later",
+        type: "error",
+      });
       JSON.stringify(err);
     }
   };

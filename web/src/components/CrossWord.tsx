@@ -1,7 +1,8 @@
 import app from "@/lib/firebase";
+import { ToastContext } from "@/providers/ToastContextProvider";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getDatabase, onValue, ref, set, update } from "firebase/database";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 
 function Crossword({
   crossWordName,
@@ -10,6 +11,7 @@ function Crossword({
   hintsAcross,
   hintsDown,
 }: any) {
+  const { toast } = useContext(ToastContext);
   const [crosswordCompleted, setCrossWordCompleted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const isCrosswordCompleted = async () => {
@@ -71,7 +73,6 @@ function Crossword({
   const saveScore = async () => {
     try {
       const auth = getAuth(app);
-
       await onAuthStateChanged(auth, async (user) => {
         const db = getDatabase(app);
         await update(
@@ -81,6 +82,10 @@ function Crossword({
             score: finalScore,
           }
         );
+        toast({
+          message: "Crossword Saved, Congratulations!",
+          type: "success",
+        })
       });
     } catch (err) {
       JSON.stringify(err);
