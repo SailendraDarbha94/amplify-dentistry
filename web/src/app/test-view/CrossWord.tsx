@@ -3,23 +3,17 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getDatabase, onValue, ref, set, update } from "firebase/database";
 import React, { useEffect, useState } from "react";
 
-function Crossword({ crossWordName, finalScore }: any) {
-  const initialGrid = [
-    [null, null, "R", "A", "M", "U", "S", null, null, null, null],
-    [null, null, "E", null, "E", null, null, null, null, null, null],
-    [null, "A", "D", "E", "N", "O", "I", "D", "S", null, null],
-    [null, "N", null, null, "T", "C", null, null, null, null, null],
-    [null, "A", null, "V", "A", "C", "U", "O", "L", "E", null],
-    [null, "E", null, "A", "L", "I", null, null, null, null, null],
-    [null, "M", null, "G", null, "P", null, null, null, null, null],
-    [null, "I", null, "U", null, "I", null, null, null, null, null],
-    ["M", "A", "S", "S", "E", "T", "E", "R", null, null, null],
-    [null, null, null, null, null, "A", null, null, null, null, null],
-    [null, null, null, null, null, "L", null, null, null, null, null],
-  ];
-
+function Crossword({
+  crossWordName,
+  finalScore,
+  crosswordGrid,
+  hintsAcross,
+  hintsDown,
+}: any) {
   const [crosswordCompleted, setCrossWordCompleted] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const isCrosswordCompleted = async () => {
+    setLoading(true);
     try {
       const auth = await getAuth(app);
       let userDetails: any;
@@ -47,8 +41,10 @@ function Crossword({ crossWordName, finalScore }: any) {
           }
         });
       });
+      setLoading(false);
     } catch (err) {
       console.log(JSON.stringify(err));
+      setLoading(false);
     }
   };
 
@@ -65,7 +61,7 @@ function Crossword({ crossWordName, finalScore }: any) {
       }))
     );
 
-  const [grid, setGrid] = useState(createInitialState(initialGrid));
+  const [grid, setGrid] = useState(createInitialState(crosswordGrid));
   const [score, setScore] = useState(0);
   const [scoreLock, setScoreLock] = useState<boolean>(false);
   const scorePlus = async () => {
@@ -82,7 +78,7 @@ function Crossword({ crossWordName, finalScore }: any) {
           ref(db, `/users/${user?.uid}/crossWords/${crossWordName}`),
           {
             completed: true,
-            score: 46,
+            score: finalScore,
           }
         );
       });
@@ -145,52 +141,79 @@ function Crossword({ crossWordName, finalScore }: any) {
   };
 
   return (
-    <div className="bg-red-300 flex flex-wrap justify-center items-center">
+    <div className="bg-secondary dark:bg-primary flex flex-wrap justify-center mx-4 rounded-xl items-center p-4">
       <div className="w-full md:w-1/2">
-        <div>
-          <p className="text-xl inline-block font-pBold">Across</p>
+        <div className="p-2">
+          <p className="text-xl inline-block font-pBold my-2">Across</p>
           <ul className="list-decimal list-inside font-pMedium text-md">
-            <li>
-              the part of jaw bone that supports muscles and teeth(5 letters)
-            </li>
-            <li>another term for tonsils(8 letters)</li>
-            <li>a cell organelle used for storage(7 letters)</li>
-            <li>a primary masticatory muscle(8 letters)</li>
+            {hintsAcross.map((hint: string, index: any) => {
+              return <li key={index}>{hint}</li>;
+            })}
           </ul>
         </div>
-        <div>
-          <p className="text-xl inline-block font-pBold">Down</p>
+        <div className="p-2">
+          <p className="text-xl inline-block font-pBold my-2">Down</p>
           <ul className="list-decimal list-inside font-pMedium text-md">
-            <li>a chronic lack of haemoglobin(7 letters)</li>
-            <li>the color of inflamed gingiva(3 letters)</li>
-            <li>the 10th cranial nerve(5 letters)</li>
-            <li>a foramen near the chin(6 letters)</li>
-            <li>a bone that forms the base of skull(9 letters)</li>
+            {hintsDown.map((hint: string, index: any) => {
+              return <li key={index}>{hint}</li>;
+            })}
           </ul>
         </div>
         {scoreLock ? (
-          <button className="bg-blue-500 p-2 rounded-md" onClick={saveScore}>
-            save
+          <button
+            className="bg-blue-500 mx-auto p-2 font-pSemiBold text-lg rounded-md"
+            onClick={saveScore}
+          >
+            Save
           </button>
         ) : null}
       </div>
-      <div className="w-full md:w-1/2">
-        {grid.map((row: any, i: any) => (
-          <div
-            className="w-fit mx-auto flex justify-center items-center"
-            key={`${i}`}
+      {loading ? (
+        <div
+          role="status"
+          className="flex
+  min-h-96
+  max-h-full
+  justify-center
+  items-center"
+        >
+          <svg
+            aria-hidden="true"
+            className="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
+            viewBox="0 0 100 101"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            {row.map((cell: any, j: any) => (
-              <Cell
-                completed={crosswordCompleted}
-                key={`${i}-${j}`}
-                cell={cell}
-                onChange={(value: any) => handleCellChange(i, j, value)}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
+            <path
+              d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+              fill="currentColor"
+            />
+            <path
+              d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+              fill="currentFill"
+            />
+          </svg>
+          <span className="sr-only">Loading...</span>
+        </div>
+      ) : (
+        <div className="w-full md:w-1/2">
+          {grid.map((row: any, i: any) => (
+            <div
+              className="w-fit mx-auto flex justify-center items-center"
+              key={`${i}`}
+            >
+              {row.map((cell: any, j: any) => (
+                <Cell
+                  completed={crosswordCompleted}
+                  key={`${i}-${j}`}
+                  cell={cell}
+                  onChange={(value: any) => handleCellChange(i, j, value)}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

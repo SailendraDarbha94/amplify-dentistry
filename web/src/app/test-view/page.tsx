@@ -2,9 +2,17 @@
 import styles from "./styles.module.css";
 import bgImage from "../../../public/images/background.webp";
 import Crossword from "./CrossWord";
+
+import {
+  firstGrid,
+  hintsAcross,
+  hintsDown,
+} from "@/constants/crosswords";
+import Chatter from "@/components/Chatter";
+
 const Page = () => {
   return (
-    <div className={styles.dashboard}>
+    <main>
       <div
         style={{
           backgroundImage: `url(${bgImage.src})`,
@@ -25,8 +33,18 @@ const Page = () => {
           <h1 className={styles.title}>First Year</h1>
         </header>
       </div>
-      <Crossword crossWordName="firstCrossword" finalScore={46} />
-    </div>
+      <Crossword
+        crosswordGrid={firstGrid}
+        crossWordName="firstCrossword"
+        finalScore={46}
+        hintsAcross={hintsAcross}
+        hintsDown={hintsDown}
+      />
+
+      <br />
+      <br />
+      <Chatter />
+    </main>
   );
 };
 

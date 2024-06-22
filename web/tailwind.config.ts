@@ -18,6 +18,7 @@ const config: Config = {
       colors: {
         primary: "#2560FF",
         primaryMore: "#174CDD",
+        secondary: "#20D3FA",
         navbar: "#20D3FA"
       },
       backgroundImage: {
