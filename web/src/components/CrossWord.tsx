@@ -161,22 +161,17 @@ function Crossword({
         </div>
         {scoreLock ? (
           <button
-            className="bg-blue-500 mx-auto p-2 font-pSemiBold text-lg rounded-md"
+            className="block mt-4 border-2 min-w-40 border-black mx-auto p-2 font-pBold text-xl rounded-md"
             onClick={saveScore}
           >
-            Save
+            SAVE
           </button>
         ) : null}
       </div>
       {loading ? (
         <div
           role="status"
-          className="flex
-  min-h-96
-  max-h-full
-  justify-center
-  items-center"
-        >
+          className="flex min-h-96 max-h-full justify-center items-center">
           <svg
             aria-hidden="true"
             className="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"

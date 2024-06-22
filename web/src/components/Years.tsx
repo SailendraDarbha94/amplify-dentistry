@@ -24,9 +24,9 @@ const Years = () => {
         <div className="mt-16 flex flex-col items-center gap-2">
           <div className="flex p-1 w-11/12  md:w-8/12 justify-between">
             <a
-              href="/test-view"
+              href="/home/years/first"
               className="border-b-2 border-r-2 mx-1 p-1 dark:border-white border-black w-1/2"
-              onClick={() => toast({ message: "something", type: "success" })}
+              //onClick={() => toast({ message: "something", type: "success" })}
             >
               <Icon
                 icon="healthicons:tooth"
@@ -34,7 +34,7 @@ const Years = () => {
               />
             </a>
             <a
-              href="/years/second"
+              href="/home/years/second"
               className="flex w-1/2 border-b-2 border-l-2 p-1 mx-1 dark:border-white border-black"
               onClick={() => setLoading(true)}
             >

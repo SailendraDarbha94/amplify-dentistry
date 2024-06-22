@@ -14,7 +14,7 @@ const NavBar = () => {
 
   const [loading, setLoading] = useState<boolean>(false);
 
-  const allowedPaths: string[] = ["/home"];
+  const allowedPaths: string[] = ["/home", "/home/years/first", "/home/years/second"];
 
   const logouter = async () => {
     setLoading(true);
@@ -46,8 +46,8 @@ const NavBar = () => {
             className="bg-sky-50 border-2 border-black z-10 text-black shadow-lg h-14 hidden md:flex m-2 items-center justify-between rounded-xl"
           >
             <a
-              href="#"
-              className="h-full p-2 rounded-tl-xl rounded-bl-xl border-r-2 border-black flex items-center"
+              href="/home"
+              className="h-full hover:bg-primary hover:text-white p-2 rounded-tl-lg rounded-bl-lg border-r-2 border-black flex items-center"
             >
               <img src="/logo-image.png" alt="logo" className="h-full w-10" />
               <p className=" font-pBold">AmplifyDentistry</p>

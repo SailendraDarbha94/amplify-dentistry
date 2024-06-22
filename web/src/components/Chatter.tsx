@@ -27,7 +27,7 @@ const Chatter = () => {
     return content;
   }
 
-  const setupFunc = async () => {
+  const chatWithGemini = async () => {
     setLoading(true);
     try {
       const genAI = new GoogleGenerativeAI(
@@ -63,8 +63,8 @@ const Chatter = () => {
   };
 
   return (
-    <div className="bg-purple-50 min-h-96 w-full font-pMedium text-black">
-      <h1 className="underline text-2xl text-center">Ask Your Doubts</h1>
+    <div className="bg-purple-50 min-h-96 rounded-tr-xl rounded-tl-xl font-pMedium text-black mx-4">
+      <h1 className="underline text-3xl text-center font-pBold p-2">Ask Your Doubts</h1>
       {loading ? (
         <div
           role="status"
@@ -92,21 +92,21 @@ const Chatter = () => {
         <div className="mx-auto w-fit">
           <input
             type="text"
-            className="bg-purple-200 focus:outline-none min-w-80 p-2 m-2 rounded-xl inline-block text-primary"
+            className="focus:outline-none outline-dotted min-w-96 p-2 m-2 rounded-md inline-block text-primary"
             placeholder="enter your question"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
           <button
             className="m-2 inline-block p-2 rounded-xl bg-primaryMore text-white"
-            onClick={setupFunc}
+            onClick={chatWithGemini}
           >
             Submit
           </button>
         </div>
       )}
 
-      <div className="font-pMedium p-4">
+      <div className="font-pMedium text-lg p-4">
         {data ? <div>{parse(data)}</div> : null}
       </div>
     </div>

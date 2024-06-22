@@ -1,7 +1,7 @@
 "use client";
 import styles from "./styles.module.css";
 import bgImage from "../../../public/images/background.webp";
-import Crossword from "./CrossWord";
+import Crossword from "../../components/CrossWord";
 
 import {
   firstGrid,

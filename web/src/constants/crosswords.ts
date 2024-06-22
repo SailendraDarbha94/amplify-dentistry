@@ -49,7 +49,7 @@ export const secondHintsAcross = [
   "also known as malt sugar (7 letters)",
 ];
 
-export const secondHIntsDown = [
+export const secondHintsDown = [
   "tooth decay caused by bacteria (6 letters)",
   "a gelatinous medium used for culture of bacteria (4 letters)",
   "a model of the jaw made with plaster of paris (4 letters)",
