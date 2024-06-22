@@ -1,13 +1,14 @@
 "use client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import parse from "html-react-parser";
+import { ToastContext } from "@/providers/ToastContextProvider";
 
 const Chatter = () => {
   const [data, setData] = useState<string>("");
   const [prompt, setPrompt] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-
+  const { toast } = useContext(ToastContext);
   function formatContent(content: string) {
     // Replace headings (text between **) with <strong> and add a class for custom styling
     content = content.replace(
@@ -59,6 +60,10 @@ const Chatter = () => {
     } catch (err) {
       console.log(JSON.stringify(err));
       setLoading(false);
+      toast({
+        message: "An Error Occured! Please try again later",
+        type: "error",
+      });
     }
   };
 
