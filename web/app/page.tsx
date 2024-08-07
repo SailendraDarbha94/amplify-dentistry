@@ -16,6 +16,7 @@ import {
   useDisclosure,
 } from "@nextui-org/modal";
 import { Button } from "@nextui-org/button";
+import clsx from "clsx";
 
 export default function Home() {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
