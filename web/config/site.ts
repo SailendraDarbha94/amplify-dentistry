@@ -9,20 +9,20 @@ export const siteConfig = {
       href: "/",
     },
     {
-      label: "Docs",
-      href: "/docs",
+      label: "About",
+      href: "/about",
     },
-    {
-      label: "Pricing",
-      href: "/pricing",
-    },
+    // {
+    //   label: "Pricing",
+    //   href: "/pricing",
+    // },
     {
       label: "Blog",
       href: "/blog",
     },
     {
-      label: "About",
-      href: "/about",
+      label: "Docs",
+      href: "/docs",
     },
   ],
   navMenuItems: [
@@ -60,10 +60,11 @@ export const siteConfig = {
     },
   ],
   links: {
-    github: "https://github.com/nextui-org/nextui",
+    github: "https://github.com/SailendraDarbha94",
     twitter: "https://twitter.com/getnextui",
     docs: "https://nextui.org",
     discord: "https://discord.gg/9b6yyZKmH4",
     sponsor: "https://patreon.com/jrgarciadev",
+    portfolio: "https://www.sailendradarbha.fyi/",
   },
 };
