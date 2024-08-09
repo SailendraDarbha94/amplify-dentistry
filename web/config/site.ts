@@ -67,4 +67,7 @@ export const siteConfig = {
     sponsor: "https://patreon.com/jrgarciadev",
     portfolio: "https://www.sailendradarbha.fyi/",
   },
+  internalLinks: {
+    signUp: "/sign-up",
+  },
 };
