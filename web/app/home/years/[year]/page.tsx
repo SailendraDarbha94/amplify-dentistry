@@ -1,9 +1,11 @@
 "use client";
-import { Card, CardFooter } from "@nextui-org/card";
+import { Card, CardBody, CardFooter, CardHeader } from "@nextui-org/card";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import Image from "next/image";
+import { Image } from "@nextui-org/image";
 import { Button } from "@nextui-org/button";
+import { Divider } from "@nextui-org/divider";
+
 import NoticeBoard from "@/components/noticeboard";
 
 const Page = () => {
@@ -17,18 +19,18 @@ const Page = () => {
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">
           <div
-            role="status"
             className="flex
                     min-h-96
                     max-h-full
                     justify-center
                     items-center"
+            role="status"
           >
             <svg
               aria-hidden="true"
               className="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
-              viewBox="0 0 100 101"
               fill="none"
+              viewBox="0 0 100 101"
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
@@ -44,8 +46,7 @@ const Page = () => {
           </div>
         </div>
       ) : null}
-      <div>
-        {path}
+      <div className="flex flex-wrap">
         <div className="bg-purple-400 w-full md:w-1/2 flex justify-center p-4">
           <Card isFooterBlurred className="border-none max-w-fit" radius="lg">
             <Image
@@ -58,7 +59,6 @@ const Page = () => {
             <CardFooter className="justify-between before:bg-white/10 border-white/20 border-1 overflow-hidden py-1 absolute before:rounded-xl rounded-large bottom-1 w-[calc(100%_-_8px)] shadow-small ml-1 z-10">
               <p className="text-tiny text-white">Question Paper Solver</p>
               <Button
-                
                 className="text-tiny text-white bg-black/20"
                 color="default"
                 radius="lg"
@@ -67,6 +67,33 @@ const Page = () => {
                 onPress={() => router.push("/home/qpaper")}
               >
                 Try Now
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+        <div className="bg-purple-900 w-full md:w-1/2 p-4 text-white">
+          <Card className="">
+            <CardHeader className="flex gap-3">
+              <Image
+                alt="ai"
+                height={40}
+                radius="sm"
+                src="https://avatars.githubusercontent.com/u/86160567?s=200&v=4"
+                width={40}
+              />
+              <div className="flex flex-col">
+                <p className="text-md">Ask AI</p>
+                <p className="text-small text-default-500">By Google Gemini</p>
+              </div>
+            </CardHeader>
+            <Divider />
+            <CardBody>
+              <p>Solve any doubts regarding dentistry using AI</p>
+            </CardBody>
+            <Divider />
+            <CardFooter>
+              <Button className="block mx-auto" color="primary" variant="ghost">
+                Open Gemini
               </Button>
             </CardFooter>
           </Card>

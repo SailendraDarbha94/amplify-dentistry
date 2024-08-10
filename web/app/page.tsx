@@ -18,11 +18,11 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 import { title } from "@/components/primitives";
 import { siteConfig } from "@/config/site";
 import app from "@/config/firebase";
-import { useRouter } from "next/navigation";
 
 export default function Home() {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();

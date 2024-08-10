@@ -1,3 +1,4 @@
+"use client";
 import {
   Navbar as NextUINavbar,
   NavbarContent,
@@ -25,7 +26,11 @@ import {
   SearchIcon,
   ToothBrushIcon,
   PortfolioIcon,
+  LogoutIcon,
 } from "@/components/icons";
+import { usePathname, useRouter } from "next/navigation";
+import { getAuth, signOut } from "firebase/auth";
+import app from "@/config/firebase";
 
 export const Navbar = () => {
   const searchInput = (
@@ -49,6 +54,19 @@ export const Navbar = () => {
     />
   );
 
+  const fullPath = usePathname();
+  const router = useRouter();
+  const logoutUser = async () => {
+    const auth = getAuth(app);
+
+    try {
+      await signOut(auth);
+      router.push("/");
+    } catch (err) {
+      console.log(JSON.stringify(err));
+    }
+  };
+
   return (
     <NextUINavbar maxWidth="xl" position="sticky">
       <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
@@ -67,7 +85,7 @@ export const Navbar = () => {
                   "data-[active=true]:text-primary data-[active=true]:font-medium"
                 )}
                 color="foreground"
-                href={item.href}
+                href={fullPath.includes("home") ? "/home" : item.href}
               >
                 {item.label}
               </NextLink>
@@ -97,18 +115,21 @@ export const Navbar = () => {
           <ThemeSwitch />
         </NavbarItem>
         <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem>
-        <NavbarItem className="hidden md:flex">
-          <Button
-            isExternal
-            as={Link}
-            className="text-sm font-normal text-default-600 bg-default-100"
-            href={siteConfig.links.sponsor}
-            startContent={<HeartFilledIcon className="text-danger" />}
-            variant="flat"
-          >
-            Sponsor
-          </Button>
-        </NavbarItem>
+        {fullPath.includes("home") ? (
+          <NavbarItem className="hidden md:flex">
+            <Button
+              //isExternal
+              //as={Link}
+              onPress={logoutUser}
+              className="text-sm font-normal text-default-600 bg-default-100"
+              //href={siteConfig.links.sponsor}
+              startContent={<LogoutIcon className="text-danger" />}
+              variant="flat"
+            >
+              Logout
+            </Button>
+          </NavbarItem>
+        ) : null}
       </NavbarContent>
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
