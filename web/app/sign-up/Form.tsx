@@ -1,15 +1,16 @@
 "use client";
 import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Button } from "@nextui-org/button";
 
 import { emptyUserFormData, User } from "./constants";
 
 import app from "@/config/firebase";
+import { ToastContext } from "../providers";
 
 const Form = ({ saveUserData }: any) => {
   const auth = getAuth(app);
-
+  const { toast } = useContext(ToastContext);
   const [loading, setLoading] = useState<boolean>(false);
   const [userDetails, setUserDetails] = useState<User>(emptyUserFormData);
 
@@ -24,15 +25,19 @@ const Form = ({ saveUserData }: any) => {
     e.preventDefault();
     if (userDetails.password.length < 8) {
       setLoading(false);
-      alert("Password must be at least 8 characters long");
-
+      toast({
+        message: "Password must be at least 8 characters long!",
+        type: "error",
+      });
       return;
     }
 
     if (userDetails.password !== userDetails.confirmPassword) {
       setLoading(false);
-      alert("Password and Confirm Password are not matching");
-
+      toast({
+        message: "Password and Confirm Password are not matching!",
+        type: "error",
+      });
       return;
     }
 
@@ -49,6 +54,10 @@ const Form = ({ saveUserData }: any) => {
     } catch (err) {
       setLoading(false);
       JSON.stringify(err);
+      toast({
+        message: "An Error Occurred! Please try again later",
+        type: "error",
+      });
     }
   };
 

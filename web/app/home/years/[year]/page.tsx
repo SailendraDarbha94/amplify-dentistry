@@ -1,21 +1,138 @@
 "use client";
 import { Card, CardBody, CardFooter, CardHeader } from "@nextui-org/card";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useContext, useState } from "react";
 import { Image } from "@nextui-org/image";
 import { Button } from "@nextui-org/button";
 import { Divider } from "@nextui-org/divider";
+import parse from "html-react-parser";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  useDisclosure,
+} from "@nextui-org/modal";
+import { Input } from "@nextui-org/input";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import NoticeBoard from "@/components/noticeboard";
+import { ToastContext } from "@/app/providers";
 
 const Page = () => {
   const [loading, setLoading] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
+  const [answer, setAnswer] = useState<string>("");
   const router = useRouter();
-  const path = usePathname();
+  //const path = usePathname();
+
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+
+  function formatContent(content: string) {
+    // Replace headings (text between **) with <strong> and add a class for custom styling
+    content = content.replace(
+      /\*\*([^\*]+)\*\*/g,
+      '<strong class="heading">$1</strong>',
+    );
+
+    // Replace bullet points (lines starting with *) with <li> elements
+    content = content.replace(/\* ([^\*]+)/g, "<li>$1</li>");
+
+    // Wrap lists in <ul> tags
+    content = content.replace(/(<li>[\s\S]*?<\/li>)/g, "<ul>$1</ul>");
+
+    // Remove any nested <ul> tags (in case of multiple replacements)
+    content = content.replace(/<\/ul><ul>/g, "");
+
+    return content;
+  }
+
+  const { toast } = useContext(ToastContext);
+
+  const chatWithGemini = async () => {
+    setLoading(true);
+    try {
+      const genAI = new GoogleGenerativeAI(
+        process.env.NEXT_PUBLIC_GEMINI_KEY as string,
+      );
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const finalPrompt = `You are a helpful assistant that helps Dental Students study for exams, any questions not pertaining to dentistry or medicine or the human body should be denied politely. Answer the question by the student now, question : ${query}`;
+      // REGULAR
+      // const result = await model.generateContent(prompt);
+      // const response = await result.response;
+      // const text = response.text();
+      // console.log(text);
+      // STREAM
+      const result = await model.generateContentStream([finalPrompt]);
+
+      // print text as it comes in
+      if (result) {
+        setLoading(false);
+        setQuery("");
+      }
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+
+        setAnswer((prev) => {
+          let newText = prev + chunkText;
+          const formattedContent = formatContent(newText);
+
+          return formattedContent;
+        });
+      }
+    } catch (err) {
+      console.log(JSON.stringify(err));
+      setLoading(false);
+      toast({
+        message: "An Error Occured! Please try again later",
+        type: "error",
+      });
+    }
+  };
 
   return (
     <div className="w-full min-h-screen">
-      Page Heading
+      <Modal
+        isOpen={isOpen}
+        size="5xl"
+        scrollBehavior="inside"
+        onClose={onClose}
+        onOpenChange={onOpenChange}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Google Gemini
+              </ModalHeader>
+              <ModalBody>
+                <Input
+                  label="Enter your doubt"
+                  type="text"
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <div className="p-2">
+                  <p className="text-lg font-medium">{parse(answer)}</p>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+                <Button
+                  className="ml-10"
+                  color="primary"
+                  onPress={chatWithGemini}
+                >
+                  Ask Gemini
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">
           <div
@@ -92,7 +209,12 @@ const Page = () => {
             </CardBody>
             <Divider />
             <CardFooter>
-              <Button className="block mx-auto" color="primary" variant="ghost">
+              <Button
+                className="block mx-auto"
+                color="primary"
+                variant="ghost"
+                onPress={onOpen}
+              >
                 Open Gemini
               </Button>
             </CardFooter>

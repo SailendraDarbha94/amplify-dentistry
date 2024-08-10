@@ -4,8 +4,13 @@ import { getDatabase, ref, set } from "firebase/database";
 import { title } from "@/components/primitives";
 import app from "@/config/firebase";
 import Form from "./Form";
+import { useContext } from "react";
+import { ToastContext } from "../providers";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
+  const router = useRouter();
+  const { toast } = useContext(ToastContext);
   const db = getDatabase(app);
   const saveUserData = async (userId: string, name: string, email: string) => {
     try {
@@ -14,8 +19,17 @@ export default function AuthPage() {
         email: email,
         role: "user",
       });
+      toast({
+        message: "Account Created! Proceed to Login!",
+        type: "error",
+      });
+      router.push("/")
     } catch (err) {
       console.log(JSON.stringify(err));
+      toast({
+        message: "An Error Occurred! Please try again later",
+        type: "error",
+      });
     }
   };
 

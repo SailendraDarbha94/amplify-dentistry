@@ -24,5 +24,5 @@ export default function HomeLayout({
     });
   }, []);
 
-  return <main className="p-4 bg-pink-500">{children}</main>;
+  return <main className="p-4">{children}</main>;
 }

@@ -11,7 +11,7 @@ import {
 } from "@nextui-org/modal";
 import { Button } from "@nextui-org/button";
 import { Input } from "@nextui-org/input";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   browserLocalPersistence,
   getAuth,
@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { title } from "@/components/primitives";
 import { siteConfig } from "@/config/site";
 import app from "@/config/firebase";
+import { ToastContext } from "./providers";
 
 export default function Home() {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
@@ -30,35 +31,34 @@ export default function Home() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-
+  const { toast } = useContext(ToastContext);
   const auth = getAuth(app);
   const loginUser = async () => {
     setLoading(true);
-    try {
-      setPersistence(auth, browserLocalPersistence).then(() => {
-        signInWithEmailAndPassword(auth, email, password).then((cb) => {
+    setPersistence(auth, browserLocalPersistence).then(() => {
+      signInWithEmailAndPassword(auth, email, password)
+        .then((cb) => {
           console.log(cb);
           if (cb.user) {
             // TODO ADD TOAST
-            // toast({
-            //   message: "User Logged In, Redirecting",
-            //   type: "success",
-            // });
+            toast({
+              message: "User Logged In! Redirecting",
+              type: "success",
+            });
             setTimeout(() => {
               router.push("/home");
             }, 1500);
             setLoading(false);
           }
+        })
+        .catch((err) => {
+          console.log("Error Occured", JSON.stringify(err));
+          toast({
+            message: `An Error Occurred! ${err.code}`,
+            type: "error",
+          });
         });
-      });
-    } catch (err) {
-      // toast({
-      //   message: "An Error Occured! Please try again later",
-      //   type: "error",
-      // });
-      setLoading(false);
-      console.log("Error Occured", err);
-    }
+    });
   };
 
   return (
@@ -86,7 +86,12 @@ export default function Home() {
                 <Button color="danger" variant="light" onPress={onClose}>
                   Close
                 </Button>
-                <Button color="primary" onPress={loginUser}>
+                <Button
+                  color="primary"
+                  onPress={() => {
+                    onClose(), loginUser();
+                  }}
+                >
                   Login
                 </Button>
               </ModalFooter>
@@ -112,9 +117,9 @@ export default function Home() {
         <Link
           //isExternal
           className={buttonStyles({
-            variant: "bordered",
+            variant: "faded",
             radius: "full",
-            color: "primary",
+            color: "secondary",
           })}
           href={siteConfig.internalLinks.signUp}
         >

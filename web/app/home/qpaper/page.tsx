@@ -1,6 +1,6 @@
 "use client";
 import { Card, CardBody, CardFooter, CardHeader } from "@nextui-org/card";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Image from "next/image";
 import { child, get, getDatabase, ref, update } from "firebase/database";
 import app from "@/config/firebase";
@@ -8,6 +8,7 @@ import { Button } from "@nextui-org/button";
 import { useRouter } from "next/navigation";
 import { subtitle } from "@/components/primitives";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ToastContext } from "@/app/providers";
 
 interface ExamPaper {
   time_period: string;
@@ -66,8 +67,13 @@ const Page = () => {
     );
   }
 
+  const {toast} = useContext(ToastContext);
   const fetchQuestionPapers = async () => {
     try {
+      toast({
+        message: "Fetching Available Question Papers!",
+        type: "process",
+      })
       console.log("entering");
       const db = getDatabase(app);
       const dbRef = ref(db);
@@ -76,10 +82,18 @@ const Page = () => {
       if (data.exists()) {
         const papers = await data.val();
         console.log(papers);
+        toast({
+          message: "Question Papers Fetched!",
+          type: "success",
+        })
         setPapers(papers);
       }
     } catch (err) {
       console.log(JSON.stringify(err));
+      toast({
+        message: "An Error Occurred! Please try again later",
+        type: "error",
+      });
     }
   };
 

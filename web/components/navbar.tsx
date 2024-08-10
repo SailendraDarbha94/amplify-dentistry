@@ -4,33 +4,29 @@ import {
   NavbarContent,
   NavbarMenu,
   NavbarMenuToggle,
-  NavbarBrand,
   NavbarItem,
   NavbarMenuItem,
 } from "@nextui-org/navbar";
 import { Button } from "@nextui-org/button";
-import { Kbd } from "@nextui-org/kbd";
 import { Link } from "@nextui-org/link";
 import { Input } from "@nextui-org/input";
 import { link as linkStyles } from "@nextui-org/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
+import { usePathname, useRouter } from "next/navigation";
+import { getAuth, signOut } from "firebase/auth";
+import { useContext } from "react";
 
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
 import {
-  TwitterIcon,
   GithubIcon,
-  DiscordIcon,
-  HeartFilledIcon,
   SearchIcon,
-  ToothBrushIcon,
   PortfolioIcon,
   LogoutIcon,
 } from "@/components/icons";
-import { usePathname, useRouter } from "next/navigation";
-import { getAuth, signOut } from "firebase/auth";
 import app from "@/config/firebase";
+import { ToastContext } from "@/app/providers";
 
 export const Navbar = () => {
   const searchInput = (
@@ -56,14 +52,23 @@ export const Navbar = () => {
 
   const fullPath = usePathname();
   const router = useRouter();
+  const { toast } = useContext(ToastContext);
   const logoutUser = async () => {
     const auth = getAuth(app);
 
     try {
       await signOut(auth);
+      toast({
+        message: "User Logged Out",
+        type: "warning",
+      });
       router.push("/");
     } catch (err) {
       console.log(JSON.stringify(err));
+      toast({
+        message: "An Error Occurred! Please try again later",
+        type: "error",
+      });
     }
   };
 
@@ -82,7 +87,7 @@ export const Navbar = () => {
               <NextLink
                 className={clsx(
                   linkStyles({ color: "foreground" }),
-                  "data-[active=true]:text-primary data-[active=true]:font-medium"
+                  "data-[active=true]:text-primary data-[active=true]:font-medium",
                 )}
                 color="foreground"
                 href={fullPath.includes("home") ? "/home" : item.href}
@@ -114,17 +119,17 @@ export const Navbar = () => {
           </Link>
           <ThemeSwitch />
         </NavbarItem>
-        <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem>
+        {/* <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem> */}
         {fullPath.includes("home") ? (
           <NavbarItem className="hidden md:flex">
             <Button
               //isExternal
               //as={Link}
+              variant="flat"
               onPress={logoutUser}
               className="text-sm font-normal text-default-600 bg-default-100"
               //href={siteConfig.links.sponsor}
               startContent={<LogoutIcon className="text-danger" />}
-              variant="flat"
             >
               Logout
             </Button>
