@@ -98,7 +98,7 @@ const Page = () => {
         isOpen={isOpen}
         size="5xl"
         scrollBehavior="inside"
-        onClose={onClose}
+        onClose={() => setAnswer("")}
         onOpenChange={onOpenChange}
       >
         <ModalContent>
@@ -164,7 +164,7 @@ const Page = () => {
         </div>
       ) : null}
       <div className="flex flex-wrap">
-        <div className="bg-purple-400 w-full md:w-1/2 flex justify-center p-4">
+        <div className="w-full md:w-1/2 flex justify-center p-4">
           <Card isFooterBlurred className="border-none max-w-fit" radius="lg">
             <Image
               alt="generic question paper of a university exam"
@@ -188,7 +188,7 @@ const Page = () => {
             </CardFooter>
           </Card>
         </div>
-        <div className="bg-purple-900 w-full md:w-1/2 p-4 text-white">
+        <div className="w-full md:w-1/2 p-4 text-white">
           <Card className="">
             <CardHeader className="flex gap-3">
               <Image
@@ -220,7 +220,7 @@ const Page = () => {
             </CardFooter>
           </Card>
         </div>
-        <div className="bg-red-400">
+        <div className="flex justify-center my-4">
           <NoticeBoard />
         </div>
       </div>
