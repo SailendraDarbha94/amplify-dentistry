@@ -27,7 +27,6 @@ const Page = () => {
   const [query, setQuery] = useState<string>("");
   const [answer, setAnswer] = useState<string>("");
   const router = useRouter();
-  //const path = usePathname();
 
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
@@ -69,7 +68,6 @@ const Page = () => {
       // STREAM
       const result = await model.generateContentStream([finalPrompt]);
 
-      // print text as it comes in
       if (result) {
         setLoading(false);
         setQuery("");
@@ -219,6 +217,7 @@ const Page = () => {
             <CardHeader className="flex gap-3">
               <Image
                 alt="ai"
+                className="dark:bg-white"
                 height={40}
                 radius="sm"
                 src="/images/hugeicons--ai-network.png"
@@ -251,6 +250,7 @@ const Page = () => {
             <CardHeader className="flex gap-3">
               <Image
                 alt="ai"
+                className="dark:bg-white"
                 height={40}
                 radius="sm"
                 src="/images/hugeicons--ai-network.png"

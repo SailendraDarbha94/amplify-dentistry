@@ -207,7 +207,7 @@ const Page = () => {
 
   return (
     <div className="w-full min-h-screen">
-      <div className="bg-purple-100 w-[90%] mx-auto rounded-full mb-10 p-5">
+      <div className="bg-purple-300 dark:bg-purple-900 w-[90%] mx-auto rounded-full mb-10 p-5">
         <h1 className="text-lg font-semibold text-center p-2 mb-4">
           Upload Question paper to solve it using AI
         </h1>

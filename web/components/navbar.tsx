@@ -109,14 +109,22 @@ export const Navbar = () => {
         justify="end"
       >
         <NavbarItem className="hidden sm:flex gap-2">
-          <Link isExternal aria-label="Github" href={siteConfig.links.github}>
+          <Link
+            isExternal
+            aria-label="Github"
+            href={
+              fullPath && fullPath.includes("home")
+                ? "https://github.com/SailendraDarbha94/amplify-dentistry"
+                : siteConfig.links.github
+            }
+          >
             <GithubIcon className="text-default-500" />
           </Link>
           <Link
             isExternal={fullPath && fullPath.includes("home") ? false : true}
             aria-label="Portfolio"
             href={
-              fullPath.includes("home")
+              fullPath && fullPath.includes("home")
                 ? "/home/profile"
                 : siteConfig.links.portfolio
             }
