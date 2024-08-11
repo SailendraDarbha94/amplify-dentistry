@@ -1,6 +1,6 @@
 "use client";
 import { Card, CardBody, CardFooter, CardHeader } from "@nextui-org/card";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useContext, useState } from "react";
 import { Image } from "@nextui-org/image";
 import { Button } from "@nextui-org/button";
@@ -19,6 +19,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import NoticeBoard from "@/components/noticeboard";
 import { ToastContext } from "@/app/providers";
+import { Select, SelectItem } from "@nextui-org/select";
+import { yearWiseSubjects } from "@/app/lib/subjects";
 
 const Page = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -33,7 +35,7 @@ const Page = () => {
     // Replace headings (text between **) with <strong> and add a class for custom styling
     content = content.replace(
       /\*\*([^\*]+)\*\*/g,
-      '<strong class="heading">$1</strong>',
+      '<strong class="heading">$1</strong>'
     );
 
     // Replace bullet points (lines starting with *) with <li> elements
@@ -54,7 +56,7 @@ const Page = () => {
     setLoading(true);
     try {
       const genAI = new GoogleGenerativeAI(
-        process.env.NEXT_PUBLIC_GEMINI_KEY as string,
+        process.env.NEXT_PUBLIC_GEMINI_KEY as string
       );
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -90,6 +92,30 @@ const Page = () => {
         type: "error",
       });
     }
+  };
+
+  const [subject, setSelectedSubject] = useState<any | null>(null);
+  const [number, setSelectedNumber] = useState<string | null>(null);
+  const { year } = useParams();
+
+  const handleSubjectChange = (e: any) => {
+    setSelectedSubject(yearWiseSubjects(year as string)[e.currentKey]);
+  };
+
+  const handleNumberChange = (e: any) => {
+    if (e.currentKey == 0) {
+      setSelectedNumber("5");
+    } else if (e.currentKey == 1) {
+      setSelectedNumber("10");
+    } else {
+      setSelectedNumber("15");
+    }
+  };
+
+  const routeToQuiz = () => {
+    const subjectForRoute = subject.split(" ").join("").replace("&", "-");
+
+    router.push(`/home/quiz/${subjectForRoute}/${number}`);
   };
 
   return (
@@ -212,7 +238,7 @@ const Page = () => {
               <Button
                 className="block mx-auto"
                 color="primary"
-                variant="ghost"
+                variant="flat"
                 onPress={onOpen}
               >
                 Open Gemini
@@ -220,7 +246,65 @@ const Page = () => {
             </CardFooter>
           </Card>
         </div>
-        <div className="flex justify-center my-4">
+        <div className="w-full p-4 text-white">
+          <Card className="w-full">
+            <CardHeader className="flex gap-3">
+              <Image
+                alt="ai"
+                height={40}
+                radius="sm"
+                src="https://avatars.githubusercontent.com/u/86160567?s=200&v=4"
+                width={40}
+              />
+              <div className="flex flex-col">
+                <p className="text-md">Quiz Yourself</p>
+                <p className="text-small text-default-500">By Google Gemini</p>
+              </div>
+            </CardHeader>
+            <Divider />
+            <CardBody>
+              <p className="text-center text-lg font-semibold mb-4">
+                Generate MCQs & Practice using AI
+              </p>
+              <div className="flex flex-wrap justify-evenly">
+                <Select
+                  className="max-w-xs"
+                  label="Choose Subject"
+                  onSelectionChange={handleSubjectChange}
+                  //onSelect={handleChange}
+                >
+                  {yearWiseSubjects(year as string).map((sub, idx) => (
+                    <SelectItem key={idx}>{sub}</SelectItem>
+                  ))}
+                </Select>
+                <Select
+                  onSelectionChange={handleNumberChange}
+                  label="Number of Questions"
+                  className="max-w-xs"
+                >
+                  {[5, 10, 15].map((sub, idx) => (
+                    <SelectItem key={idx} className="text-center">
+                      {JSON.stringify(sub)}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+            </CardBody>
+            <Divider />
+            <CardFooter>
+              <Button
+                className="block mx-auto"
+                color={!subject || !number ? "danger" : "primary"}
+                isDisabled={!subject || !number}
+                variant="flat"
+                onPress={routeToQuiz}
+              >
+                Create Quiz
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+        <div className="flex w-full justify-center my-4">
           <NoticeBoard />
         </div>
       </div>

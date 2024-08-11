@@ -12,7 +12,7 @@ const Years = () => {
     <main className="mx-auto max-w-7xl p-4 md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-black pb-5 sm:flex-row sm:items-center sm:gap-0">
         <h1 className="my-3 text-center w-full text-5xl font-pSemiBold">
-          Home
+          Years
         </h1>
       </div>
 
