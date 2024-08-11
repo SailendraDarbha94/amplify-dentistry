@@ -6,6 +6,7 @@ import {
   NavbarMenuToggle,
   NavbarItem,
   NavbarMenuItem,
+  NavbarBrand,
 } from "@nextui-org/navbar";
 import { Button } from "@nextui-org/button";
 import { Link } from "@nextui-org/link";
@@ -24,6 +25,7 @@ import {
   SearchIcon,
   PortfolioIcon,
   LogoutIcon,
+  ToothBrushIcon,
 } from "@/components/icons";
 import app from "@/config/firebase";
 import { ToastContext } from "@/app/providers";
@@ -50,7 +52,7 @@ export const Navbar = () => {
     />
   );
 
-  const fullPath = usePathname();
+  const fullPath: string = usePathname();
   const router = useRouter();
   const { toast } = useContext(ToastContext);
   const logoutUser = async () => {
@@ -75,13 +77,16 @@ export const Navbar = () => {
   return (
     <NextUINavbar maxWidth="xl" position="sticky">
       <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
-        {/* <NavbarBrand as="li" className="gap-3 max-w-fit">
-          <NextLink className="flex justify-start items-center gap-1" href="/">
+        <NavbarBrand as="li" className="gap-3 max-w-fit">
+          <NextLink
+            className="flex justify-start items-center gap-1"
+            href={fullPath && fullPath.includes("home") ? "/home" : "/"}
+          >
             <ToothBrushIcon />
-            <p className="font-bold text-inherit">AmpDent</p>
+            <p className="font-bold text-lg">Amplify Dentistry</p>
           </NextLink>
-        </NavbarBrand> */}
-        <ul className="hidden lg:flex gap-4 justify-start ml-2">
+        </NavbarBrand>
+        {/* <ul className="hidden lg:flex gap-4 justify-start ml-2">
           {siteConfig.navItems.map((item) => (
             <NavbarItem key={item.href}>
               <NextLink
@@ -96,7 +101,7 @@ export const Navbar = () => {
               </NextLink>
             </NavbarItem>
           ))}
-        </ul>
+        </ul> */}
       </NavbarContent>
 
       <NavbarContent
@@ -104,14 +109,11 @@ export const Navbar = () => {
         justify="end"
       >
         <NavbarItem className="hidden sm:flex gap-2">
-          {/* <Link isExternal aria-label="Twitter" href={siteConfig.links.twitter}>
-            <TwitterIcon className="text-default-500" />
-          </Link> */}
           <Link isExternal aria-label="Github" href={siteConfig.links.github}>
             <GithubIcon className="text-default-500" />
           </Link>
           <Link
-            isExternal={fullPath.includes("home") ? false : true}
+            isExternal={fullPath && fullPath.includes("home") ? false : true}
             aria-label="Portfolio"
             href={
               fullPath.includes("home")
@@ -124,15 +126,12 @@ export const Navbar = () => {
           <ThemeSwitch />
         </NavbarItem>
         {/* <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem> */}
-        {fullPath.includes("home") ? (
+        {fullPath && fullPath.includes("home") ? (
           <NavbarItem className="hidden md:flex">
             <Button
-              //isExternal
-              //as={Link}
               variant="flat"
               onPress={logoutUser}
               className="text-sm font-normal text-default-600 bg-default-100"
-              //href={siteConfig.links.sponsor}
               startContent={<LogoutIcon className="text-danger" />}
             >
               Logout

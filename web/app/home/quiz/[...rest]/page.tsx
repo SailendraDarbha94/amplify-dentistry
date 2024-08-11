@@ -42,7 +42,6 @@ const Page = () => {
 
   const [score, setScore] = useState<number>(0);
   const [counter, setCounter] = useState<number>(0);
-  const [message, setMessage] = useState<string>("");
   const [quizFinished, setQuizFinished] = useState<boolean>(false);
 
   const topRef = useRef(null);
@@ -55,20 +54,12 @@ const Page = () => {
 
   const doctorRenderer: () => string = () => {
     if (score < 10) {
-      setMessage("Are you kidding me?");
-
       return "/images/angry-doctor.png";
     } else if (score < 18) {
-      setMessage("You could do better");
-
       return "/images/perplexed-doctor.png";
     } else if (score <= 24) {
-      setMessage("Well Done");
-
       return "/images/normal-doctor.png";
     } else {
-      setMessage("You bring joy to teachers");
-
       return "/images/happy-doctor.png";
     }
   };
@@ -134,7 +125,7 @@ const Page = () => {
             />
           </div>
           <p className="text-xl p-2 text-center font-extrabold">
-            Quiz Finished !{message}
+            Quiz Finished !
           </p>
           <div className="w-full p-4">
             <Button
