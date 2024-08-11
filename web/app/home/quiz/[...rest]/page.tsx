@@ -1,13 +1,15 @@
 "use client";
 import QuizItem from "@/components/quizItem";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Button } from "@nextui-org/button";
+import { Image } from "@nextui-org/image";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 const Page = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [quiz, setQuiz] = useState<any[] | null>(null);
   const { rest } = useParams();
-
+  const router = useRouter();
   const quizGenerator = async () => {
     setLoading(true);
     try {
@@ -24,6 +26,7 @@ const Page = () => {
       const stringToParse = await newText.replace("```", "");
 
       const { quiz } = JSON.parse(stringToParse);
+
       //console.log(quiz)
       setQuiz(quiz);
 
@@ -35,7 +38,48 @@ const Page = () => {
 
   useEffect(() => {
     quizGenerator();
-  }, [rest]);
+  }, []);
+
+  const [score, setScore] = useState<number>(0);
+  const [counter, setCounter] = useState<number>(0);
+  const [message, setMessage] = useState<string>("");
+  const [quizFinished, setQuizFinished] = useState<boolean>(false);
+
+  const topRef = useRef(null);
+  const scrollToRef = (target: any) => {
+    window.scrollTo({
+      top: target.current.offsetTop - 100,
+      behavior: "smooth",
+    });
+  };
+
+  const doctorRenderer: () => string = () => {
+    if (score < 10) {
+      setMessage("Are you kidding me?");
+
+      return "/images/angry-doctor.png";
+    } else if (score < 18) {
+      setMessage("You could do better");
+
+      return "/images/perplexed-doctor.png";
+    } else if (score <= 24) {
+      setMessage("Well Done");
+
+      return "/images/normal-doctor.png";
+    } else {
+      setMessage("You bring joy to teachers");
+
+      return "/images/happy-doctor.png";
+    }
+  };
+
+  useEffect(() => {
+    if (counter.toString() === rest[1]) {
+      setQuiz(null);
+      setQuizFinished(true);
+      scrollToRef(topRef);
+    }
+  }, [counter]);
 
   return (
     <div className="w-full min-h-screen">
@@ -44,9 +88,21 @@ const Page = () => {
           <p>loading...</p>
         </div>
       ) : (
-        <div>
-          <p>subject is {rest[0]}</p>
-          <p>number of questions to generate is {rest[1]}</p>
+        <div
+          ref={topRef}
+          className="flex flex-wrap bg-slate-700 p-4 rounded-lg text-white"
+        >
+          <div className="md:w-1/2 text-center">
+            {/* <p className="text-xl font-semibold">Subject : {rest[0]}</p> */}
+            <p className="text-center text-2xl font-bold h-full flex items-center justify-center">
+              Questions : {rest[1]}
+            </p>
+          </div>
+          <div className="md:w-1/2">
+            <p className="text-center text-2xl font-bold h-full flex items-center justify-center">
+              Score : {score}
+            </p>
+          </div>
         </div>
       )}
       <div>
@@ -55,13 +111,43 @@ const Page = () => {
             {quiz.map((item: any) => {
               return (
                 <div key={item.id}>
-                  <QuizItem {...item} />
+                  <QuizItem
+                    {...item}
+                    scorer={setScore}
+                    counter={setCounter}
+                    increment={rest[1] == "5" ? 6 : rest[1] == "10" ? 3 : 2}
+                  />
                 </div>
               );
             })}
           </div>
         ) : null}
       </div>
+      {quizFinished ? (
+        <div id="finished-quiz" className="mt-10">
+          <div className="w-full flex justify-center">
+            <Image
+              className="rounded-xl border-2 border-black"
+              height={400}
+              src={doctorRenderer()}
+              width={400}
+            />
+          </div>
+          <p className="text-xl p-2 text-center font-extrabold">
+            Quiz Finished !{message}
+          </p>
+          <div className="w-full p-4">
+            <Button
+              className="block mx-auto"
+              color="primary"
+              variant="shadow"
+              onPress={() => router.back()}
+            >
+              Go Back
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

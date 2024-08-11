@@ -10,24 +10,38 @@ const QuizItem = ({
   question,
   answer,
   options,
+  scorer,
+  counter,
+  increment
 }: {
   id: number;
   question: string;
   answer: string;
   options: string[];
+  scorer: any;
+  counter: any;
+  increment: number;
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [optionsDisabled, setOptionsDisabled] = useState<boolean>(false);
   const { toast } = useContext(ToastContext);
 
-  const checkAnswer = async (answer: string) => {
-    if (answer == answer) {
+  const checkAnswer = async (params: string) => {
+    counter((prev:number) => {
+      return prev + 1;
+    });
+
+    if (params == answer) {
       setOptionsDisabled(true);
+      scorer((prev:number) => {
+        return prev + increment;
+      });
       toast({
         message: "Correct Answer",
         type: "success",
       });
     } else {
+      setOptionsDisabled(true);
       toast({
         message: "Wrong Answer",
         type: "error",

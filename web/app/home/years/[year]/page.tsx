@@ -221,7 +221,7 @@ const Page = () => {
                 alt="ai"
                 height={40}
                 radius="sm"
-                src="https://avatars.githubusercontent.com/u/86160567?s=200&v=4"
+                src="/images/hugeicons--ai-network.png"
                 width={40}
               />
               <div className="flex flex-col">
@@ -253,7 +253,7 @@ const Page = () => {
                 alt="ai"
                 height={40}
                 radius="sm"
-                src="https://avatars.githubusercontent.com/u/86160567?s=200&v=4"
+                src="/images/hugeicons--ai-network.png"
                 width={40}
               />
               <div className="flex flex-col">

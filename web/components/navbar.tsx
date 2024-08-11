@@ -111,9 +111,13 @@ export const Navbar = () => {
             <GithubIcon className="text-default-500" />
           </Link>
           <Link
-            isExternal
+            isExternal={fullPath.includes("home") ? false : true}
             aria-label="Portfolio"
-            href={siteConfig.links.portfolio}
+            href={
+              fullPath.includes("home")
+                ? "/home/profile"
+                : siteConfig.links.portfolio
+            }
           >
             <PortfolioIcon />
           </Link>
