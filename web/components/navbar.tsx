@@ -85,18 +85,13 @@ export const Navbar = () => {
             <ToothBrushIcon />
             <p className="font-bold text-lg">Amplify Dentistry</p>
           </NextLink>
-          {fullPath && fullPath.includes("home") ? (
-            <NavbarItem className="flex md:hidden">
-              <Button
-                variant="flat"
-                onPress={logoutUser}
-                className="text-sm font-normal text-default-600 bg-default-100"
-                startContent={<LogoutIcon className="text-danger" />}
-              >
-                Logout
-              </Button>
-            </NavbarItem>
-          ) : null}
+          <NextLink
+            className="justify-start items-center gap-1 flex md:hidden"
+            href={fullPath && fullPath.includes("home") ? "/home" : "/"}
+          >
+            {/* <ToothBrushIcon /> */}
+            <p className="font-bold text-lg">Home</p>
+          </NextLink>
         </NavbarBrand>
         {/* <ul className="hidden lg:flex gap-4 justify-start ml-2">
           {siteConfig.navItems.map((item) => (
@@ -147,7 +142,7 @@ export const Navbar = () => {
         </NavbarItem>
         {/* <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem> */}
         {fullPath && fullPath.includes("home") ? (
-          <NavbarItem className="hidden md:flex">
+          <NavbarItem className="">
             <Button
               variant="flat"
               onPress={logoutUser}
@@ -177,6 +172,18 @@ export const Navbar = () => {
         </Link>
         <ThemeSwitch />
         {/* <NavbarMenuToggle /> */}
+        {fullPath && fullPath.includes("home") ? (
+          <NavbarItem className="">
+            <Button
+              variant="flat"
+              onPress={logoutUser}
+              className="text-sm font-normal text-default-600 bg-default-100"
+              startContent={<LogoutIcon className="text-danger" />}
+            >
+              Logout
+            </Button>
+          </NavbarItem>
+        ) : null}
       </NavbarContent>
 
       {/* <NavbarMenu>

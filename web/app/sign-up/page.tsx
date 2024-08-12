@@ -23,7 +23,7 @@ export default function AuthPage() {
         message: "Account Created! Proceed to Login!",
         type: "error",
       });
-      router.push("/")
+      router.push("/");
     } catch (err) {
       console.log(JSON.stringify(err));
       toast({
@@ -35,8 +35,8 @@ export default function AuthPage() {
 
   return (
     <div>
-      <h1 className={title()}>Sign Up</h1>
-      <section className="font-pMedium p-4">
+      <h1 className={`${title()} hidden md:block`}>Sign Up</h1>
+      <section className="font-medium md:p-4">
         <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:min-h-screen lg:py-0">
           <a
             className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
@@ -50,7 +50,7 @@ export default function AuthPage() {
             AmpDent
           </a>
           <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
-            <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
+            <div className="p-4 md:p-4 space-y-4 md:space-y-6 sm:p-8">
               <Form saveUserData={saveUserData} />
             </div>
           </div>

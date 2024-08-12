@@ -1,41 +1,15 @@
 "use client";
-import app from "@/config/firebase";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { child, get, getDatabase, ref } from "firebase/database";
-import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useState } from "react";
 const Page = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
-  const [user, setUser] = useState<any | null>(null);
-  const [answers, setAnswers] = useState<any | null>(null);
-
-  const fetchAnswers = async (params: any) => {
-    const db = getDatabase(app);
-    console.log(params?.uid);
-    console.log("entering db");
-    get(child(ref(db), `/users/${params?.uid}/answers`)).then((snap) => {
-      if (snap.exists()) {
-        console.log(snap);
-        setAnswers(snap.val());
-      }
-    });
-  };
-
-  useEffect(() => {
-    const auth = getAuth(app);
-
-    onAuthStateChanged(auth, (user) => {
-      console.log("entering");
-      if (user) {
-        setUser(user);
-        console.log(user);
-        fetchAnswers(user);
-      }
-    });
-  }, []);
+  const { answer } = useParams();
 
   return (
     <div className="w-full min-h-screen">
+      Page Heading
+      <p className="text-lg font-bold">{answer}</p>
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">
           <div
@@ -66,23 +40,6 @@ const Page = () => {
           </div>
         </div>
       ) : null}
-      <div>{user ? <div>{user?.email}</div> : null}</div>
-      {/* <div>{JSON.stringify(user)}</div> */}
-      <div>
-        {answers ? (
-          <div>
-            {Object.keys(answers).map((ans: any, idx: number) => {
-              return (
-                <div key={idx}>
-                  <h1>{answers[ans].question}</h1>
-                  <p>Category : {answers[ans].type}</p>
-                  <p>{JSON.stringify(answers[ans].answer)}</p>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 };

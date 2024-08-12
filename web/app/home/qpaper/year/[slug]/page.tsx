@@ -25,6 +25,7 @@ interface ExamPaper {
   university: string;
   subject?: string;
   year_number?: string;
+  url?: string;
 }
 const Page = () => {
   const [selectedFile, setSelectedFile] = useState<any>(null);
@@ -91,19 +92,33 @@ const Page = () => {
 
       if (data.exists()) {
         const papers: ExamPaper[] = await data.val();
+        console.log(papers);
 
         const filteredPapers = Object.values(papers).filter(
-          (p: ExamPaper) => p.year_number === slug
+          (p: ExamPaper) => p.year_number === slug,
         );
+
+        let filteredPapersObj:any = {};
+
+        Object.keys(papers).forEach((key:any) => {
+
+          if (papers[key].year_number === slug) {
+            filteredPapersObj[key] = papers[key];
+            filteredPapersObj[key].url = key;
+          }
+        });
+
+        //console.log(filteredPapers);
 
         toast({
           message: "Question Papers Fetched!",
           type: "success",
         });
 
-        setPapers(
-          filteredPapers && filteredPapers.length > 0 ? filteredPapers : null
-        );
+        // setPapers(
+        //   filteredPapers && filteredPapers.length > 0 ? filteredPapers : null
+        // );
+        setPapers(filteredPapersObj);
       }
     } catch (err) {
       console.log(JSON.stringify(err));
@@ -269,7 +284,7 @@ const Page = () => {
       <div className="">
         {papers ? (
           <div className="flex flex-wrap justify-evenly">
-            {Object.keys(papers).map((paper: ExamPaper | any) => {
+            {Object.keys(papers).map((paper: ExamPaper | any, idx: number) => {
               return (
                 <Card
                   className="py-4 my-2 max-w-fit block border-2 border-transparent dark:border-white"
@@ -303,7 +318,7 @@ const Page = () => {
                       className="block mx-auto"
                       color="secondary"
                       variant="flat"
-                      onPress={() => router.push(`/home/qpaper/${paper}`)}
+                      onPress={() => router.push(`/home/qpaper/${papers[paper].url}`)}
                     >
                       View Paper
                     </Button>
