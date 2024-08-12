@@ -223,39 +223,36 @@ const Page = () => {
         </Tab>
         <Tab key="Flash Cards" title="Flash Cards">
           <h2 className="text-lg font-semibold text-center">Flash Cards</h2>
+          <div>
+            {flashCards ? (
+              <Accordion selectionMode="single">
+                {Object.keys(flashCards).map((flash: any, idx: number) => {
+                  return (
+                    <AccordionItem
+                      key={idx}
+                      aria-label={flashCards[flash].question}
+                      title={flashCards[flash].question}
+                    >
+                      <div className="text-medium font-light tracking-wide">
+                        {flashCards[flash].answer}
+                      </div>
+                      <Button
+                        className="block mx-auto my-4 p-2"
+                        color="danger"
+                        radius="md"
+                        variant="ghost"
+                        onPress={() => deleteFlashCard(flash)}
+                      >
+                        Delete
+                      </Button>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            ) : null}
+          </div>
         </Tab>
       </Tabs>
-
-      {/* <div>{JSON.stringify(user)}</div> */}
-
-      <div>
-        {flashCards ? (
-          <Accordion selectionMode="single">
-            {Object.keys(flashCards).map((flash: any, idx: number) => {
-              return (
-                <AccordionItem
-                  key={idx}
-                  aria-label={flashCards[flash].question}
-                  title={flashCards[flash].question}
-                >
-                  <div className="text-medium font-light tracking-wide">
-                    {flashCards[flash].answer}
-                  </div>
-                  <Button
-                    className="block mx-auto my-4 p-2"
-                    color="danger"
-                    radius="md"
-                    variant="ghost"
-                    onPress={() => deleteFlashCard(flash)}
-                  >
-                    Delete
-                  </Button>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        ) : null}
-      </div>
     </div>
   );
 };
