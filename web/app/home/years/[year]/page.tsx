@@ -205,7 +205,7 @@ const Page = () => {
                 radius="lg"
                 size="sm"
                 variant="flat"
-                onPress={() => router.push(`/home/qpaper/year/${year}`)}
+                onPress={() => router.push(`/home/qpaper/years/${year}`)}
               >
                 Try Now
               </Button>

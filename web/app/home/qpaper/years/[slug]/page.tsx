@@ -139,7 +139,7 @@ const Page = () => {
     You are a dental professor in a reputed college and you help students analyse their question papers, you receive images and you analyse them,
     to find out whether they are a question paper of a univeristy or some other files.
     If it is a question paper then you shall analyse the paper and return back the questions with their respective categories which are 
-    Long Essay, Short Essay & Short Answer, also mention the qp code of the paper and the month and year mentioned in the paper, along with the name of the university conducting the examination(exclude the location of the university) and the subject name which is mentioned above the Q.P code which is a number containing usually 3 or four digits in the image, you shall also figure out the year number of students eligible for this examination paper which can have one of the four values which are "first" if the subject of the paper matches any value mentioned in the ${firstYearSubjects} array or "second" if the subject of the paper matches any value mentioned in the ${secondYearSubjects} array or "third" if the subject of the paper matches any value mentioned in the ${thirdYearSubjects} array or "fourth" if the subject of the paper matches any value mentioned in the ${fourthYearSubjects} array, you are smart enough to figure out the year number of eligible students even if the subject name mentioned on the paper does not exactly match any subject name in the array,
+    Long Essay, Short Essay & Short Answer, also mention the qp code of the paper and the time period during which the examination was conducted, it is mentioned in the paper and you shall format it in {Mon Year} format with three letter for the month and then the year, such as Mar 2024 or Oct 2011 and so on, Along with the name of the university conducting the examination(exclude the location of the university) and the subject name which is mentioned above the Q.P code which is a number containing four digits in the image but you shall save that number in string format, you shall also figure out the year number of students eligible for this examination paper which can have one of the four values which are "first" if the subject of the paper matches any value mentioned in the ${firstYearSubjects} array or "second" if the subject of the paper matches any value mentioned in the ${secondYearSubjects} array or "third" if the subject of the paper matches any value mentioned in the ${thirdYearSubjects} array or "fourth" if the subject of the paper matches any value mentioned in the ${fourthYearSubjects} array, you are smart enough to figure out the year number of eligible students even if the subject name mentioned on the paper does not exactly match any subject name in the array,
     also make sure that once you figure out the year number then you select that subject name from the array and use that instead of the full subject name from the paper,
     return the data in triple quoted string containing JSON, here is a sample representation of that,  
     { university: Rajiv Gandhi University of Health Sciences, subject: subject name, time_period: Dec 2017, year_number: first/second etc., qpcode: 1123, long_essays: [questionone, questiontwo], short_essays: [questions...], short_answers: [string...]}
@@ -166,7 +166,7 @@ const Page = () => {
       if (isExamPaper(newParser)) {
         const newKey = `${createAbbreviation(newParser.university)}_${
           newParser.qpcode
-        }`;
+        }_${newParser.time_period.split(" ").join("")}`;
 
         //const chekingRef = ref(db, `/qpapers/${newKey}`);
 
@@ -219,6 +219,16 @@ const Page = () => {
 
   return (
     <div className="w-full min-h-screen">
+      <div>
+        <Button
+          variant="bordered"
+          className="hover:bg-yellow-400 hover:text-black block mx-auto mb-10"
+          color="warning"
+          onPress={() => router.push(`/home/years/${slug}`)}
+        >
+          Back
+        </Button>
+      </div>
       <div className="bg-purple-300 dark:bg-purple-900 w-full md:w-[90%] mx-auto rounded-xl shadow-md shadow-slate-500 md:rounded-full mb-10 p-2 md:p-5">
         <h1 className="text-lg font-semibold text-center p-2 mb-4">
           Upload Question paper to solve it using AI

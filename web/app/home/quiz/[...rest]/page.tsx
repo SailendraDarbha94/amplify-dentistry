@@ -85,12 +85,12 @@ const Page = () => {
         >
           <div className="md:w-1/2 text-center">
             {/* <p className="text-xl font-semibold">Subject : {rest[0]}</p> */}
-            <p className="text-center text-2xl font-bold h-full flex items-center justify-center">
+            <p className="text-center text-lg md:text-2xl font-bold h-full flex items-center justify-center">
               Questions : {rest[1]}
             </p>
           </div>
           <div className="md:w-1/2">
-            <p className="text-center text-2xl font-bold h-full flex items-center justify-center">
+            <p className="text-center text-lg md:text-2xl font-bold h-full flex items-center justify-end">
               Score : {score}
             </p>
           </div>

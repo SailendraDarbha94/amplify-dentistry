@@ -181,7 +181,7 @@ const QuestionItem = ({
         <button
           className={`text-sm inline ${
             loading ? "animate-pulse" : "animate-none"
-          } bg-black text-white rounded-md py-1 px-2`}
+          } bg-black text-white dark:bg-white dark:text-black rounded-md py-1 px-2`}
           disabled={loading}
           onClick={questionAnswerer}
         >

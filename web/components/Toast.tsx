@@ -1,5 +1,3 @@
-import { ToothBrushIcon } from "./icons";
-
 export interface ToastMessage {
   message: string;
   type: string;
@@ -9,8 +7,8 @@ const Toast = ({ message, type }: ToastMessage) => {
   return (
     <>
       {message && (
-        <div className="fixed flex items-center font-pSemiBold z-50 text-lg top-20 right-0 w-80 min-h-14 border-2 border-black p-4 bg-white text-black rounded-xl">
-          <svg
+        <div className="fixed font-pSemiBold z-50 text-lg top-20 right-0 w-80 min-h-14 border-2 border-black p-4 bg-white text-black rounded-xl">
+          {/* <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-10 w-fit"
             viewBox="0 0 128 128"
@@ -72,7 +70,7 @@ const Toast = ({ message, type }: ToastMessage) => {
               fill="#fb8c00"
               d="M7.11 116.71c4.11 4.11 9.86.76 11.92-1.3c1.6-1.6 53.84-53.37 53.84-53.37c5.11-5.11 6.89-6.5 5.01-9.15s-9.38-2.33-13.54 1.84c0 0-52.56 48.89-54.83 51.16s-5.85 7.37-2.4 10.82"
             />
-          </svg>
+          </svg> */}
           {message}
         </div>
       )}
