@@ -219,17 +219,47 @@ const Page = () => {
 
   return (
     <div className="w-full min-h-screen">
-      <div>
-        <Button
-          variant="bordered"
-          className="hover:bg-yellow-400 hover:text-black block mx-auto mb-10"
-          color="warning"
-          onPress={() => router.push(`/home/years/${slug}`)}
-        >
-          Back
-        </Button>
-      </div>
-      <div className="bg-purple-300 dark:bg-purple-900 w-full md:w-[90%] mx-auto rounded-xl shadow-md shadow-slate-500 md:rounded-full mb-10 p-2 md:p-5">
+      <Card>
+        <CardHeader>
+          <h1 className="text-center w-full mt-4 textlg md:text-3xl font-bold tracking-wide">
+            Upload Question paper to solve it using AI
+          </h1>
+        </CardHeader>
+        <CardBody>
+          <label htmlFor="test" className="block mx-auto text-md text-center">
+            *Please select an Image file, other formats are currently
+            unsupported
+          </label>
+          <input
+            type="file"
+            id="test"
+            className="block p-2 mx-auto max-w-fit"
+            onChange={handleFileChange}
+          />
+        </CardBody>
+        <CardFooter className="flex justify-around items-center pb-4 pt-2">
+          <Button
+            variant="bordered"
+            className="hover:bg-yellow-400 md:w-40 hover:text-black"
+            color="warning"
+            onPress={() => router.push(`/home/years/${slug}`)}
+          >
+            Back
+          </Button>
+          {selectedFile ? (
+            <Button
+              disabled={loading}
+              variant="solid"
+              color="primary"
+              className={`${loading ? "animate-pulse" : "animate-none"} md:w-40`}
+              onClick={solvePaper}
+            >
+              {loading ? "Loading..." : "Upload Paper"}
+            </Button>
+          ) : null}
+        </CardFooter>
+      </Card>
+      {/* <div className="bg-purple-300 dark:bg-purple-900 w-full md:w-[90%] mx-auto rounded-xl shadow-md shadow-slate-500 md:rounded-full mb-10 p-2 md:p-5">
         <h1 className="text-lg font-semibold text-center p-2 mb-4">
           Upload Question paper to solve it using AI
         </h1>
@@ -258,8 +288,8 @@ const Page = () => {
             </Button>
           ) : null}
         </div>
-      </div>
-      <h1 className="text-lg font-semibold text-center">
+      </div> */}
+      <h1 className="text-lg font-semibold text-center mt-10">
         {papers ? "Available Papers" : "No Uploaded Papers"}
       </h1>
       <br />
