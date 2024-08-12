@@ -35,7 +35,7 @@ export default function AuthPage() {
 
   return (
     <div>
-      <h1 className={`${title()} hidden md:block`}>Sign Up</h1>
+      {/* <h1 className={`${title()} hidden md:block`}>Sign Up</h1> */}
       <section className="font-medium md:p-4">
         <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:min-h-screen lg:py-0">
           <a

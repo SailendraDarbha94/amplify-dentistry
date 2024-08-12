@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 // import * as firebase from "firebase";
 // Optionally import the services that you want to use
-import { browserLocalPersistence, initializeAuth } from 'firebase/auth';
+import { browserLocalPersistence, initializeAuth } from "firebase/auth";
 import { getDatabase, ref } from "firebase/database";
 // import {...} from "firebase/firestore";
 // import {...} from "firebase/functions";
@@ -9,23 +9,23 @@ import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 // Initialize Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyBVUwTCTvah5wRiiIxDun8YpMfeRYaQPqo",
-    authDomain: "amplify-dentistry-9c178.firebaseapp.com",
-    projectId: "amplify-dentistry-9c178",
-    storageBucket: "amplify-dentistry-9c178.appspot.com",
-    messagingSenderId: "1029656965103",
-    databaseURL: "https://amplify-dentistry-9c178-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    appId: "1:1029656965103:web:eac462a52a6b4c78aa101a",
-    measurementId: "G-TYSNZVGY45"
-  };
-  
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+};
+
 // if (!firebase.apps.length) {
 //   firebase.initializeApp(firebaseConfig);
 // }
 
 const app = initializeApp(firebaseConfig);
 
-export default app
+export default app;
 // For more information on how to access Firebase in your project,
 // see the Firebase documentation: https://firebase.google.com/docs/web/setup#access-firebase
 
