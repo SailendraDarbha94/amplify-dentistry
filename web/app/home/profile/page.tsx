@@ -5,6 +5,7 @@ import app from "@/config/firebase";
 import { Accordion, AccordionItem } from "@nextui-org/accordion";
 import { Button } from "@nextui-org/button";
 import { Divider } from "@nextui-org/divider";
+import { Tab, Tabs } from "@nextui-org/tabs";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { child, get, getDatabase, ref, remove } from "firebase/database";
 import { useContext, useEffect, useState } from "react";
@@ -13,11 +14,34 @@ const Page = () => {
 
   const [user, setUser] = useState<any | null>(null);
   const [answers, setAnswers] = useState<any | null>(null);
+  const [flashCards, setFlashCards] = useState<any | null>(null);
+
   const { toast } = useContext(ToastContext);
+
+  const fetchFlashCards = async (params: any) => {
+    const db = getDatabase(app);
+
+    try {
+      get(child(ref(db), `/users/${params?.uid}/flashcards`)).then((snap) => {
+        if (snap.exists()) {
+          //console.log(snap);
+          setFlashCards(snap.val());
+        }
+      });
+    } catch (err) {
+      console.log(JSON.stringify(err));
+      toast({
+        message: "An Error Occurred! Please try again later",
+        type: "error",
+      });
+    }
+  };
+
   const fetchAnswers = async (params: any) => {
     const db = getDatabase(app);
-    console.log(params?.uid);
-    console.log("entering db");
+    //console.log(params?.uid);
+    //console.log("entering db");
+
     get(child(ref(db), `/users/${params?.uid}/answers`)).then((snap) => {
       if (snap.exists()) {
         //console.log(snap);
@@ -30,11 +54,12 @@ const Page = () => {
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, (u) => {
-      console.log("entering");
+      //console.log("entering");
       if (u) {
         setUser(u);
-        console.log(u);
+        //console.log(u);
         fetchAnswers(u);
+        fetchFlashCards(u);
       }
     });
   }, []);
@@ -43,11 +68,41 @@ const Page = () => {
     setLoading(true);
     const db = getDatabase(app);
     const deletionRef = ref(db, `/users/${user.uid}/answers/${params}`);
-    console.log(params);
+    //console.log(params);
+
     await remove(deletionRef)
       .then(() => {
         toast({
           message: "Answer Deleted from Database",
+          type: "sucess",
+        });
+        setLoading(false);
+        setTimeout(() => {
+          if (window) {
+            window.location.reload();
+          }
+        }, 500);
+      })
+      .catch((err) => {
+        console.log(JSON.stringify(err));
+        toast({
+          message: "An Error Occurred! Please try again later",
+          type: "error",
+        });
+        setLoading(false);
+      });
+  };
+
+  const deleteFlashCard = async (params: string) => {
+    setLoading(true);
+    const db = getDatabase(app);
+    const deletionRef = ref(db, `/users/${user.uid}/flashcards/${params}`);
+    //console.log(params);
+
+    await remove(deletionRef)
+      .then(() => {
+        toast({
+          message: "Flash Card Deleted from Database",
           type: "sucess",
         });
         setLoading(false);
@@ -107,51 +162,91 @@ const Page = () => {
       </div>
       <br />
       <br />
-      <h2 className="text-lg font-semibold text-center">Saved Answers</h2>
+      <Tabs aria-label="Options" size="md" radius="lg" className="block">
+        <Tab key="Answers" title="Answers">
+          <h2 className="text-lg font-semibold text-center">Saved Answers</h2>{" "}
+          <div>
+            {answers ? (
+              <Accordion selectionMode="single">
+                {Object.keys(answers).map((ans: any, idx: number) => {
+                  return (
+                    <AccordionItem
+                      key={idx}
+                      aria-label={answers[ans].question}
+                      title={answers[ans].question}
+                    >
+                      <div className="text-medium font-light tracking-wide">
+                        {answers[ans].answer ? (
+                          <div className="px-4 pb-4 text-md tracking-wide font-pLight ">
+                            {answers[ans].answer.map(
+                              (segment: any, index: number) => {
+                                if (typeof segment === "string") {
+                                  return (
+                                    <p
+                                      key={index}
+                                      className="font-pLight text-md"
+                                    >
+                                      {segment}
+                                    </p>
+                                  );
+                                } else if (segment.type === "bold") {
+                                  return (
+                                    <div key={index} className="mt-2">
+                                      <h1 className="text-lg font-pMedium">
+                                        {segment.content}
+                                      </h1>
+                                    </div>
+                                  );
+                                }
+
+                                return null;
+                              }
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                      <Button
+                        className="block mx-auto my-4 p-2"
+                        color="danger"
+                        radius="md"
+                        variant="ghost"
+                        onPress={() => deleteAnswer(ans)}
+                      >
+                        Delete
+                      </Button>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            ) : null}
+          </div>
+        </Tab>
+        <Tab key="Flash Cards" title="Flash Cards">
+          <h2 className="text-lg font-semibold text-center">Flash Cards</h2>
+        </Tab>
+      </Tabs>
+
       {/* <div>{JSON.stringify(user)}</div> */}
+
       <div>
-        {answers ? (
+        {flashCards ? (
           <Accordion selectionMode="single">
-            {Object.keys(answers).map((ans: any, idx: number) => {
+            {Object.keys(flashCards).map((flash: any, idx: number) => {
               return (
                 <AccordionItem
                   key={idx}
-                  aria-label={answers[ans].question}
-                  title={answers[ans].question}
+                  aria-label={flashCards[flash].question}
+                  title={flashCards[flash].question}
                 >
                   <div className="text-medium font-light tracking-wide">
-                    {answers[ans].answer ? (
-                      <div className="px-4 pb-4 text-md tracking-wide font-pLight ">
-                        {answers[ans].answer.map(
-                          (segment: any, index: number) => {
-                            if (typeof segment === "string") {
-                              return (
-                                <p key={index} className="font-pLight text-md">
-                                  {segment}
-                                </p>
-                              );
-                            } else if (segment.type === "bold") {
-                              return (
-                                <div key={index} className="mt-2">
-                                  <h1 className="text-lg font-pMedium">
-                                    {segment.content}
-                                  </h1>
-                                </div>
-                              );
-                            }
-
-                            return null;
-                          }
-                        )}
-                      </div>
-                    ) : null}
+                    {flashCards[flash].answer}
                   </div>
                   <Button
                     className="block mx-auto my-4 p-2"
                     color="danger"
                     radius="md"
                     variant="ghost"
-                    onPress={() => deleteAnswer(ans)}
+                    onPress={() => deleteFlashCard(flash)}
                   >
                     Delete
                   </Button>

@@ -328,9 +328,8 @@ export default function Home() {
                   Flash Cards
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 font-light">
-                  Coming Soon : No longer shall you need to worry about
-                  forgetting key details about important topics, we&apos;ve got
-                  you covered
+                  No longer shall you need to worry about forgetting key details
+                  about important topics, we&apos;ve got you covered
                 </p>
               </div>
               <div>

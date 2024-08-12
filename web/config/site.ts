@@ -2,7 +2,8 @@ export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
   name: "Amplify Dentistry",
-  description: "AI Platform for Dental Students",
+  description:
+    "Ampdent is an AI Platform for Dental Students powered by Gemini and built upon Firebase for speed, reliability and scalability",
   navItems: [
     {
       label: "Home",

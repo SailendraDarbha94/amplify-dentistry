@@ -5,6 +5,17 @@ import { Divider } from "@nextui-org/divider";
 import { useContext, useState } from "react";
 
 import { ToastContext } from "@/app/providers";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  useDisclosure,
+} from "@nextui-org/modal";
+import { child, getDatabase, push, ref, update } from "firebase/database";
+import app from "@/config/firebase";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 const QuizItem = ({
   id,
   question,
@@ -12,7 +23,7 @@ const QuizItem = ({
   options,
   scorer,
   counter,
-  increment
+  increment,
 }: {
   id: number;
   question: string;
@@ -24,16 +35,55 @@ const QuizItem = ({
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [optionsDisabled, setOptionsDisabled] = useState<boolean>(false);
+  const [flashCardSaved, setFlashCardSaved] = useState<boolean>(false);
   const { toast } = useContext(ToastContext);
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
+  const createFlashCard = async () => {
+    setLoading(true);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      const newKey = push(child(ref(db), `/users/${user?.uid}/flashcards`)).key;
+      const updates: any | null = {};
+
+      updates[`/users/${user?.uid}/flashcards/${newKey}`] = {
+        question: question,
+        answer: answer,
+      };
+
+      update(ref(db), updates)
+        .then(() => {
+          console.log("flashcard saved");
+          setLoading(false);
+          setFlashCardSaved(true);
+          toast({
+            message: "Flashcard Saved to Profile!",
+            type: "success",
+          });
+        })
+        .catch((err) => {
+          console.log(JSON.stringify(err));
+          setLoading(false);
+          toast({
+            message: "An Error Occurred! Please Try Again Later",
+            type: "error",
+          });
+        });
+    });
+
+    setLoading(false);
+  };
 
   const checkAnswer = async (params: string) => {
-    counter((prev:number) => {
+    counter((prev: number) => {
       return prev + 1;
     });
 
     if (params == answer) {
       setOptionsDisabled(true);
-      scorer((prev:number) => {
+      scorer((prev: number) => {
         return prev + increment;
       });
       toast({
@@ -51,6 +101,40 @@ const QuizItem = ({
 
   return (
     <div className="w-full min-h-fit">
+      <Modal size="3xl" isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <h1 className="text-2xl font-extrabold text-center">
+                  Flash Card
+                </h1>
+              </ModalHeader>
+              <ModalBody>
+                <div className="mt-4">
+                  <h1 className="text-lg font-light">{question}</h1>
+                  <br />
+                  <p className="text-lg font-semibold">{answer}</p>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+                <Button
+                  isDisabled={flashCardSaved}
+                  color="primary"
+                  onPress={() => {
+                    onClose(), createFlashCard();
+                  }}
+                >
+                  {flashCardSaved ? "Saved" : "Save"}
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">
           <div
@@ -85,6 +169,18 @@ const QuizItem = ({
         <Card className="w-full">
           <CardHeader className="flex gap-3">
             <p className="text-lg">{question}</p>
+            {optionsDisabled ? (
+              <Button
+                className="ml-auto min-w-24 max-w-24"
+                color="secondary"
+                onPress={onOpen}
+                radius="lg"
+                size="sm"
+                variant="shadow"
+              >
+                Flash Card
+              </Button>
+            ) : null}
           </CardHeader>
           <Divider />
           <CardBody className="">
@@ -93,7 +189,7 @@ const QuizItem = ({
                 return (
                   <Button
                     key={idx}
-                    className="w-[45%] my-2 block"
+                    className="w-[45%] my-2 block text-wrap min-h-fit"
                     color={
                       optionsDisabled && option == answer
                         ? "success"
