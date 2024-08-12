@@ -227,7 +227,7 @@ const Page = () => {
         </CardHeader>
         <CardBody>
           <label htmlFor="test" className="block mx-auto text-md text-center">
-            *Please select an Image file, other formats are currently
+            *Please select an Image/Pdf file, other formats are currently
             unsupported
           </label>
           <input
