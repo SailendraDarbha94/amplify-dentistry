@@ -1,14 +1,19 @@
 "use client";
+import { ToastContext } from "@/app/providers";
+import { subtitle, title } from "@/components/primitives";
 import app from "@/config/firebase";
+import { Accordion, AccordionItem } from "@nextui-org/accordion";
+import { Button } from "@nextui-org/button";
+import { Divider } from "@nextui-org/divider";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { child, get, getDatabase, ref } from "firebase/database";
-import { useEffect, useState } from "react";
+import { child, get, getDatabase, ref, remove } from "firebase/database";
+import { useContext, useEffect, useState } from "react";
 const Page = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   const [user, setUser] = useState<any | null>(null);
   const [answers, setAnswers] = useState<any | null>(null);
-
+  const { toast } = useContext(ToastContext);
   const fetchAnswers = async (params: any) => {
     const db = getDatabase(app);
     console.log(params?.uid);
@@ -24,15 +29,43 @@ const Page = () => {
   useEffect(() => {
     const auth = getAuth(app);
 
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, (u) => {
       console.log("entering");
-      if (user) {
-        setUser(user);
-        console.log(user);
-        fetchAnswers(user);
+      if (u) {
+        setUser(u);
+        console.log(u);
+        fetchAnswers(u);
       }
     });
   }, []);
+
+  const deleteAnswer = async (params: string) => {
+    setLoading(true);
+    const db = getDatabase(app);
+    const deletionRef = ref(db, `/users/${user.uid}/answers/${params}`);
+    console.log(params);
+    await remove(deletionRef)
+      .then(() => {
+        toast({
+          message: "Answer Deleted from Database",
+          type: "sucess",
+        });
+        setLoading(false);
+        setTimeout(() => {
+          if (window) {
+            window.location.reload();
+          }
+        }, 500);
+      })
+      .catch((err) => {
+        console.log(JSON.stringify(err));
+        toast({
+          message: "An Error Occurred! Please try again later",
+          type: "error",
+        });
+        setLoading(false);
+      });
+  };
 
   return (
     <div className="w-full min-h-screen">
@@ -66,21 +99,66 @@ const Page = () => {
           </div>
         </div>
       ) : null}
-      <div>{user ? <div>{user?.email}</div> : null}</div>
+      <div className="">
+        <h1 className={title()}>Your Profile</h1>
+        {user ? (
+          <div className="p-2 text-xl font-bold underline">{user?.email}</div>
+        ) : null}
+      </div>
+      <br />
+      <br />
+      <h2 className="text-lg font-semibold text-center">Saved Answers</h2>
       {/* <div>{JSON.stringify(user)}</div> */}
       <div>
         {answers ? (
-          <div>
+          <Accordion selectionMode="single">
             {Object.keys(answers).map((ans: any, idx: number) => {
               return (
-                <div key={idx}>
-                  <h1>{answers[ans].question}</h1>
-                  <p>Category : {answers[ans].type}</p>
-                  <p>{JSON.stringify(answers[ans].answer)}</p>
-                </div>
+                <AccordionItem
+                  key={idx}
+                  aria-label={answers[ans].question}
+                  title={answers[ans].question}
+                >
+                  <p className="text-medium font-light tracking-wide">
+                    {answers[ans].answer ? (
+                      <div className="px-4 pb-4 text-md tracking-wide font-pLight ">
+                        {answers[ans].answer.map(
+                          (segment: any, index: number) => {
+                            if (typeof segment === "string") {
+                              return (
+                                <p key={index} className="font-pLight text-md">
+                                  {segment}
+                                </p>
+                              );
+                            } else if (segment.type === "bold") {
+                              return (
+                                <div key={index} className="mt-2">
+                                  <h1 className="text-lg font-pMedium">
+                                    {segment.content}
+                                  </h1>
+                                </div>
+                              );
+                            }
+
+                            return null;
+                          }
+                        )}
+                      </div>
+                    ) : null}
+                  </p>
+                  <Button
+                    className="block mx-auto my-4 p-2"
+                    color="danger"
+                    radius="md"
+                    variant="ghost"
+                    onPress={() => deleteAnswer(ans)}
+                  >
+                    Delete
+                  </Button>
+                </AccordionItem>
               );
             })}
-          </div>
+          </Accordion>
         ) : null}
       </div>
     </div>

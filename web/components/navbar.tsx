@@ -17,7 +17,7 @@ import clsx from "clsx";
 import { usePathname, useRouter } from "next/navigation";
 import { getAuth, signOut } from "firebase/auth";
 import { useContext } from "react";
-
+import Image from "next/image";
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
 import {
@@ -82,7 +82,10 @@ export const Navbar = () => {
             className="justify-start items-center gap-1 hidden md:flex"
             href={fullPath && fullPath.includes("home") ? "/home" : "/"}
           >
-            <ToothBrushIcon />
+            {/* <ToothBrushIcon /> */}
+            <div className="relative w-4 h-4 md:h-6 md:w-6">
+              <Image src="/images/logo-image.png" fill alt="logo" />
+            </div>
             <p className="font-bold text-lg">Amplify Dentistry</p>
           </NextLink>
           <NextLink

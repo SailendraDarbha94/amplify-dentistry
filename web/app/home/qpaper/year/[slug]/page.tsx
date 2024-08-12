@@ -95,13 +95,12 @@ const Page = () => {
         console.log(papers);
 
         const filteredPapers = Object.values(papers).filter(
-          (p: ExamPaper) => p.year_number === slug,
+          (p: ExamPaper) => p.year_number === slug
         );
 
-        let filteredPapersObj:any = {};
+        let filteredPapersObj: any = {};
 
-        Object.keys(papers).forEach((key:any) => {
-
+        Object.keys(papers).forEach((key: any) => {
           if (papers[key].year_number === slug) {
             filteredPapersObj[key] = papers[key];
             filteredPapersObj[key].url = key;
@@ -198,6 +197,9 @@ const Page = () => {
           type: "success",
         });
         setLoading(false);
+        // if (window) {
+        //   window.location.reload();
+        // }
         console.log("bsdk paper upload kar");
       }
     } catch (err) {
@@ -318,7 +320,9 @@ const Page = () => {
                       className="block mx-auto"
                       color="secondary"
                       variant="flat"
-                      onPress={() => router.push(`/home/qpaper/${papers[paper].url}`)}
+                      onPress={() =>
+                        router.push(`/home/qpaper/${papers[paper].url}`)
+                      }
                     >
                       View Paper
                     </Button>
