@@ -172,7 +172,7 @@ const QuestionItem = ({
           disabled={disabled}
           className={`text-sm inline ${
             loading ? "animate-pulse" : "animate-none"
-          } ${disabled ? "bg-slate-600" : "bg-black"} text-white rounded-md py-1 px-2`}
+          } ${disabled ? "bg-slate-600" : "bg-black"} dark:bg-white text-white dark:text-black rounded-md py-1 px-2`}
           onClick={answerSaver}
         >
           {loading ? "Loading" : disabled ? "Saved" : "Save"}

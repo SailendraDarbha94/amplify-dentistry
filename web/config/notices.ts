@@ -1,9 +1,14 @@
 export const notices: any[] = [
   {
     id: 1,
-    title: "Resumption of Services",
-    notice:
-      "This is to inform you all that Amplify Dentistry will be resuming services soon",
+    title: "New Feature!",
+    notice: "Question Paper Solver is now Live!",
+    author: "AmpDent",
+  },
+  {
+    id: 2,
+    title: "R.G.U.H.S Exams",
+    notice: "The Jun-July exams of 2024 have started",
     author: "AmpDent",
   },
 ];

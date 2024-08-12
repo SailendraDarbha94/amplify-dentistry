@@ -20,7 +20,7 @@ const Page = () => {
     console.log("entering db");
     get(child(ref(db), `/users/${params?.uid}/answers`)).then((snap) => {
       if (snap.exists()) {
-        console.log(snap);
+        //console.log(snap);
         setAnswers(snap.val());
       }
     });
@@ -119,7 +119,7 @@ const Page = () => {
                   aria-label={answers[ans].question}
                   title={answers[ans].question}
                 >
-                  <p className="text-medium font-light tracking-wide">
+                  <div className="text-medium font-light tracking-wide">
                     {answers[ans].answer ? (
                       <div className="px-4 pb-4 text-md tracking-wide font-pLight ">
                         {answers[ans].answer.map(
@@ -145,7 +145,7 @@ const Page = () => {
                         )}
                       </div>
                     ) : null}
-                  </p>
+                  </div>
                   <Button
                     className="block mx-auto my-4 p-2"
                     color="danger"
