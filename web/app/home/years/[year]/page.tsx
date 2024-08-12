@@ -205,7 +205,7 @@ const Page = () => {
                 radius="lg"
                 size="sm"
                 variant="flat"
-                onPress={() => router.push("/home/qpaper")}
+                onPress={() => router.push(`/home/qpaper/year/${year}`)}
               >
                 Try Now
               </Button>
@@ -263,12 +263,12 @@ const Page = () => {
             </CardHeader>
             <Divider />
             <CardBody>
-              <p className="text-center text-lg font-semibold mb-4">
+              <p className="text-center text-sm md:text-lg font-semibold mb-4">
                 Generate MCQs & Practice using AI
               </p>
               <div className="flex flex-wrap justify-evenly">
                 <Select
-                  className="max-w-xs"
+                  className="max-w-xs mb-2"
                   label="Choose Subject"
                   onSelectionChange={handleSubjectChange}
                   //onSelect={handleChange}
@@ -280,7 +280,7 @@ const Page = () => {
                 <Select
                   onSelectionChange={handleNumberChange}
                   label="Number of Questions"
-                  className="max-w-xs"
+                  className="max-w-xs mb-2"
                 >
                   {[5, 10, 15].map((sub, idx) => (
                     <SelectItem key={idx} className="text-center">

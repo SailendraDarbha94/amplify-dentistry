@@ -24,5 +24,5 @@ export default function HomeLayout({
     });
   }, []);
 
-  return <main className="p-4">{children}</main>;
+  return <main className="max-w-full h-full md:p-4">{children}</main>;
 }

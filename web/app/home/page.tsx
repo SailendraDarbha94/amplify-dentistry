@@ -5,7 +5,7 @@ const Page = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   return (
-    <div className="w-full min-h-screen">
+    <div className="w-full min-h-fit">
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">
           <div

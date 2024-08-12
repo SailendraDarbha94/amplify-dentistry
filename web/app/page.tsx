@@ -117,16 +117,31 @@ export default function Home() {
         <Link
           //isExternal
           className={buttonStyles({
-            variant: "faded",
+            variant: "flat",
             radius: "full",
-            color: "secondary",
+            color: "primary",
           })}
           href={siteConfig.internalLinks.signUp}
         >
           Sign Up
           {/* <ToothBrushIcon /> */}
         </Link>
-        <Button color="primary" radius="full" variant="shadow" onPress={onOpen}>
+        <Button
+          className="hidden md:block"
+          color="primary"
+          radius="full"
+          variant="shadow"
+          onPress={onOpen}
+        >
+          Login
+        </Button>
+        <Button
+          className="block md:hidden"
+          color="primary"
+          onPress={() => {
+            router.push("/sign-in");
+          }}
+        >
           Login
         </Button>
       </div>

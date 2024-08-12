@@ -5,11 +5,16 @@ import Image from "next/image";
 import { child, get, getDatabase, ref, update } from "firebase/database";
 import app from "@/config/firebase";
 import { Button } from "@nextui-org/button";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { subtitle } from "@/components/primitives";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ToastContext } from "@/app/providers";
-import { firstYearSubjects, fourthYearSubjects, secondYearSubjects, thirdYearSubjects } from "@/app/lib/subjects";
+import {
+  firstYearSubjects,
+  fourthYearSubjects,
+  secondYearSubjects,
+  thirdYearSubjects,
+} from "@/app/lib/subjects";
 
 interface ExamPaper {
   time_period: string;
@@ -29,6 +34,9 @@ const Page = () => {
     setSelectedFile(file);
     //console.log(file);
   };
+
+  const { slug } = useParams();
+
   async function fileToGenerativePart(file: File) {
     const base64EncodedDataPromise = new Promise((resolve) => {
       const reader: any = new FileReader();
@@ -76,19 +84,26 @@ const Page = () => {
         message: "Fetching Available Question Papers!",
         type: "process",
       });
-      console.log("entering");
+      //console.log("entering");
       const db = getDatabase(app);
       const dbRef = ref(db);
       const data = await get(child(dbRef, "qpapers"));
 
       if (data.exists()) {
-        const papers = await data.val();
-        console.log(papers);
+        const papers: ExamPaper[] = await data.val();
+
+        const filteredPapers = Object.values(papers).filter(
+          (p: ExamPaper) => p.year_number === slug
+        );
+
         toast({
           message: "Question Papers Fetched!",
           type: "success",
         });
-        setPapers(papers);
+
+        setPapers(
+          filteredPapers && filteredPapers.length > 0 ? filteredPapers : null
+        );
       }
     } catch (err) {
       console.log(JSON.stringify(err));
@@ -120,48 +135,12 @@ const Page = () => {
     }
     `;
 
-    // const newPrompt = "describe this picture in a few lines";
-    // Prepare image for input
-
     try {
       const imagePart: any = await fileToGenerativePart(selectedFile);
       const result: any = await model.generateContent([prompt, imagePart]);
       const response = result.response;
       const text: any = await response.text();
       console.log(text);
-
-      //let parsedReponse: ExamPaper = JSON.parse(text);
-      //let parsedReponse:any
-
-      //console.log("parseddddd", parsedReponse, typeof parsedReponse);
-      // if (parsedReponse?.error_code == "101") {
-      //   console.log("Upload paper not stupid shit, you're testing my patience")
-      // }
-
-      // if (parsedReponse) {
-      //   const db = getDatabase(app);
-      //   const newKey = `${createAbbreviation(parsedReponse.university)}_${
-      //     parsedReponse.qpcode
-      //   }`;
-
-      //   //const chekingRef = ref(db, `/qpapers/${newKey}`);
-
-      //   get(child(ref(db), `/qpapers/${newKey}`)).then((snap) => {
-      //     if (snap.exists()) {
-      //       console.log("TODO : add toast, Paper already exists");
-      //     } else {
-      //       const updates: ExamPaper | any = {};
-      //       updates["/qpapers/" + newKey] = parsedReponse;
-      //       update(ref(db), updates);
-
-      //       console.log("qpaper uploaded at /qpapers/" + newKey);
-      //     }
-      //   });
-
-      //   //const newKey = push(child(ref(db), "qpapers")).key;
-
-      //   //router.push(`/qpaper/${newKey}`);
-      // } else {
 
       const newText = await text.split("json")[1];
       console.log(newText);
@@ -218,6 +197,7 @@ const Page = () => {
 
   useEffect(() => {
     fetchQuestionPapers();
+    console.log(slug);
   }, []);
 
   return (
@@ -252,7 +232,9 @@ const Page = () => {
           ) : null}
         </div>
       </div>
-      <h1 className="text-lg font-semibold text-center">Available Papers</h1>
+      <h1 className="text-lg font-semibold text-center">
+        {papers ? "Available Papers" : "No Uploaded Papers"}
+      </h1>
       <br />
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">

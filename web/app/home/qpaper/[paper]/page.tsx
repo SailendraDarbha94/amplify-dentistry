@@ -66,7 +66,7 @@ const Page = () => {
   };
 
   return (
-    <div className="w-full min-h-screen p-4">
+    <div className="w-full min-h-screen p-0.5 md:p-4">
       <h1 className="text-3xl font-pExtraBold p-4">Question Paper</h1>
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">
@@ -100,7 +100,7 @@ const Page = () => {
       ) : null}
       <div className="">
         {data ? (
-          <div className="p-4">
+          <div className="md:p-4">
             <p className="font-pSemiBold text-lg">Q.P Code : {data.qpcode}</p>
             <p className="font-pSemiBold text-lg">Term : {data.time_period}</p>
             <p className="font-pSemiBold text-lg">Subject : {data.subject}</p>

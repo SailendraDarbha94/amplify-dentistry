@@ -9,7 +9,7 @@ const Years = () => {
   //const { toast } = useContext(ToastContext);
 
   return (
-    <main className="mx-auto max-w-7xl p-4 md:p-10">
+    <main className="mx-auto max-w-7xl p-0.5 md:p-10">
       <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-black pb-5 sm:flex-row sm:items-center sm:gap-0">
         <h1 className="my-3 text-center w-full text-5xl font-pSemiBold">
           Years
@@ -30,7 +30,7 @@ const Years = () => {
             >
               <Icon
                 icon="healthicons:tooth"
-                className="ml-auto md:h-10 md:w-10 h-8 w-8"
+                className="ml-auto md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
               />
             </a>
             <a
@@ -39,11 +39,11 @@ const Years = () => {
               onClick={() => setLoading(true)}
             >
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
             </a>
@@ -55,19 +55,19 @@ const Years = () => {
               onClick={() => setLoading(true)}
             >
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
             </a>
@@ -77,23 +77,19 @@ const Years = () => {
               onClick={() => setLoading(true)}
             >
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
               <Icon
-                className="md:h-10 md:w-10 h-8 w-8"
+                className="md:h-10 md:w-10 sm:h-8 sm:w-8 w-6 h-6"
                 icon="healthicons:tooth"
               />
             </a>
           </div>
-          <br />
-          {/* <div className="w-full">
-            <NoticeBoard />
-          </div> */}
         </div>
       )}
     </main>

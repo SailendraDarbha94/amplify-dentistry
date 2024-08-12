@@ -79,12 +79,24 @@ export const Navbar = () => {
       <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
         <NavbarBrand as="li" className="gap-3 max-w-fit">
           <NextLink
-            className="flex justify-start items-center gap-1"
+            className="justify-start items-center gap-1 hidden md:flex"
             href={fullPath && fullPath.includes("home") ? "/home" : "/"}
           >
             <ToothBrushIcon />
             <p className="font-bold text-lg">Amplify Dentistry</p>
           </NextLink>
+          {fullPath && fullPath.includes("home") ? (
+            <NavbarItem className="flex md:hidden">
+              <Button
+                variant="flat"
+                onPress={logoutUser}
+                className="text-sm font-normal text-default-600 bg-default-100"
+                startContent={<LogoutIcon className="text-danger" />}
+              >
+                Logout
+              </Button>
+            </NavbarItem>
+          ) : null}
         </NavbarBrand>
         {/* <ul className="hidden lg:flex gap-4 justify-start ml-2">
           {siteConfig.navItems.map((item) => (
@@ -152,32 +164,56 @@ export const Navbar = () => {
         <Link isExternal aria-label="Github" href={siteConfig.links.github}>
           <GithubIcon className="text-default-500" />
         </Link>
+        <Link
+          isExternal={fullPath && fullPath.includes("home") ? false : true}
+          aria-label="Portfolio"
+          href={
+            fullPath && fullPath.includes("home")
+              ? "/home/profile"
+              : siteConfig.links.portfolio
+          }
+        >
+          <PortfolioIcon />
+        </Link>
         <ThemeSwitch />
-        <NavbarMenuToggle />
+        {/* <NavbarMenuToggle /> */}
       </NavbarContent>
 
-      <NavbarMenu>
+      {/* <NavbarMenu>
         {searchInput}
-        <div className="mx-4 mt-2 flex flex-col gap-2">
+        <div className="mx-4 mt-2 justify-around min-h-48 max-h-full flex flex-col gap-4 items-center">
           {siteConfig.navMenuItems.map((item, index) => (
             <NavbarMenuItem key={`${item}-${index}`}>
               <Link
+                className=""
                 color={
                   index === 2
                     ? "primary"
                     : index === siteConfig.navMenuItems.length - 1
-                      ? "danger"
+                      ? "primary"
                       : "foreground"
                 }
-                href="#"
+                href={item.href}
                 size="lg"
               >
-                {item.label}
+                <h1 className="text-center">{item.label}</h1>
               </Link>
             </NavbarMenuItem>
           ))}
+          {fullPath && fullPath.includes("home") ? (
+            <NavbarMenuItem className="hidden md:flex">
+              <Button
+                variant="flat"
+                onPress={logoutUser}
+                className="text-sm font-normal text-default-600 bg-default-100"
+                startContent={<LogoutIcon className="text-danger" />}
+              >
+                Logout
+              </Button>
+            </NavbarMenuItem>
+          ) : null}
         </div>
-      </NavbarMenu>
+      </NavbarMenu> */}
     </NextUINavbar>
   );
 };
