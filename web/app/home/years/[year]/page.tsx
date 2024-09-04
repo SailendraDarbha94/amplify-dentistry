@@ -304,8 +304,8 @@ const Page = () => {
             </CardFooter>
           </Card>
         </div>
-        <div className="flex w-full justify-center my-4">
-          <NoticeBoard />
+        <div className="flex w-full justify-center my-4 p-4">
+          <NoticeBoard year={year} />
         </div>
       </div>
     </div>

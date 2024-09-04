@@ -1,4 +1,5 @@
 "use client";
+import Quiz from "@/components/quiz";
 import QuizItem from "@/components/quizItem";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Button } from "@nextui-org/button";
@@ -41,7 +42,7 @@ const Page = () => {
   }, []);
 
   const [score, setScore] = useState<number>(0);
-  const [counter, setCounter] = useState<number>(0);
+  const [counter, setCounter] = useState<number>(1);
   const [quizFinished, setQuizFinished] = useState<boolean>(false);
 
   const topRef = useRef(null);
@@ -76,7 +77,9 @@ const Page = () => {
     <div className="w-full min-h-screen">
       {loading ? (
         <div className="w-full min-h-96 flex justify-center items-center">
-          <p className="text-3xl font-extrabold tracking-wider animate-pulse text-center">Loading...</p>
+          <p className="text-3xl font-extrabold tracking-wider animate-pulse text-center">
+            Loading...
+          </p>
         </div>
       ) : (
         <div
@@ -96,7 +99,7 @@ const Page = () => {
           </div>
         </div>
       )}
-      <div className="">
+      {/* <div className="">
         {quiz ? (
           <div>
             {quiz.map((item: any) => {
@@ -111,6 +114,20 @@ const Page = () => {
                 </div>
               );
             })}
+          </div>
+        ) : null}
+      </div> */}
+      <div className="">
+        {/* {quiz && quiz?.length.toString() <= rest[1] ? ( */}
+        {quiz ? (
+          <div>
+            <Quiz
+              counter={counter}
+              setCounter={setCounter}
+              scorer={setScore}
+              quizQuestions={quiz}
+              increment={rest[1] == "5" ? 6 : rest[1] == "10" ? 3 : 2}
+            />
           </div>
         ) : null}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@nextui-org/button";
-import { Card, CardHeader, CardBody } from "@nextui-org/card";
+import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
 import { Divider } from "@nextui-org/divider";
 import { useContext, useState } from "react";
 
@@ -23,6 +23,7 @@ const QuizItem = ({
   options,
   scorer,
   counter,
+  setCounter,
   increment,
 }: {
   id: number;
@@ -31,6 +32,7 @@ const QuizItem = ({
   options: string[];
   scorer: any;
   counter: any;
+  setCounter: any;
   increment: number;
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -77,10 +79,6 @@ const QuizItem = ({
   };
 
   const checkAnswer = async (params: string) => {
-    counter((prev: number) => {
-      return prev + 1;
-    });
-
     if (params == answer) {
       setOptionsDisabled(true);
       scorer((prev: number) => {
@@ -97,6 +95,14 @@ const QuizItem = ({
         type: "error",
       });
     }
+  };
+
+  const nextQuestion = async () => {
+    await setTimeout(() => {
+      setCounter((prev: number) => {
+        return prev + 1;
+      });
+    }, 300);
   };
 
   return (
@@ -168,17 +174,19 @@ const QuizItem = ({
       <div className="my-4 p-2">
         <Card className="w-full">
           <CardHeader className="flex gap-3">
-            <p className="text-lg">{question}</p>
+            <p className="text-lg">
+              {`Question number ${counter} : ${question}`}
+            </p>
             {optionsDisabled ? (
               <Button
                 className="ml-auto min-w-24 max-w-24"
-                color="secondary"
+                color="warning"
                 onPress={onOpen}
-                radius="lg"
+                radius="full"
                 size="sm"
                 variant="shadow"
               >
-                Flash Card
+                <span className="font-bold text-gray-900">FLASH CARD</span>
               </Button>
             ) : null}
           </CardHeader>
@@ -208,6 +216,17 @@ const QuizItem = ({
               })}
             </div>
           </CardBody>
+          <CardFooter className="flex justify-center">
+            <Button
+              isDisabled={!optionsDisabled}
+              color={optionsDisabled ? "secondary" : "danger"}
+              radius="full"
+              variant={optionsDisabled ? "solid" : "flat"}
+              onPress={nextQuestion}
+            >
+              Next Question
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     </div>

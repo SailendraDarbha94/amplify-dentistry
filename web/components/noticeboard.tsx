@@ -1,18 +1,21 @@
 "use client";
 
-
 import { notices } from "@/config/notices";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const NoticeBoard = () => {
+const NoticeBoard = ({ year }: { year: string | string[] }) => {
   const [loading, setLoading] = useState<boolean>(false);
 
+  useEffect(() => {
+    console.log(year);
+  }, []);
+
   return (
-    <div className=" w-11/12 font-pMedium border-2 mx-auto border-black dark:border-white bg-transparent rounded-lg">
+    <div className="dark:bg-slate-900 w-full font-pMedium border-2 mx-auto shadow-lg shadow-slate-300 dark:shadow-slate-800 border-black dark:border-slate-500 bg-transparent rounded-lg">
       <h2 className="font-pExtraBold text-center text-2xl text-white bg-black">
         NoticeBoard
       </h2>
-      <hr className="w-full border-black" />
+      <hr className="w-full border-black dark:border-slate-500" />
       <div className="flex justify-evenly overflow-scroll">
         {loading ? (
           <div className="flex h-10 p-4 justify-center items-center">
