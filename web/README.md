@@ -1,7 +1,7 @@
 # Next.js & NextUI Template
 commit bubble to get motivation
 This is a template for creating applications using Next.js 14 (app directory) and NextUI (v2).
-
+clean up
 [Try it on CodeSandbox](https://githubbox.com/nextui-org/next-app-template)
 need to get motivated
 ## Technologies Used
