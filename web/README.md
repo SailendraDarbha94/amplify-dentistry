@@ -5,7 +5,7 @@ clean up
 [Try it on CodeSandbox](https://githubbox.com/nextui-org/next-app-template)
 need to get motivated
 ## Technologies Used
-
+resstaarttttt
 - [Next.js 14](https://nextjs.org/docs/getting-started)
 - [NextUI v2](https://nextui.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
