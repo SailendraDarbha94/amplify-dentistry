@@ -13,7 +13,7 @@ resstaarttttt
 - [TypeScript](https://www.typescriptlang.org/)
 - [Framer Motion](https://www.framer.com/motion/)
 - [next-themes](https://github.com/pacocoursey/next-themes)
-
+restart tomowoor with sonet
 ## How to Use
 
 ### Use the template with create-next-app
