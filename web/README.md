@@ -4,6 +4,7 @@ This is a template for creating applications using Next.js 14 (app directory) an
 clean up
 [Try it on CodeSandbox](https://githubbox.com/nextui-org/next-app-template)
 need to get motivated
+redo backend with go
 ## Technologies Used
 resstaarttttt
 - [Next.js 14](https://nextjs.org/docs/getting-started)
