@@ -7,6 +7,7 @@ need to get motivated
 redo backend with go
 ## Technologies Used
 resstaarttttt
+tomoroow
 - [Next.js 14](https://nextjs.org/docs/getting-started)
 - [NextUI v2](https://nextui.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
