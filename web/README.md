@@ -6,6 +6,8 @@ clean up
 need to get motivated
 redo backend with go
 ## Technologies Used
+
+tomoroow for sure
 resstaarttttt
 tomoroow
 so it begins
