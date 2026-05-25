@@ -1,7 +1,4 @@
-make it into an app for clinics
-tomoroow for sure
-resstaarttttt
- tomorrow
+make it into an app with nextjs
 another day another wasted
 so it begins
 - [Next.js 14](https://nextjs.org/docs/getting-started)
