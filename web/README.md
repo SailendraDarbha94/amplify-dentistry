@@ -10,7 +10,7 @@ so it begins
 - [next-themes](https://github.com/pacocoursey/next-themes)
 restart tomowoor with sonet
 ## How to Use
-
+clean up and start tomorrow
 ### Use the template with create-next-app
 
 To create a new project based on this template using `create-next-app`, run the following command:
