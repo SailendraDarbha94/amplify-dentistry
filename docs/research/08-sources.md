@@ -1,0 +1,66 @@
+# Sources worth reading first
+
+The editor's shortlist of the most decision-relevant primary sources, grouped by topic. Every finding in the [appendix](appendix/README.md) carries its own URLs; this is the reading list.
+
+> Part of the [dental practice-management research](README.md) (October 2026).
+
+- Market: https://www.grandviewresearch.com/industry-analysis/dental-practice-management-software-market
+- Market: https://www.grandviewresearch.com/horizon/outlook/dental-practice-management-software-market/india
+- Market: https://investor.henryschein.com/news-releases/news-release-details/2026/Henry-Schein-One-Unveils-the-Next-Era-of-Dentrix-Ascend-for-DSOs-and-Growth-Focused-Practices/default.aspx
+- Market: https://www.forbesindia.com/article/news/deep-dive/clove-dentals-prescription-for-scale/2993977/1
+- Market: https://www.ciol.com/cxo-of-the-week-vikas-sood-cio-clove-dental/
+- Workforce: https://dciindia.gov.in/DentistRegistered.aspx
+- Workforce: https://www.dentskart.com/blog/how-to-start-a-dental-practice-in-india-2026
+- Adoption: https://www.ovid.com/jnls/srmj/fulltext/10.4103/srmjrds.srmjrds_144_23~evaluating-the-knowledge-and-perception-of-electronic-health
+- Adoption: https://pmc.ncbi.nlm.nih.gov/articles/PMC12375830/
+- Adoption: https://pmc.ncbi.nlm.nih.gov/articles/PMC12451562/
+- Competitor-global: https://www.opendental.com/site/fees.html
+- Competitor-global: https://www.opendental.com/manual/odtouchchart.html
+- Competitor-global: https://carestack.com/pricing
+- Competitor-global: https://www.dentally.com/pricing
+- Competitor-India: https://www.practo.com/providers/clinics/ray/plans
+- Competitor-India: https://clinicea.com/pricing
+- Competitor-India: https://dontin.app/web/best-dental-clinic-management-software-india/
+- Competitor-India: https://yourdentalreview.com/practo-patient-management-software-ray/
+- Clinical-model: https://opendental.com/Manual/entertreatment.html
+- Clinical-model: https://www.opendental.com/manual/perio.html
+- Clinical-model: https://www.opendental.com/OpenDentalDocumentation26-1.xml
+- Clinical-model: https://github.com/ZoliQua/React-Advanced-Odontogram
+- Standards: https://nrces.in/ndhm/fhir/r4/StructureDefinition-OPConsultRecord.html
+- Standards: https://mlds.ihtsdotools.org/api/releasePackages/173263
+- Standards: https://www.ada.org/publications/ada-store-products/licensing-for-commercial-users
+- Regulation-India: https://dciindia.gov.in/Rule_Regulation/Gazette_Notification_reg_DCI_Revised_Dentists_Code_of_Ethics_Regulations_2014_27.06.2014.pdf
+- Regulation-India: https://www.pib.gov.in/PressReleasePage.aspx?PRID=2242888&reg=48&lang=2
+- Regulation-India: https://prsindia.org/files/bills_acts/acts_parliament/2023/Digital_Personal_Data_Protection_Act,_2023.pdf
+- Regulation-India: https://www.dpdpa.com/DPDP_Rules_2025_English_only.pdf
+- Regulation-India: https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf
+- Regulation-India: https://cdsco.gov.in/opencms/export/sites/CDSCO_WEB/Pdf-documents/acts_rules/2016DrugsandCosmeticsAct1940Rules1945.pdf
+- Regulation-India: https://nabh-portal-live.s3.ap-south-1.amazonaws.com/wp-content/uploads/2025/07/13105241/Final-Dental-Standard-3rd-Edition.pdf
+- Regulation-India: https://cdsco.gov.in/opencms/system/modules/CDSCO.WEB/elements/download_file_division.jsp?num_id=MTQ1MTM=
+- Case-law: https://indiankanoon.org/doc/438423/
+- Case-law: https://indiankanoon.org/doc/82459637/
+- Regulation-US: https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-support-software
+- GST: https://www.taxmann.com/post/blog/no-gst-on-providing-dental-health-care-services-by-dental-clinic-aar/
+- GST: https://www.gstindiaonline.com/pages/gstlegislation/GST-Nfy/Central%20Tax%20Rate/2025/15-2025-CTR.pdf
+- Payments: https://rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12896
+- Payments: https://razorpay.com/pricing/
+- Payments: https://www.medianama.com/2026/09/223-upi-mdr-above-rs-2000-october-15/
+- Messaging: https://developers.facebook.com/docs/whatsapp/pricing/
+- Messaging: https://whatsappbusiness.com/policy/
+- Messaging: https://msg91.com/in/pricing/otp
+- Messaging: https://www.messagecentral.com/blog/a-complete-guide-on-dlt-registration
+- ABDM: https://sandboxcms.abdm.gov.in/uploads/FAQ_20_11_2025_808a25df64.pdf
+- ABDM: https://sandboxcms.abdm.gov.in/api/newmenus?populate=deep
+- ABDM: https://abdm.gov.in/strapicms/uploads/DHIS_corrigendum_7_c1d7e09cc2.pdf
+- Stack: https://docs.flutter.dev/perf/impeller
+- Stack: https://docs.flutter.dev/platform-integration/web/wasm
+- Stack: https://supabase.com/pricing
+- Stack: https://powersync.com/pricing
+- Stack: https://pub.dev/packages/dental_teeth_selector
+- App-stores: https://support.google.com/googleplay/android-developer/answer/16679511?hl=en
+- App-stores: https://developer.apple.com/app-store/review/guidelines/
+- Global: https://faq.nhsbsa.nhs.uk/knowledgebase/article/KA-02003/en-us
+- Global: https://www.tamimi.com/law-update-articles/the-federal-law-regulating-the-use-of-information-and-communication-technology-in-the-uae-healthcare-sector/
+- Global: https://dentistry.co.uk/2026/05/07/international-dentists-joining-gdc-register-outnumber-uk-qualifiers-for-the-first-time/
+- GTM: https://ida.org.in/
+- GTM: https://us.dental-tribune.com/news/study-reveals-how-automated-patient-appointment-reminders-affect-dental-practice-no-show-rates-and-production/
