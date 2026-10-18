@@ -1,39 +1,18 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# ampdent_terminology
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Seed vocabularies for the AmpDent dental platform (pure Dart, depends only on
+`ampdent_core`):
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+- `indianProcedureCatalogue`: 150 Indian dental procedures with fee ranges in
+  paise, GST class, SAC/HSN, stages, recall interval and consent template.
+- `icd10OralCodes`: WHO ICD-10 (2019) block K00-K14 with 4-character subcodes.
+- `dentalDrugMaster`: dental drug master with Drugs and Cosmetics Rules
+  schedule tags and schedule history (`scheduleAt`).
+- `consentTemplates`, `dataNoticeTemplates`: procedure consent and DPDP notice
+  templates with `{placeholder}` rendering and a stable `versionHash`.
+- `defaultRecallRules`: procedure-triggered recall defaults.
+- `caseSheetSections`, `medicalHistoryQuestions`: BDS case-sheet structure.
+- `gstStateCodes`, `gstRegistrationThresholdRupees`: GST state table.
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
-```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+The data layer maps these seeds into tables on first launch; the seeds are
+never mutated at runtime.

@@ -12,6 +12,7 @@ dependencies:
   ampdent_core:
     path: ../core
   collection: ^1.19.0
+  crypto: ^3.0.6
 dev_dependencies:
   test: ^1.25.0
   flutter_lints: ^6.0.0
