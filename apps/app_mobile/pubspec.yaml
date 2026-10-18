@@ -1,0 +1,51 @@
+name: ampdent_mobile
+description: "AmpDent, the dentist's chairside app (Android and iOS). Dental-only clinic management, offline-first, WhatsApp-native."
+version: 0.1.0+1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  ampdent_core:
+    path: ../../packages/core
+  ampdent_terminology:
+    path: ../../packages/terminology
+  ampdent_chart_engine:
+    path: ../../packages/chart_engine
+  ampdent_data:
+    path: ../../packages/data
+  ampdent_documents:
+    path: ../../packages/documents
+  ampdent_ui:
+    path: ../../packages/ui
+  ampdent_messaging:
+    path: ../../packages/messaging
+  flutter_riverpod: ^3.4.0
+  go_router: ^18.0.0
+  intl: ^0.20.0
+  uuid: ^4.5.0
+  collection: ^1.19.0
+  signature: ^6.0.0
+  printing: ^5.14.0
+  share_plus: ^13.0.0
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.5.0
+  path_provider: ^2.1.5
+  url_launcher: ^6.3.1
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true

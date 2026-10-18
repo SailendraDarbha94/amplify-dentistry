@@ -1,0 +1,20 @@
+name: ampdent_core
+description: "Pure-Dart domain model: teeth (FDI canonical), surfaces, dentition, findings, procedures, plans, billing, consent. No Flutter dependency."
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+
+  meta: ^1.16.0
+  collection: ^1.19.0
+  uuid: ^4.5.0
+  crypto: ^3.0.6
+  intl: ^0.20.0
+dev_dependencies:
+  test: ^1.25.0
+  flutter_lints: ^6.0.0
+

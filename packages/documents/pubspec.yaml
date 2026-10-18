@@ -1,0 +1,25 @@
+name: ampdent_documents
+description: "PDF documents: invoice/receipt, estimate, prescription, consent form, lab slip, patient record export; printing and sharing helpers."
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  ampdent_core:
+    path: ../core
+  ampdent_terminology:
+    path: ../terminology
+  pdf: ^3.11.0
+  printing: ^5.14.0
+  intl: ^0.20.0
+  crypto: ^3.0.6
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+

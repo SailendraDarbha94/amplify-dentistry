@@ -1,0 +1,42 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+pubspec.lock
+!/pubspec.lock
+*.iml
+.idea/
+.vscode/
+*.log
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Generated
+**/*.g.dart
+**/*.drift.dart
+**/*.freezed.dart
+**/*.mocks.dart
+
+# iOS / Android
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/android/.gradle/
+**/android/local.properties
+**/android/key.properties
+*.jks
+*.keystore
+
+# Node (services, web)
+node_modules/
+dist/
+.next/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+supabase/.temp/
+
+# OS
+.DS_Store

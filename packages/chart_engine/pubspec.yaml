@@ -1,0 +1,20 @@
+name: ampdent_chart_engine
+description: "Pure dart:ui odontogram (surface hit-testing, mixed dentition, FDI/Universal/Palmer labels) and six-site periodontal chart widgets."
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  ampdent_core:
+    path: ../core
+  collection: ^1.19.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+

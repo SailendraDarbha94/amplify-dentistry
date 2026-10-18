@@ -1,0 +1,19 @@
+name: amplify_dentistry_workspace
+description: Dental-only clinic management platform (Flutter monorepo managed with Melos and pub workspaces).
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - apps/app_mobile
+  - packages/core
+  - packages/terminology
+  - packages/chart_engine
+  - packages/data
+  - packages/documents
+  - packages/ui
+  - packages/messaging
+
+dev_dependencies:
+  melos: ^8.9.0
