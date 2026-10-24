@@ -63,7 +63,15 @@ begin
   end if;
 
   -- Tenant tables carry clinic_id; the clinics table is its own tenant.
-  v_clinic_id := coalesce((v_after ->> 'clinic_id')::uuid, (v_after ->> 'id')::uuid);
+  -- Platform-wide rows (catalog_items / drugs with clinic_id null) belong to no clinic and are not audited here.
+  if tg_table_name = 'clinics' then
+    v_clinic_id := (v_after ->> 'id')::uuid;
+  else
+    v_clinic_id := (v_after ->> 'clinic_id')::uuid;
+  end if;
+  if v_clinic_id is null then
+    return new;
+  end if;
   v_entity_id := v_after ->> 'id';
 
   insert into public.audit_events

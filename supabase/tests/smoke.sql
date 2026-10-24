@@ -316,6 +316,36 @@ exception when restrict_violation then null;
 end
 $$;
 
+-- Platform-wide catalogue rows (clinic_id null) can be written by the service role and are not audited.
+do $$
+declare
+  n integer;
+begin
+  insert into public.catalog_items (id, clinic_id, code, name, layman_name, category, treatment_area,
+                                    default_fee_paise, fee_min_paise, fee_max_paise, sac_hsn_code)
+  values ('99999999-0000-0000-0000-0000000000c1', null, 'CONS-NEW', 'New patient consultation', 'Check-up',
+          'diagnostic', 'mouth', 50000, 30000, 100000, '999312');
+  select count(*) into n from public.audit_events where entity_id = '99999999-0000-0000-0000-0000000000c1';
+  if n <> 0 then raise exception 'platform catalogue rows must not produce audit rows, got %', n; end if;
+end
+$$;
+
+-- Members of any clinic read platform rows; nobody writes them through the API.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.catalog_items where clinic_id is null;
+  if n <> 1 then raise exception 'member should read one platform catalogue row, saw %', n; end if;
+  update public.catalog_items set name = 'tamper' where clinic_id is null;
+  if found then raise exception 'platform catalogue rows must not be updatable through the API'; end if;
+end
+$$;
+commit;
+
 -- Every tenant table has an index whose first column is clinic_id.
 do $$
 declare

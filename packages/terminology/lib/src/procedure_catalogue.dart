@@ -16,23 +16,9 @@ part 'catalogue/other_goods.dart';
 part 'catalogue/prosthodontic.dart';
 part 'catalogue/restorative.dart';
 
-/// Clinical category of a catalogue procedure. Mirrors the values the core
-/// `ProcedureCategory` entity enum is specified to carry; replace with the
-/// core enum once `ampdent_core` exports it.
-enum ProcedureSeedCategory {
-  diagnostic,
-  preventive,
-  restorative,
-  endodontic,
-  periodontal,
-  prosthodontic,
-  oralSurgery,
-  orthodontic,
-  pediatric,
-  implant,
-  cosmetic,
-  other,
-}
+/// Clinical category of a catalogue procedure: the core `ProcedureCategory`
+/// enum, aliased so seed files and the data layer can keep using this name.
+typedef ProcedureSeedCategory = ProcedureCategory;
 
 /// One seed row of the clinic procedure catalogue.
 class ProcedureSeed {

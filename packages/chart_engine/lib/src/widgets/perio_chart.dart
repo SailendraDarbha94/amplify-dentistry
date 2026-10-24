@@ -52,9 +52,25 @@ class PerioChart extends StatefulWidget {
   final (ToothId, PerioSite)? focusedCell;
   final PerioCellTap? onCellTap;
 
-  /// Invoked by [PerioChart.enterValue]; kept on the widget so an attached
-  /// number pad and the grid share one callback.
+  /// Invoked by [enterValue]; kept on the widget so an attached number pad
+  /// and the grid share one callback.
   final PerioValueEntered? onValueEntered;
+
+  /// Routes a value from an attached [PerioNumberPad] (or any other input)
+  /// to [onValueEntered]. Null clears the cell; boolean measurements pass
+  /// 1 / 0. Returns false when no callback is wired.
+  bool enterValue(
+    ToothId tooth,
+    PerioSite? site,
+    PerioMeasurementType type,
+    int? value,
+  ) {
+    final cb = onValueEntered;
+    if (cb == null) return false;
+    cb(tooth, site, type, value);
+    return true;
+  }
+
   final ToothNotation notation;
   final PerioStyle? style;
 

@@ -7,6 +7,7 @@
 #   4. run tests/smoke.sql (RLS isolation, numbering, append-only guards, audit trail)
 # Requires PostgreSQL 15+ binaries (initdb, pg_ctl, psql) on PATH; Homebrew's postgresql@17 is added below.
 # Environment: AMPDENT_PG_PORT (default 54329), AMPDENT_PG_SCRATCH (default mktemp -d), AMPDENT_KEEP=1 to keep the cluster.
+# The server listens on TCP only (no Unix socket): long scratch paths exceed the 103-byte socket path limit on macOS.
 
 set -euo pipefail
 
@@ -20,6 +21,7 @@ PORT="${AMPDENT_PG_PORT:-54329}"
 WORK="${AMPDENT_PG_SCRATCH:-$(mktemp -d)}"
 DATA="$WORK/data"
 DB="ampdent_scratch"
+mkdir -p "$WORK"
 
 cleanup() {
   if [[ -d "$DATA" ]]; then
@@ -37,7 +39,7 @@ echo "initdb -> $DATA"
 initdb -D "$DATA" -U postgres -A trust --no-locale -E UTF8 >"$WORK/initdb.log" 2>&1
 
 pg_ctl -D "$DATA" -w -l "$WORK/postgres.log" \
-  -o "-p $PORT -k $WORK -c listen_addresses=127.0.0.1 -c fsync=off -c synchronous_commit=off" start >/dev/null
+  -o "-p $PORT -c unix_socket_directories= -c listen_addresses=127.0.0.1 -c fsync=off -c synchronous_commit=off" start >/dev/null
 
 PSQL=(psql -v ON_ERROR_STOP=1 -X -q -h 127.0.0.1 -p "$PORT" -U postgres)
 

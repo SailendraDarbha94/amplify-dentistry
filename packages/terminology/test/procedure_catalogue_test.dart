@@ -141,5 +141,20 @@ void main() {
       );
       expect(searchProcedures(''), isEmpty);
     });
+
+    test('category is the core ProcedureCategory enum', () {
+      for (final s in indianProcedureCatalogue) {
+        expect(s.category, isA<ProcedureCategory>(), reason: s.code);
+      }
+      expect(ProcedureSeedCategory.values, ProcedureCategory.values);
+    });
+
+    test('every crown-coded procedure requires a pre-op radiograph', () {
+      for (final s in indianProcedureCatalogue) {
+        if (s.code.startsWith('CRN-')) {
+          expect(s.requiresPreOpRadiograph, isTrue, reason: s.code);
+        }
+      }
+    });
   });
 }

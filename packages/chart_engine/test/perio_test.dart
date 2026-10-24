@@ -212,6 +212,49 @@ void main() {
     ]);
   });
 
+  test('PerioChart.enterValue routes to onValueEntered', () {
+    final entered = <(ToothId, PerioSite?, PerioMeasurementType, int?)>[];
+    final chart = PerioChart(
+      arch: Arch.upper,
+      aspect: PerioAspect.facial,
+      states: defaultToothStates(ageYears: 30),
+      readings: const [],
+      onValueEntered: (t, s, type, v) => entered.add((t, s, type, v)),
+    );
+    expect(
+      chart.enterValue(
+        _t('16'),
+        PerioSite.buccal,
+        PerioMeasurementType.probingDepth,
+        5,
+      ),
+      isTrue,
+    );
+    expect(
+      chart.enterValue(_t('16'), null, PerioMeasurementType.mobility, null),
+      isTrue,
+    );
+    expect(entered, [
+      (_t('16'), PerioSite.buccal, PerioMeasurementType.probingDepth, 5),
+      (_t('16'), null, PerioMeasurementType.mobility, null),
+    ]);
+    final unwired = PerioChart(
+      arch: Arch.upper,
+      aspect: PerioAspect.facial,
+      states: const {},
+      readings: const [],
+    );
+    expect(
+      unwired.enterValue(
+        _t('16'),
+        PerioSite.buccal,
+        PerioMeasurementType.probingDepth,
+        5,
+      ),
+      isFalse,
+    );
+  });
+
   testWidgets('PerioNumberPad reports digits, toggles and next', (
     tester,
   ) async {

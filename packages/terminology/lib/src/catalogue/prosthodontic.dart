@@ -105,6 +105,7 @@ const List<ProcedureSeed> prosthodonticProcedures = [
     feeMaxPaise: 2000 * 100,
     defaultFeePaise: 600 * 100,
     durationMinutes: 20,
+    requiresPreOpRadiograph: true,
   ),
   ProcedureSeed(
     code: 'CRN-REMOVE',

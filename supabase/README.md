@@ -39,7 +39,11 @@ grants), then the migrations, `seed.sql`, and `tests/smoke.sql`. Never apply the
 
 ```bash
 supabase/tests/run_local.sh              # needs postgresql@17 from Homebrew
+AMPDENT_KEEP=1 supabase/tests/run_local.sh   # keep the cluster running for inspection with psql -p 54329
 ```
+
+The scratch server listens on TCP only (`unix_socket_directories` is empty), so a long scratch path cannot hit
+macOS's 103-byte Unix-socket path limit. Docker-based `supabase start` / `supabase db lint` are not required.
 
 ## Conventions (match `packages/core`)
 
@@ -86,10 +90,12 @@ patient-scoped table and `clinic_members (user_id)` for the RLS lookup.
 ## RLS model
 
 - RLS is enabled on every public table; `anon` has all table privileges revoked.
-- Membership lives in `clinic_members (user_id, clinic_id, role, is_active)`. Helpers are `STABLE SECURITY DEFINER`
-  with `search_path = ''`: `app.current_clinic_ids()`, `app.has_role(clinic, variadic roles)`,
-  `app.clinic_ids_with_role(variadic roles)`, `app.clinic_has_members(clinic)`. `auth.uid()` is always wrapped as
-  `(select auth.uid())` so it is evaluated once per statement (Supabase RLS performance guidance).
+- Membership lives in `clinic_members (user_id, clinic_id, role, is_active)`, unique per `(clinic_id, user_id)`.
+  Helpers are `STABLE SECURITY DEFINER` with `search_path = ''`: `app.current_clinic_ids()`,
+  `app.clinic_ids_with_role(variadic roles)`, `app.has_role(clinic, variadic roles)` (RPC checks only),
+  `app.clinic_has_members(clinic)`. `auth.uid()` is always wrapped as `(select auth.uid())` and every policy
+  predicate has the shape `clinic_id in (select app.<set_returning_helper>(...))`, so the planner evaluates the
+  membership lookup once per statement as an InitPlan rather than once per row (Supabase RLS performance guidance).
 - Every policy is `to authenticated`. Tenant tables: `select`/`insert`/`update` where
   `clinic_id in (select app.current_clinic_ids())`.
 - **No DELETE policy** on clinical or financial tables (`procedures`, `findings`, `tooth_state_records`,
@@ -98,8 +104,8 @@ patient-scoped table and `clinic_members (user_id)` for the RLS lookup.
   `BEFORE DELETE` trigger (`app.prevent_hard_delete`) additionally raises for append-only tables even for the
   service role.
 - Financial tables (`invoices`, `payments`, `adjustments`, `ledger_entries`): select for `ownerDentist`,
-  `receptionist`, `accountant`; insert/update for `ownerDentist`, `receptionist`. Associate dentists do not see
-  money.
+  `receptionist`, `accountant`; insert/update for `ownerDentist`, `receptionist`, via
+  `clinic_id in (select app.clinic_ids_with_role(...))`. Associate dentists do not see money.
 - `audit_events`: select + insert for members (clients log `view`/`export`/`print`); no update, no delete.
 - `clinics`: any signed-in user may insert one; a user may then insert themselves as `ownerDentist` only while
   the clinic has no members (`app.clinic_has_members`). Owners manage `clinic_members` and clinic settings.
@@ -115,7 +121,8 @@ patient-scoped table and `clinic_members (user_id)` for the RLS lookup.
   `audit_events` with `actor_id = (select auth.uid())` (nil uuid for the service role), `action` =
   `create` / `update` / `statusChange` / `softDelete` (when `status` becomes `deleted`), `before`/`after` as
   `jsonb`, `device_id` from the per-request setting `app.device_id` (set it with
-  `set_config('app.device_id', '<device>', true)` or a PostgREST header hook) else `'server'`.
+  `set_config('app.device_id', '<device>', true)` or a PostgREST header hook) else `'server'`. Platform-wide
+  rows (`catalog_items` / `drugs` with `clinic_id null`) belong to no tenant and are skipped.
 - `app.prevent_hard_delete()` before delete on append-only tables.
 - `app.financial_year_start(at, tz)` -> 1 April of the Indian FY in the clinic's time zone.
 - `app.next_invoice_number(clinic, fy_start)` -> `INV/2026-27/0001`; counter upsert takes a row lock, so

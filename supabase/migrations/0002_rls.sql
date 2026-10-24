@@ -5,7 +5,9 @@
 --   * auth.uid() is always wrapped as (select auth.uid()) so it is evaluated once per statement;
 --   * membership lookups live in STABLE SECURITY DEFINER functions with an empty search_path;
 --   * every policy is scoped `to authenticated`;
---   * every column a policy filters on is indexed (clinic_id everywhere, clinic_members.user_id).
+--   * every column a policy filters on is indexed (clinic_id everywhere, clinic_members.user_id);
+--   * role checks go through set-returning helpers used as `col in (select app.clinic_ids_with_role(...))`,
+--     which the planner runs once per statement (InitPlan) instead of once per row.
 -- No DELETE policy exists on any clinical or financial table, so deletes are impossible through the API.
 
 grant usage on schema app to authenticated, service_role;
@@ -125,8 +127,8 @@ create policy clinics_insert_authenticated on public.clinics
   with check (true);
 create policy clinics_update_owner on public.clinics
   for update to authenticated
-  using (app.has_role(id, 'ownerDentist'))
-  with check (app.has_role(id, 'ownerDentist'));
+  using (id in (select app.clinic_ids_with_role('ownerDentist')))
+  with check (id in (select app.clinic_ids_with_role('ownerDentist')));
 
 create policy clinic_members_select_member on public.clinic_members
   for select to authenticated
@@ -135,7 +137,7 @@ create policy clinic_members_select_member on public.clinic_members
 create policy clinic_members_insert_owner on public.clinic_members
   for insert to authenticated
   with check (
-    app.has_role(clinic_id, 'ownerDentist')
+    clinic_id in (select app.clinic_ids_with_role('ownerDentist'))
     or (
       user_id = (select auth.uid())
       and role = 'ownerDentist'
@@ -144,8 +146,8 @@ create policy clinic_members_insert_owner on public.clinic_members
   );
 create policy clinic_members_update_owner on public.clinic_members
   for update to authenticated
-  using (app.has_role(clinic_id, 'ownerDentist'))
-  with check (app.has_role(clinic_id, 'ownerDentist'));
+  using (clinic_id in (select app.clinic_ids_with_role('ownerDentist')))
+  with check (clinic_id in (select app.clinic_ids_with_role('ownerDentist')));
 
 -- Shared catalogues: platform rows (clinic_id null) are readable by every member; clinic rows are tenant scoped.
 create policy catalog_items_select on public.catalog_items
@@ -160,7 +162,7 @@ create policy catalog_items_update on public.catalog_items
   with check (clinic_id in (select app.current_clinic_ids()));
 create policy catalog_items_delete_owner on public.catalog_items
   for delete to authenticated
-  using (app.has_role(clinic_id, 'ownerDentist'));
+  using (clinic_id in (select app.clinic_ids_with_role('ownerDentist')));
 
 create policy drugs_select on public.drugs
   for select to authenticated
@@ -174,7 +176,7 @@ create policy drugs_update on public.drugs
   with check (clinic_id in (select app.current_clinic_ids()));
 create policy drugs_delete_owner on public.drugs
   for delete to authenticated
-  using (app.has_role(clinic_id, 'ownerDentist'));
+  using (clinic_id in (select app.clinic_ids_with_role('ownerDentist')));
 
 -- ---------------------------------------------------------------------------
 -- Tenant tables: select / insert / update for members; never delete.
@@ -214,10 +216,10 @@ $$;
 -- Configuration rows an owner may remove outright (no clinical or financial content).
 create policy chairs_delete_owner on public.chairs
   for delete to authenticated
-  using (app.has_role(clinic_id, 'ownerDentist'));
+  using (clinic_id in (select app.clinic_ids_with_role('ownerDentist')));
 create policy labs_delete_owner on public.labs
   for delete to authenticated
-  using (app.has_role(clinic_id, 'ownerDentist'));
+  using (clinic_id in (select app.clinic_ids_with_role('ownerDentist')));
 
 -- ---------------------------------------------------------------------------
 -- Financial tables: read for ownerDentist / receptionist / accountant; write for ownerDentist / receptionist.
@@ -229,22 +231,19 @@ declare
   financial_tables constant text[] := array['invoices', 'payments', 'adjustments', 'ledger_entries'];
 begin
   foreach t in array financial_tables loop
+    -- clinic_ids_with_role already implies active membership, so current_clinic_ids() is not repeated.
     execute format(
       'create policy %I on public.%I for select to authenticated
-         using (clinic_id in (select app.current_clinic_ids())
-                and app.has_role(clinic_id, ''ownerDentist'', ''receptionist'', ''accountant''))',
+         using (clinic_id in (select app.clinic_ids_with_role(''ownerDentist'', ''receptionist'', ''accountant'')))',
       t || '_select_billing_roles', t);
     execute format(
       'create policy %I on public.%I for insert to authenticated
-         with check (clinic_id in (select app.current_clinic_ids())
-                     and app.has_role(clinic_id, ''ownerDentist'', ''receptionist''))',
+         with check (clinic_id in (select app.clinic_ids_with_role(''ownerDentist'', ''receptionist'')))',
       t || '_insert_billing_roles', t);
     execute format(
       'create policy %I on public.%I for update to authenticated
-         using (clinic_id in (select app.current_clinic_ids())
-                and app.has_role(clinic_id, ''ownerDentist'', ''receptionist''))
-         with check (clinic_id in (select app.current_clinic_ids())
-                     and app.has_role(clinic_id, ''ownerDentist'', ''receptionist''))',
+         using (clinic_id in (select app.clinic_ids_with_role(''ownerDentist'', ''receptionist'')))
+         with check (clinic_id in (select app.clinic_ids_with_role(''ownerDentist'', ''receptionist'')))',
       t || '_update_billing_roles', t);
   end loop;
 end
