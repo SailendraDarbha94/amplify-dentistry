@@ -1,39 +1,17 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# ampdent_messaging
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Patient communication for AmpDent, with no network code yet.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+- `MessageTemplate` and `defaultTemplates`: the approved WhatsApp/SMS
+  template catalogue (English; Hindi and Telugu follow under the same codes).
+  Bodies never carry clinical content; anything clinical sits behind an
+  authenticated `{link}`.
+- `OptInPolicy.canSend`: DPDP purpose-scoped opt-in rules by Meta category.
+- `PhoneNumbers`: E.164 normalisation, validation and masking for Indian
+  mobiles.
+- `estimateCostPaise`: Meta India rate card snapshot (re-read quarterly).
+- `MessagingProvider` with `OutboxMessagingProvider` (queues to an injected
+  sink) and `DeepLinkMessagingProvider` (wa.me / sms: URIs for the solo-clinic
+  v1 fallback).
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
-```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+Depends only on `ampdent_core`.

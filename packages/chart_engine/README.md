@@ -1,39 +1,17 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# ampdent_chart_engine
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Pure `dart:ui` odontogram and six-site periodontal chart for AmpDent. Depends
+only on `ampdent_core` and Flutter.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+- `Odontogram`: 32 permanent + 20 primary teeth laid out as the clinician views
+  the patient, procedural tooth shapes with five tappable crown faces, root
+  silhouettes, FDI / Universal / Palmer labels, overlays for findings and
+  planned or completed work, selection ring, badges. Scrolls horizontally when
+  the width cannot hold 16 teeth at 44 px; `compact` stacks quadrant rows.
+- `PerioChart` + `PerioNumberPad`: one arch and aspect at a time, PD / GM /
+  bleeding / plaque / mobility / furcation grid with 4 mm amber and 6 mm red
+  thresholds, auto-advance helpers (`perioEntrySequence`, `PerioEntryCursor`).
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
-```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+See the doc comment in `lib/ampdent_chart_engine.dart` for the public API.
+Golden images live in `test/goldens/`; regenerate with
+`flutter test --update-goldens`.
