@@ -1,17 +1,29 @@
-import 'package:ampdent_mobile/core/placeholder_page.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Prescription routes (placeholder in this build).
+import 'prescription_detail_page.dart';
+import 'prescription_editor_page.dart';
+import 'prescription_list_page.dart';
+
+/// Prescription routes. `new` is listed before `:rxId`; `?repeatOf=<id>`
+/// pre-fills the editor from an earlier prescription.
 final List<RouteBase> prescriptionsRoutes = [
-  placeholderRoute(
-    '/patients/:id/prescriptions',
-    'Prescriptions',
-    icon: Icons.medication_outlined,
+  GoRoute(
+    path: '/patients/:id/prescriptions',
+    builder: (context, state) =>
+        PrescriptionListPage(patientId: state.pathParameters['id']!),
   ),
-  placeholderRoute(
-    '/patients/:id/prescriptions/new',
-    'New prescription',
-    icon: Icons.medication_outlined,
+  GoRoute(
+    path: '/patients/:id/prescriptions/new',
+    builder: (context, state) => PrescriptionEditorPage(
+      patientId: state.pathParameters['id']!,
+      repeatOfId: state.uri.queryParameters['repeatOf'],
+    ),
+  ),
+  GoRoute(
+    path: '/patients/:id/prescriptions/:rxId',
+    builder: (context, state) => PrescriptionDetailPage(
+      patientId: state.pathParameters['id']!,
+      prescriptionId: state.pathParameters['rxId']!,
+    ),
   ),
 ];

@@ -1,9 +1,15 @@
-import 'package:ampdent_mobile/core/placeholder_page.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Export and audit log routes (placeholder in this build).
+import 'audit_page.dart';
+import 'data_ownership_page.dart';
+import 'export_page.dart';
+
+/// Export, data-ownership statement and audit log routes.
 final List<RouteBase> exportRoutes = [
-  placeholderRoute('/export', 'Export', icon: Icons.download_outlined),
-  placeholderRoute('/audit', 'Audit log', icon: Icons.history_outlined),
+  GoRoute(path: '/export', builder: (context, state) => const ExportPage()),
+  GoRoute(
+    path: '/export/data-ownership',
+    builder: (context, state) => const DataOwnershipPage(),
+  ),
+  GoRoute(path: '/audit', builder: (context, state) => const AuditPage()),
 ];

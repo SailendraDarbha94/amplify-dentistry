@@ -1,17 +1,20 @@
-import 'package:ampdent_mobile/core/placeholder_page.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Treatment plan and estimate routes (placeholder in this build).
+import 'plan_builder_page.dart';
+import 'plan_list_page.dart';
+
+/// Treatment plan routes: the patient's plan list and the plan builder.
 final List<RouteBase> planRoutes = [
-  placeholderRoute(
-    '/patients/:id/plan',
-    'Treatment plans',
-    icon: Icons.assignment_outlined,
+  GoRoute(
+    path: '/patients/:id/plan',
+    builder: (context, state) =>
+        PlanListPage(patientId: state.pathParameters['id']!),
   ),
-  placeholderRoute(
-    '/patients/:id/plan/:planId',
-    'Treatment plan',
-    icon: Icons.assignment_outlined,
+  GoRoute(
+    path: '/patients/:id/plan/:planId',
+    builder: (context, state) => PlanBuilderPage(
+      patientId: state.pathParameters['id']!,
+      planId: state.pathParameters['planId']!,
+    ),
   ),
 ];

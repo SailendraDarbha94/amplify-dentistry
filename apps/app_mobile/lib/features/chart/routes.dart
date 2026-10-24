@@ -1,13 +1,22 @@
-import 'package:ampdent_mobile/core/placeholder_page.dart';
-import 'package:flutter/material.dart';
+import 'package:ampdent_core/ampdent_core.dart';
 import 'package:go_router/go_router.dart';
 
-/// Odontogram, findings and procedures routes (placeholder in this build).
+import 'chart_page.dart';
+import 'perio_page.dart';
+
+/// Odontogram (`/patients/:id/chart`, optional `?tooth=16` to preselect a
+/// tooth) and perio chart (`/patients/:id/chart/perio`).
 final List<RouteBase> chartRoutes = [
-  placeholderRoute('/patients/:id/chart', 'Chart', icon: Icons.grid_on),
-  placeholderRoute(
-    '/patients/:id/chart/perio',
-    'Perio chart',
-    icon: Icons.table_chart_outlined,
+  GoRoute(
+    path: '/patients/:id/chart',
+    builder: (context, state) => ChartPage(
+      patientId: state.pathParameters['id']!,
+      initialTooth: ToothId.tryParse(state.uri.queryParameters['tooth'] ?? ''),
+    ),
+  ),
+  GoRoute(
+    path: '/patients/:id/chart/perio',
+    builder: (context, state) =>
+        PerioPage(patientId: state.pathParameters['id']!),
   ),
 ];
