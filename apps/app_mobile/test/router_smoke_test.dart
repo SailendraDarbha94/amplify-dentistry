@@ -1,3 +1,4 @@
+import 'package:ampdent_mobile/core/app_strings.dart';
 import 'package:ampdent_mobile/core/router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,6 +92,11 @@ void main() {
           Uri.parse(path).path,
           reason: 'router did not land on $path',
         );
+        expect(
+          find.text(MobileStrings.comingInThisBuild),
+          findsNothing,
+          reason: '$path still renders a placeholder page',
+        );
       }
     });
 
@@ -112,12 +118,6 @@ void main() {
       await tester.tap(tab('Schedule'));
       await settle(tester);
       expect(env.location, '/schedule');
-    });
-
-    testWidgets('placeholder pages say so', (tester) async {
-      await env.pumpApp(tester);
-      await env.go(tester, '/recall');
-      expect(find.text('Coming in this build'), findsOneWidget);
     });
   });
 }

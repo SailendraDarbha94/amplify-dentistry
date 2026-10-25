@@ -17,3 +17,24 @@ workspace:
 
 dev_dependencies:
   melos: ^8.9.0
+
+melos:
+  command:
+    bootstrap:
+      runPubGetInParallel: false
+  scripts:
+    analyze:
+      description: Static analysis for every package.
+      run: dart run melos exec -c 1 -- "flutter analyze --no-fatal-infos"
+    test:
+      description: Run tests in every package that has a test directory.
+      run: dart run melos exec -c 1 --dir-exists=test -- "flutter test"
+    format:
+      description: Format all Dart code.
+      run: dart format .
+    format:check:
+      description: Fail if any Dart file is not formatted.
+      run: dart format --output=none --set-exit-if-changed .
+    gen:
+      description: Run build_runner in packages that use code generation.
+      run: dart run melos exec -c 1 --depends-on=build_runner -- "dart run build_runner build"

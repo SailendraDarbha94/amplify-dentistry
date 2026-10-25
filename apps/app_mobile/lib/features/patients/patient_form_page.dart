@@ -151,7 +151,10 @@ class _PatientFormState extends ConsumerState<PatientForm> {
       );
       if (!mounted) return;
       if (widget.existing == null) {
-        context.go('/patients/${saved.id}');
+        // Replace the form with the new patient's page in the stack the user
+        // came from (Patients list or Today quick action) so neither tab is
+        // left with a stale form on top.
+        context.pushReplacement('/patients/${saved.id}');
       } else {
         context.pop();
       }

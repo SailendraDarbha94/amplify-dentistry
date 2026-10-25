@@ -184,7 +184,9 @@ class _AppointmentFormPageState extends ConsumerState<AppointmentFormPage> {
           .save(draft, now: ref.read(clockProvider)());
       ref.read(selectedDayProvider.notifier).select(saved.startsAt.toLocal());
       if (!mounted) return;
-      context.go('/schedule/${saved.id}');
+      // Replace the form with the saved appointment in the current stack so
+      // the tab the booking started from is not left showing a stale form.
+      context.pushReplacement('/schedule/${saved.id}');
     } on Object catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
