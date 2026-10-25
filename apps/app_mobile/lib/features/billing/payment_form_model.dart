@@ -95,6 +95,8 @@ class PaymentRecorder {
   final ActorContext ctx;
 
   /// Records a payment. Card payments store only [cardLast4] and [cardBrand].
+  /// A payment above the invoice balance is refused unless [allowAdvance] is
+  /// set, in which case the excess stays as credit on account.
   Future<Payment> recordPayment({
     required String patientId,
     String? invoiceId,
@@ -104,6 +106,7 @@ class PaymentRecorder {
     String? cardLast4,
     String? cardBrand,
     String? note,
+    bool allowAdvance = false,
     DateTime? now,
   }) async {
     if (method == PaymentMethod.card) {
@@ -130,6 +133,7 @@ class PaymentRecorder {
         note: _clean(note),
         createdAt: at,
       ),
+      allowAdvance: allowAdvance,
     );
   }
 

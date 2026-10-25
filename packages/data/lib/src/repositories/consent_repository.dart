@@ -19,7 +19,9 @@ abstract class ConsentRepository {
   /// Consents covering a procedure id.
   Future<List<ConsentRecord>> consentsForProcedure(String procedureId);
 
-  /// Records a data-consent grant or refusal event.
+  /// Records a data-consent grant or refusal event. Append-only: an id that
+  /// already exists throws [StateError]; a change of mind is a new row or a
+  /// [withdrawDataConsent].
   Future<DataConsent> recordDataConsent(ActorContext ctx, DataConsent consent);
 
   /// Withdraws a granted data consent.

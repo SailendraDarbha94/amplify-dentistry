@@ -191,6 +191,34 @@ DrugSchedule scheduleAt(DrugSeed drug, DateTime at) {
   return drug.schedule;
 }
 
+/// The seed row behind a stored [Drug]: same generic name and strength,
+/// case-insensitive (the master's `code` is not kept on the row). Null for a
+/// clinic-added drug.
+DrugSeed? drugSeedForDrug(Drug drug) {
+  final name = drug.genericName.trim().toLowerCase();
+  final strength = drug.strength.trim().toLowerCase();
+  DrugSeed? byName;
+  for (final d in dentalDrugMaster) {
+    if (d.genericName.toLowerCase() != name) continue;
+    if (d.strength.toLowerCase() == strength) return d;
+    byName ??= d;
+  }
+  return byName;
+}
+
+/// Schedule to print for [drug] on a prescription issued at [at]. A master
+/// drug follows its seed's schedule history ([scheduleAt]), so a drug that
+/// becomes Schedule H1 on a notified date is still Schedule H on an earlier
+/// prescription; a clinic-added drug has no history and keeps its stored
+/// schedule.
+DrugSchedule scheduleForDrugAt(Drug drug, DateTime at) {
+  final seed = drugSeedForDrug(drug);
+  if (seed != null && seed.schedule == drug.schedule) {
+    return scheduleAt(seed, at);
+  }
+  return drug.schedule;
+}
+
 /// The dental drug master seed.
 const List<DrugSeed> dentalDrugMaster = [
   ...antimicrobialDrugs,

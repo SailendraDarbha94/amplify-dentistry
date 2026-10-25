@@ -6,6 +6,20 @@ import 'json_support.dart';
 /// A patient of one clinic. Age may be known from [dateOfBirth] or recorded
 /// approximately ([approxAgeYears] at [ageRecordedAt]) when the DOB is
 /// unknown, which is common in Indian practice.
+/// Whether a patient is an adult, a minor, or of unknown age (no date of
+/// birth and no approximate age on record). Unknown is never silently treated
+/// as adult: consent, messaging and guardian rules must resolve it first.
+enum AgeStatus {
+  /// 18 or older.
+  adult,
+
+  /// Under 18.
+  minor,
+
+  /// No date of birth or approximate age recorded.
+  unknown,
+}
+
 @immutable
 class Patient {
   /// Creates a patient.
@@ -133,18 +147,38 @@ class Patient {
     return approx + _yearsBetween(recorded, asOf);
   }
 
-  /// Whether the patient is under 18 as of [asOf]. Unknown age is treated as
-  /// adult.
-  bool isMinor(DateTime asOf) {
+  /// Whether a date of birth or an approximate age is on record.
+  bool get hasKnownAge => dateOfBirth != null || approxAgeYears != null;
+
+  /// Tri-state age status at [asOf]: [AgeStatus.unknown] when neither a date
+  /// of birth nor an approximate age is recorded.
+  AgeStatus ageStatus(DateTime asOf) {
     final age = ageYears(asOf);
-    return age != null && age < 18;
+    if (age == null) return AgeStatus.unknown;
+    return age < 18 ? AgeStatus.minor : AgeStatus.adult;
   }
 
-  /// Whether a guardian must be recorded: minor with no guardian name or
-  /// phone.
-  bool requiresGuardian(DateTime asOf) =>
-      isMinor(asOf) &&
-      ((guardianName ?? '').isEmpty || (guardianPhone ?? '').isEmpty);
+  /// Whether the patient is known to be under 18 at [asOf]. Unknown age
+  /// returns false here; use [ageStatus] or [isMinorOrNull] where an unknown
+  /// age must block (consent, messaging, guardian rules).
+  bool isMinor(DateTime asOf) => ageStatus(asOf) == AgeStatus.minor;
+
+  /// True for a minor, false for an adult, null when the age is unknown.
+  bool? isMinorOrNull(DateTime asOf) => switch (ageStatus(asOf)) {
+    AgeStatus.minor => true,
+    AgeStatus.adult => false,
+    AgeStatus.unknown => null,
+  };
+
+  /// Whether a guardian must be recorded before the patient can be treated or
+  /// messaged: true for a minor without a guardian name and phone, and true
+  /// when the age is unknown (it must be resolved first).
+  bool requiresGuardian(DateTime asOf) => switch (ageStatus(asOf)) {
+    AgeStatus.adult => false,
+    AgeStatus.unknown => true,
+    AgeStatus.minor =>
+      (guardianName ?? '').isEmpty || (guardianPhone ?? '').isEmpty,
+  };
 
   /// Phone that notifications go to: the guardian's for a minor when one is
   /// recorded, otherwise the patient's own.

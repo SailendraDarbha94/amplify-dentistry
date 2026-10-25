@@ -11,6 +11,54 @@ export 'plan_funnel.dart';
 /// Default title of a new plan.
 const String defaultPlanTitle = 'Treatment plan';
 
+/// Plan-flow copy (English; translation hook via `AppStrings` later).
+abstract final class PlanStrings {
+  /// Acceptance (and treatment) needs a written estimate first.
+  static const String estimateRequired =
+      'Issue a written estimate before accepting the plan, or record that '
+      'the patient declined one';
+
+  /// The lines changed after the latest estimate was issued.
+  static const String planChangedSinceEstimate =
+      'Plan changed since the last estimate. Issue a new estimate before '
+      'accepting.';
+
+  /// Accepted lines no longer match the frozen snapshot.
+  static const String snapshotMismatch =
+      'Plan lines differ from the snapshot frozen at acceptance';
+}
+
+/// The latest estimate issued for a plan (highest version), or null.
+Estimate? latestEstimate(Iterable<Estimate> estimates) {
+  Estimate? latest;
+  for (final e in estimates) {
+    if (e.status == EstimateStatus.draft) continue;
+    if (latest == null || e.version > latest.version) latest = e;
+  }
+  return latest;
+}
+
+/// Whether [estimate] still describes [plan] with [lines]: compares the
+/// plan snapshot hash frozen on the estimate with the current one. Null when
+/// the estimate carries no hash (issued before hashes were recorded).
+bool? estimateMatchesPlan(
+  Estimate estimate,
+  TreatmentPlan plan,
+  Iterable<TreatmentPlanLine> lines,
+) {
+  final hash = estimate.planSnapshotHash;
+  if (hash == null) return null;
+  return hash == computePlanSnapshotHash(plan, lines);
+}
+
+/// Whether the lines of an accepted [plan] still match the snapshot hash
+/// frozen at acceptance. Null for an unaccepted plan or one without a hash.
+bool? snapshotIntact(TreatmentPlan plan, Iterable<TreatmentPlanLine> lines) {
+  final hash = plan.snapshotHash;
+  if (!plan.isAccepted || hash == null) return null;
+  return hash == computePlanSnapshotHash(plan, lines);
+}
+
 /// Placeholder link sent in estimate messages until the patient portal
 /// exists; the UI tells the dentist to share the PDF itself.
 const String pendingPortalLink = 'https://link.pending';

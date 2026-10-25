@@ -87,9 +87,10 @@ String _dateLabel(DateTime value) {
 }
 
 /// Issues and voids invoices through the [BillingRepository]. Issuing saves
-/// the draft (which mints the `DRAFT-` number) and then issues it, so GST
-/// rates are resolved from the clinic table at issue time and the ledger
-/// charge and audit event are written by the repository.
+/// and issues the draft in one repository transaction (minting the `DRAFT-`
+/// number, resolving GST rates from the clinic table at issue time, posting
+/// the ledger charge and the audit/outbox rows), so a failure can never leave
+/// a stranded draft whose procedures disappear from billing.
 class InvoiceIssuer {
   /// Creates the issuer.
   const InvoiceIssuer({required this.billing, required this.ctx});
@@ -107,8 +108,7 @@ class InvoiceIssuer {
     DateTime? at,
   }) async {
     if (draft.lines.isEmpty) throw StateError('An invoice needs a line');
-    final saved = await billing.saveDraft(ctx, draft);
-    return billing.issueInvoice(ctx, saved.id, rates: rates, at: at);
+    return billing.issueDraft(ctx, draft, rates: rates, at: at);
   }
 
   /// Voids [invoiceId]; [reason] must not be blank.

@@ -52,18 +52,22 @@ class DriftPrescriptionRepository extends DatabaseAccessor<AppDatabase>
   }
 
   @override
-  Future<Drug> upsertDrug(ActorContext ctx, Drug drug) => writeTransaction(
-    () async => audited(
-      ctx: ctx,
-      table: _drugs,
-      entityType: 'Drug',
-      entityId: drug.id,
-      before: await getDrug(drug.id),
-      after: drug,
-      insertable: drug.toInsertable(),
-      toJson: (d) => d.toJson(),
-    ),
-  );
+  Future<Drug> upsertDrug(ActorContext ctx, Drug drug) {
+    final clinicId = drug.clinicId;
+    if (clinicId != null) checkTenant(ctx, clinicId, 'drug.clinicId');
+    return writeTransaction(
+      () async => audited(
+        ctx: ctx,
+        table: _drugs,
+        entityType: 'Drug',
+        entityId: drug.id,
+        before: await getDrug(drug.id),
+        after: drug,
+        insertable: drug.toInsertable(),
+        toJson: (d) => d.toJson(),
+      ),
+    );
+  }
 
   @override
   Future<Prescription> issuePrescription(
@@ -95,6 +99,7 @@ class DriftPrescriptionRepository extends DatabaseAccessor<AppDatabase>
               verificationCode: newVerificationCode(),
               documentHash: prescription.documentHash,
               pdfPath: prescription.pdfPath,
+              patientSnapshot: prescription.patientSnapshot,
               createdAt: prescription.createdAt,
             )
           : prescription;

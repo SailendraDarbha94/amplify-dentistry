@@ -94,7 +94,12 @@ class PerioPage extends ConsumerWidget {
           AppSpacing.xl,
         ),
         children: [
-          BpeEntry(value: draft.bpe, onChanged: controller.setBpe),
+          BpeEntry(
+            value: draft.bpe,
+            furcation: draft.bpeFurcation,
+            onChanged: controller.setBpe,
+            onFurcationToggled: controller.toggleBpeFurcation,
+          ),
           const SizedBox(height: AppSpacing.sm),
           _PerioControls(draft: draft, controller: controller),
           const SizedBox(height: AppSpacing.sm),
@@ -221,7 +226,9 @@ class _PerioControls extends StatelessWidget {
         if (draft.measure == PerioMeasurementType.gingivalMargin)
           FilterChip(
             key: const ValueKey('perio-recession'),
-            label: Text(ChartStrings.recession),
+            label: Text(
+              draft.recession ? ChartStrings.recession : ChartStrings.coronal,
+            ),
             selected: draft.recession,
             onSelected: (_) => controller.toggleRecession(),
           ),

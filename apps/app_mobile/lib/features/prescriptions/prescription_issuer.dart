@@ -37,11 +37,13 @@ class PrescriptionIssuer {
   final String Function() codeGenerator;
 
   /// Issues [draft] for [patientId]. Throws [ArgumentError] on an empty draft
-  /// and [MissingRegistrationNumber] when the prescriber has none.
+  /// and [MissingRegistrationNumber] when the prescriber has none. Pass
+  /// [patient] so its demographics are frozen on the row for reprints.
   Future<Prescription> issue({
     required RxDraft draft,
     required String patientId,
     required ClinicMember prescriber,
+    Patient? patient,
     String? visitId,
     DateTime? now,
   }) async {
@@ -60,6 +62,7 @@ class PrescriptionIssuer {
       verificationCode: codeGenerator(),
       now: at,
       visitId: visitId,
+      patient: patient,
     );
     final saved = await prescriptions.issuePrescription(ctx, rx);
     for (final line in draft.lines) {

@@ -2,6 +2,7 @@ import 'package:ampdent_core/ampdent_core.dart';
 import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
+import '../../db/converters.dart';
 import '../actor_context.dart';
 import '../billing_repository.dart';
 import 'audited_writer.dart';
@@ -29,7 +30,7 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
         throw StateError('Invoice ${invoice.id} is ${before.status.name}');
       }
       final number = invoice.number.isEmpty
-          ? await mintDraftNumber(ctx, nowUtc())
+          ? await mintLocalDraftNumber(ctx, 'INV')
           : invoice.number;
       final after = computeInvoiceTotals(
         invoice.copyWith(number: number, status: InvoiceStatus.draft),
@@ -37,6 +38,20 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
       return writeInvoice(ctx, before, after);
     });
   }
+
+  @override
+  Future<Invoice> issueDraft(
+    ActorContext ctx,
+    Invoice draft, {
+    GstRateTable? rates,
+    DateTime? at,
+  }) => writeTransaction(() async {
+    // Nested transactions join this one, so the draft row, the issued row,
+    // the ledger charge and every audit/outbox row commit together or not
+    // at all.
+    final saved = await saveDraft(ctx, draft);
+    return issueInvoice(ctx, saved.id, rates: rates, at: at);
+  });
 
   @override
   Future<Invoice> issueInvoice(
@@ -51,6 +66,7 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
     if (before.status != InvoiceStatus.draft) {
       throw StateError('Invoice $invoiceId is already ${before.status.name}');
     }
+    await _ensureStagesUnbilled(before);
     final now = nowUtc(at);
     final table = rates ?? await loadGstRateTable(before.clinicId);
     final clinic = await (select(
@@ -63,7 +79,7 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
         ),
     ];
     final number = before.number.isEmpty
-        ? await mintDraftNumber(ctx, now)
+        ? await mintLocalDraftNumber(ctx, 'INV', now: now)
         : before.number;
     final dentist = await _treatingDentist(before);
     if (dentist == null) throw const NoRegisteredClinician();
@@ -99,6 +115,46 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
     );
     return saved;
   });
+
+  /// Throws [StateError] when a line of [invoice] bills a procedure (or a
+  /// stage of one) that another non-void invoice of the patient already
+  /// carries. A line without a stage bills the whole procedure, so it
+  /// collides with any line of that procedure and vice versa.
+  Future<void> _ensureStagesUnbilled(Invoice invoice) async {
+    final procedureIds = {
+      for (final l in invoice.lines)
+        if (l.procedureId != null) l.procedureId!,
+    };
+    if (procedureIds.isEmpty) return;
+    final others =
+        await (select(invoicesTable)..where(
+              (t) =>
+                  t.patientId.equals(invoice.patientId) &
+                  t.id.equals(invoice.id).not() &
+                  t.status.equalsValue(InvoiceStatus.voided).not(),
+            ))
+            .get();
+    for (final other in others) {
+      for (final billed in other.lines) {
+        final id = billed.procedureId;
+        if (id == null || !procedureIds.contains(id)) continue;
+        for (final l in invoice.lines) {
+          if (l.procedureId != id) continue;
+          final collides =
+              l.stageIndex == null ||
+              billed.stageIndex == null ||
+              l.stageIndex == billed.stageIndex;
+          if (collides) {
+            throw StateError(
+              'Procedure $id'
+              '${l.stageIndex == null ? '' : ' stage ${l.stageIndex! + 1}'}'
+              ' is already billed on ${other.number}',
+            );
+          }
+        }
+      }
+    }
+  }
 
   /// The clinician named on an invoice: the provider of the billed
   /// procedures (first line first), else the clinic's owner dentist; only a
@@ -236,6 +292,27 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
   @override
   Stream<List<Invoice>> watchInvoices(String patientId) =>
       _forPatient(patientId).watch();
+
+  @override
+  Future<List<Invoice>> invoicesForClinic(
+    String clinicId, {
+    DateTime? from,
+    DateTime? to,
+  }) =>
+      (select(invoicesTable)
+            ..where((t) {
+              var where = t.clinicId.equals(clinicId);
+              if (from != null) {
+                where =
+                    where & t.issuedAt.isBiggerOrEqualValue(encodeIsoUtc(from));
+              }
+              if (to != null) {
+                where = where & t.issuedAt.isSmallerThanValue(encodeIsoUtc(to));
+              }
+              return where;
+            })
+            ..orderBy([(t) => OrderingTerm.desc(t.issuedAt)]))
+          .get();
 
   @override
   Future<List<Invoice>> outstandingInvoices(String clinicId) =>

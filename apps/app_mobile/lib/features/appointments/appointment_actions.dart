@@ -200,7 +200,7 @@ class _AppointmentActionsCardState
                 ),
               ),
             )
-          else if (patient != null && patient.isMinor(now))
+          else if (patient != null && patient.ageStatus(now) == AgeStatus.minor)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
               child: Text(

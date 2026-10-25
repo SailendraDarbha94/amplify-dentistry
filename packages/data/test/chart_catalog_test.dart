@@ -73,6 +73,43 @@ void main() {
   });
 
   group('procedures', () {
+    test('completed procedures are listed per clinic and date range', () async {
+      final chart = env.repos.chart;
+      await chart.createProcedure(ctx, procedure(id: 'p-1', totalStages: 1));
+      await chart.createProcedure(ctx, procedure(id: 'p-2', totalStages: 1));
+      await chart.createProcedure(ctx, procedure(id: 'p-3', totalStages: 1));
+      await chart.setProcedureStatus(
+        ctx,
+        'p-1',
+        ProcedureStatus.completed,
+        at: t0,
+      );
+      await chart.setProcedureStatus(
+        ctx,
+        'p-2',
+        ProcedureStatus.completed,
+        at: t2,
+      );
+      final all = await chart.completedProceduresForClinic(clinicId);
+      expect(all.map((p) => p.id), ['p-2', 'p-1'], reason: 'newest first');
+      expect(
+        (await chart.completedProceduresForClinic(
+          clinicId,
+          from: t1,
+        )).map((p) => p.id),
+        ['p-2'],
+      );
+      expect(
+        (await chart.completedProceduresForClinic(
+          clinicId,
+          from: t0,
+          to: t1,
+        )).map((p) => p.id),
+        ['p-1'],
+      );
+      expect(await chart.completedProceduresForClinic('clinic-2'), isEmpty);
+    });
+
     test('status transitions and stage advance write audit events', () async {
       final chart = env.repos.chart;
       final p = procedure();

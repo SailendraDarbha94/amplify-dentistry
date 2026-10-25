@@ -130,7 +130,8 @@ class _PatientFormState extends ConsumerState<PatientForm> {
       lastDate: now,
       helpText: 'Date of birth',
     );
-    if (picked != null) setState(() => _dob = picked);
+    if (!mounted || picked == null) return;
+    setState(() => _dob = picked);
   }
 
   Future<void> _save() async {

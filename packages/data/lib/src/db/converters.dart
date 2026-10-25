@@ -200,6 +200,26 @@ class JsonObjectConverter extends TypeConverter<Map<String, Object?>, String>
   Object? toJson(Map<String, Object?> value) => value;
 }
 
+/// Stores the patient demographics frozen on a prescription as JSON.
+class PatientSnapshotConverter extends TypeConverter<PatientSnapshot, String>
+    with JsonTypeConverter2<PatientSnapshot, String, Object?> {
+  /// Const constructor.
+  const PatientSnapshotConverter();
+
+  @override
+  PatientSnapshot fromSql(String fromDb) => fromJson(jsonDecode(fromDb));
+
+  @override
+  String toSql(PatientSnapshot value) => jsonEncode(toJson(value));
+
+  @override
+  PatientSnapshot fromJson(Object? json) =>
+      PatientSnapshot.fromJson((json as Map).cast<String, Object?>());
+
+  @override
+  Object? toJson(PatientSnapshot value) => value.toJson();
+}
+
 /// Base for converters that store a list of value objects as a JSON array
 /// using the object's own `toJson`/`fromJson`.
 abstract class JsonListConverter<T> extends TypeConverter<List<T>, String>
@@ -330,17 +350,30 @@ class BpeMapConverter extends TypeConverter<Map<Sextant, BpeCode>, String>
   String toSql(Map<Sextant, BpeCode> value) => jsonEncode(toJson(value));
 
   @override
-  Map<Sextant, BpeCode> fromJson(Object? json) =>
-      (json as Map?)?.map(
-        (k, v) => MapEntry(
-          enumFromJson(Sextant.values, k),
-          enumFromJson(BpeCode.values, v),
-        ),
-      ) ??
-      const {};
+  Map<Sextant, BpeCode> fromJson(Object? json) => bpeMapFromJson(json);
 
   @override
   Object? toJson(Map<Sextant, BpeCode> value) => {
     for (final e in value.entries) e.key.name: e.value.name,
   };
+}
+
+/// Stores a set of sextants (BPE furcation flags) as a JSON array of names.
+class SextantSetConverter extends TypeConverter<Set<Sextant>, String>
+    with JsonTypeConverter2<Set<Sextant>, String, Object?> {
+  /// Const constructor.
+  const SextantSetConverter();
+
+  @override
+  Set<Sextant> fromSql(String fromDb) => fromJson(jsonDecode(fromDb));
+
+  @override
+  String toSql(Set<Sextant> value) => jsonEncode(toJson(value));
+
+  @override
+  Set<Sextant> fromJson(Object? json) =>
+      enumListFromJson(Sextant.values, json).toSet();
+
+  @override
+  Object? toJson(Set<Sextant> value) => enumListToJson(value);
 }

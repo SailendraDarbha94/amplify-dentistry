@@ -440,8 +440,9 @@ void main() {
         ],
         bpe: const {
           Sextant.upperRightPosterior: BpeCode.code3,
-          Sextant.lowerAnterior: BpeCode.furcation,
+          Sextant.lowerAnterior: BpeCode.code1,
         },
+        bpeFurcation: const {Sextant.upperRightPosterior},
         stage: PeriodontitisStage.stage2,
         grade: PeriodontitisGrade.gradeB,
         createdAt: _t0,
@@ -453,6 +454,7 @@ void main() {
       'Drug',
       Drug(
         id: 'drug-1',
+        clinicId: _clinic,
         genericName: 'Amoxicillin',
         brandNames: const ['Mox'],
         strength: '500 mg',
@@ -1158,6 +1160,58 @@ void main() {
         computePlanSnapshotHash(plan.copyWith(version: 2), lines),
         isNot(h1),
       );
+    });
+  });
+
+  group('BPE', () {
+    test('a sextant carries a numeric code and a furcation flag', () {
+      final exam = PerioExam(
+        id: 'perio-2',
+        clinicId: _clinic,
+        patientId: _patient,
+        examinedAt: _t0,
+        examinerId: _provider,
+        bpe: const {Sextant.upperRightPosterior: BpeCode.code4},
+        bpeFurcation: const {Sextant.upperRightPosterior},
+        createdAt: _t0,
+      );
+      final json = jsonDecode(jsonEncode(exam.toJson())) as Map;
+      expect(json['bpe'], {'upperRightPosterior': 'code4'});
+      expect(json['bpeFurcation'], ['upperRightPosterior']);
+      final back = PerioExam.fromJson(json.cast<String, Object?>());
+      expect(back.bpe[Sextant.upperRightPosterior], BpeCode.code4);
+      expect(back.bpeFurcation, {Sextant.upperRightPosterior});
+      expect(exam.copyWith(bpeFurcation: const {}).bpeFurcation, isEmpty);
+      expect(BpeCode.values, hasLength(5), reason: 'codes are 0-4 only');
+    });
+
+    test('legacy values still parse: labels and the * marker', () {
+      expect(BpeCode.parse('code3'), BpeCode.code3);
+      expect(BpeCode.parse('3'), BpeCode.code3);
+      expect(BpeCode.isFurcationMarker('*'), isTrue);
+      expect(BpeCode.isFurcationMarker('furcation'), isTrue);
+      expect(BpeCode.isFurcationMarker('3'), isFalse);
+      expect(() => BpeCode.parse('*'), throwsFormatException);
+      expect(() => BpeCode.parse('9'), throwsFormatException);
+      final legacy = PerioExam.fromJson({
+        'id': 'perio-3',
+        'clinicId': _clinic,
+        'patientId': _patient,
+        'examinedAt': _t0.toIso8601String(),
+        'examinerId': _provider,
+        'bpe': {'lowerAnterior': '*', 'upperAnterior': '2'},
+        'createdAt': _t0.toIso8601String(),
+      });
+      // The old `*` code becomes the furcation flag; the sextant has no
+      // numeric code. Re-serialising writes the new shape.
+      expect(legacy.bpe, {Sextant.upperAnterior: BpeCode.code2});
+      expect(legacy.bpeFurcation, {Sextant.lowerAnterior});
+      expect(legacyBpeFurcationFromJson({'lowerAnterior': 'furcation'}), {
+        Sextant.lowerAnterior,
+      });
+      final json = legacy.toJson();
+      expect(json['bpe'], {'upperAnterior': 'code2'});
+      expect(json['bpeFurcation'], ['lowerAnterior']);
     });
   });
 

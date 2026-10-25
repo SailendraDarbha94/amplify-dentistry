@@ -48,6 +48,7 @@ export 'src/repositories/drift/drift_prescription_repository.dart';
 export 'src/repositories/drift/drift_recall_repository.dart';
 export 'src/repositories/drift/drift_repositories.dart';
 export 'src/repositories/drift/drift_treatment_plan_repository.dart';
+export 'src/repositories/drift/repository_exception.dart';
 export 'src/repositories/drift/settings_access.dart';
 export 'src/repositories/export_repository.dart';
 export 'src/repositories/lab_repository.dart';

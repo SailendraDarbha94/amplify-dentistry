@@ -236,26 +236,13 @@ class DriftClinicRepository extends DatabaseAccessor<AppDatabase>
       writeSetting(ctx, SettingKeys.notation, enumSettingToJson(notation));
 
   @override
-  Future<String> nextPatientNumber(ActorContext ctx) async {
-    final n = await nextCounter(ctx, SettingKeys.patientNumberCounter);
-    return 'P-${n.toString().padLeft(5, '0')}';
-  }
+  Future<String> nextPatientNumber(ActorContext ctx) => mintPatientNumber(ctx);
 
   @override
-  Future<String> nextDraftInvoiceNumber(
-    ActorContext ctx, {
-    DateTime? now,
-  }) async {
-    final n = await nextCounter(ctx, SettingKeys.draftInvoiceCounter);
-    return draftNumber('INV', nowUtc(now), n);
-  }
+  Future<String> nextDraftInvoiceNumber(ActorContext ctx, {DateTime? now}) =>
+      mintLocalDraftNumber(ctx, 'INV', now: now);
 
   @override
-  Future<String> nextDraftEstimateNumber(
-    ActorContext ctx, {
-    DateTime? now,
-  }) async {
-    final n = await nextCounter(ctx, SettingKeys.draftEstimateCounter);
-    return draftNumber('EST', nowUtc(now), n);
-  }
+  Future<String> nextDraftEstimateNumber(ActorContext ctx, {DateTime? now}) =>
+      mintLocalDraftNumber(ctx, 'EST', now: now);
 }

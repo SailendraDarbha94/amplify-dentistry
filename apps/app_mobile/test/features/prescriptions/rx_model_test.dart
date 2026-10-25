@@ -1,7 +1,9 @@
 import 'dart:math';
 
 import 'package:ampdent_core/ampdent_core.dart';
+import 'package:ampdent_data/ampdent_data.dart';
 import 'package:ampdent_mobile/features/prescriptions/rx_model.dart';
+import 'package:ampdent_terminology/ampdent_terminology.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -212,6 +214,114 @@ void main() {
       expect(cautionLabels(drug: ibu, history: null, isMinor: false), [
         'Caution in pregnancy',
       ]);
+    });
+  });
+
+  group('schedule history at prescribe time', () {
+    final pregabalin = drugFromSeed(drugSeedByCode('PREGAB-75')!);
+    final before = DateTime.utc(2026, 10, 1);
+    final after = DateTime.utc(2026, 12, 1);
+    final prescriber = ClinicMember(
+      id: 'm',
+      clinicId: 'c',
+      displayName: 'Dr. A. Rao',
+      role: ClinicRole.ownerDentist,
+      registrationNumber: 'A-1',
+      phone: '+919000000002',
+      createdAt: before,
+      updatedAt: before,
+    );
+
+    test('a line takes the schedule in force on the prescribe date', () {
+      final early = RxLineDraft.fromDrug(pregabalin, at: before);
+      expect(early.schedule, DrugSchedule.h);
+      expect(early.isScheduleH1, isFalse);
+      expect(early.scheduleAt(after), DrugSchedule.h1);
+      final late = RxLineDraft.fromDrug(pregabalin, at: after);
+      expect(late.schedule, DrugSchedule.h1);
+      expect(late.isScheduleH1, isTrue);
+      expect(late.scheduleAt(before), DrugSchedule.h);
+      // The drug master itself says H1 (its current tag).
+      expect(pregabalin.schedule, DrugSchedule.h1);
+    });
+
+    test('the stored prescription resolves at the issue time', () {
+      final draft = RxDraft(
+        lines: [RxLineDraft.fromDrug(pregabalin, at: before)],
+      );
+      Prescription issue(DateTime now) => draft.toPrescription(
+        id: 'rx',
+        clinicId: 'c',
+        patientId: 'p',
+        prescriber: prescriber,
+        verificationCode: 'ABC234',
+        now: now,
+      );
+      expect(issue(before).lines.single.schedule, DrugSchedule.h);
+      expect(issue(before).hasScheduleH1, isFalse);
+      expect(issue(after).lines.single.schedule, DrugSchedule.h1);
+      expect(issue(after).hasScheduleH1, isTrue);
+    });
+
+    test('a repeat re-resolves the tag for the new date', () {
+      final old = RxDraft(lines: [RxLineDraft.fromDrug(pregabalin, at: before)])
+          .toPrescription(
+            id: 'rx-old',
+            clinicId: 'c',
+            patientId: 'p',
+            prescriber: prescriber,
+            verificationCode: 'ABC234',
+            now: before,
+          );
+      expect(old.lines.single.schedule, DrugSchedule.h);
+      final repeat = RxDraft.repeatOf(
+        old,
+        drugs: {pregabalin.id: pregabalin},
+        at: after,
+      );
+      expect(repeat.lines.single.schedule, DrugSchedule.h1);
+      // Without the drug master the stored tag is kept as it was printed.
+      expect(
+        RxDraft.repeatOf(old, at: after).lines.single.schedule,
+        DrugSchedule.h,
+      );
+    });
+
+    test('the patient demographics are frozen on the prescription', () {
+      final patient = Patient(
+        id: 'p',
+        clinicId: 'c',
+        patientNumber: 'P-7',
+        firstName: 'Asha',
+        lastName: 'Rao',
+        phone: '+919876543210',
+        dateOfBirth: DateTime.utc(1990, 5, 20),
+        sex: Sex.female,
+        addressLines: const ['4 Park Lane'],
+        city: 'Hyderabad',
+        createdAt: before,
+        updatedAt: before,
+      );
+      final rx = RxDraft(lines: [RxLineDraft.fromDrug(pregabalin, at: after)])
+          .toPrescription(
+            id: 'rx',
+            clinicId: 'c',
+            patientId: 'p',
+            prescriber: prescriber,
+            verificationCode: 'ABC234',
+            now: after,
+            patient: patient,
+          );
+      final snap = rx.patientSnapshot!;
+      expect(snap.displayName, 'Asha Rao');
+      expect(snap.ageYears, 36);
+      expect(snap.sex, Sex.female);
+      expect(snap.city, 'Hyderabad');
+      expect(snap.guardianName, isNull);
+      expect(
+        Prescription.fromJson(rx.toJson()).patientSnapshot?.toJson(),
+        snap.toJson(),
+      );
     });
   });
 

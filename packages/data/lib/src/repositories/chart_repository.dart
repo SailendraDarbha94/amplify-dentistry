@@ -26,6 +26,15 @@ abstract class ChartRepository {
     ToothStateRecord record,
   );
 
+  /// Appends many tooth-state records in one transaction (one audit event
+  /// and one outbox row per record, all stamped with the same instant), for
+  /// the 52-row age-default seed. Nothing is written when any record fails
+  /// validation.
+  Future<List<ToothStateRecord>> recordToothStates(
+    ActorContext ctx,
+    List<ToothStateRecord> records,
+  );
+
   /// Findings for a patient, newest first.
   Future<List<Finding>> findings(
     String patientId, {
@@ -72,6 +81,14 @@ abstract class ChartRepository {
   Stream<List<ProcedureRecord>> watchProceduresForPatient(
     String patientId, {
     bool includeDeleted = false,
+  });
+
+  /// Completed procedures of a clinic, newest first, optionally limited to
+  /// those completed at or after [from] and before [to].
+  Future<List<ProcedureRecord>> completedProceduresForClinic(
+    String clinicId, {
+    DateTime? from,
+    DateTime? to,
   });
 
   /// Creates a procedure.

@@ -82,12 +82,24 @@ abstract class ClinicRepository {
   /// Saves the display notation.
   Future<void> saveNotation(ActorContext ctx, ToothNotation notation);
 
-  /// Mints the next patient number: `P-00001`, `P-00002`, ...
+  /// Device id of the clinic's primary device (the one that mints plain
+  /// `P-00001` numbers), or null when none is recorded yet.
+  Future<String?> primaryDeviceId(String clinicId);
+
+  /// Makes [deviceId] the clinic's primary device.
+  Future<void> setPrimaryDevice(ActorContext ctx, String deviceId);
+
+  /// Mints the next patient number: `P-00001`, `P-00002`, ... on the primary
+  /// device; `P-<code>-00001` on any other device, where `code` is the first
+  /// four characters of the device id, so numbers minted offline on several
+  /// phones never collide on the server's unique index.
   Future<String> nextPatientNumber(ActorContext ctx);
 
-  /// Mints the next local draft invoice number (`DRAFT-INV-yyyyMM-0001`).
+  /// Mints the next local draft invoice number
+  /// (`DRAFT-INV-yyyyMM-<code>-0001`, device-unique).
   Future<String> nextDraftInvoiceNumber(ActorContext ctx, {DateTime? now});
 
-  /// Mints the next local draft estimate number (`DRAFT-EST-yyyyMM-0001`).
+  /// Mints the next local draft estimate number
+  /// (`DRAFT-EST-yyyyMM-<code>-0001`, device-unique).
   Future<String> nextDraftEstimateNumber(ActorContext ctx, {DateTime? now});
 }

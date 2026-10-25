@@ -3,6 +3,7 @@ import 'package:meta/meta.dart';
 import '../dental/clinical_enums.dart';
 import 'drug.dart';
 import 'json_support.dart';
+import 'patient.dart';
 
 /// One drug on a prescription (frozen copy of the drug master values).
 @immutable
@@ -116,6 +117,94 @@ class PrescriptionLine {
       );
 }
 
+/// Patient demographics frozen on a prescription at issue, so a reprint shows
+/// what the signed original showed even after the patient record changes.
+@immutable
+class PatientSnapshot {
+  /// Creates a snapshot.
+  const PatientSnapshot({
+    required this.displayName,
+    required this.patientNumber,
+    this.ageYears,
+    required this.sex,
+    this.addressLines = const [],
+    this.city,
+    this.pincode,
+    this.phone,
+    this.guardianName,
+  });
+
+  /// Takes the snapshot of [patient] as of [asOf].
+  factory PatientSnapshot.of(Patient patient, DateTime asOf) {
+    final age = patient.ageYears(asOf);
+    return PatientSnapshot(
+      displayName: patient.displayName,
+      patientNumber: patient.patientNumber,
+      ageYears: age?.floor(),
+      sex: patient.sex,
+      addressLines: patient.addressLines,
+      city: patient.city,
+      pincode: patient.pincode,
+      phone: patient.phone,
+      guardianName: patient.isMinor(asOf) ? patient.guardianName : null,
+    );
+  }
+
+  /// Name as printed.
+  final String displayName;
+
+  /// Patient number as printed.
+  final String patientNumber;
+
+  /// Completed years of age at issue; null when the age was unknown.
+  final int? ageYears;
+
+  /// Sex.
+  final Sex sex;
+
+  /// Address lines.
+  final List<String> addressLines;
+
+  /// City.
+  final String? city;
+
+  /// PIN code.
+  final String? pincode;
+
+  /// Phone as printed.
+  final String? phone;
+
+  /// Guardian named on the document (minors only).
+  final String? guardianName;
+
+  /// JSON form.
+  Map<String, Object?> toJson() => {
+    'displayName': displayName,
+    'patientNumber': patientNumber,
+    'ageYears': ageYears,
+    'sex': sex.name,
+    'addressLines': addressLines,
+    'city': city,
+    'pincode': pincode,
+    'phone': phone,
+    'guardianName': guardianName,
+  };
+
+  /// Parses the JSON form.
+  factory PatientSnapshot.fromJson(Map<String, Object?> json) =>
+      PatientSnapshot(
+        displayName: json['displayName'] as String,
+        patientNumber: json['patientNumber'] as String? ?? '',
+        ageYears: json['ageYears'] as int?,
+        sex: enumFromJsonOrNull(Sex.values, json['sex']) ?? Sex.unspecified,
+        addressLines: stringListFromJson(json['addressLines']),
+        city: json['city'] as String?,
+        pincode: json['pincode'] as String?,
+        phone: json['phone'] as String?,
+        guardianName: json['guardianName'] as String?,
+      );
+}
+
 /// A signed prescription. Prescriber identity and registration number are
 /// frozen onto the row (DCI Code 3.4.1).
 @immutable
@@ -138,6 +227,7 @@ class Prescription {
     required this.verificationCode,
     this.documentHash,
     this.pdfPath,
+    this.patientSnapshot,
     required this.createdAt,
   });
 
@@ -189,6 +279,11 @@ class Prescription {
   /// Rendered PDF path.
   final String? pdfPath;
 
+  /// Patient demographics frozen at issue; documents render from this so a
+  /// reprint matches the signed original. Null on rows issued before the
+  /// snapshot existed (documents then fall back to the live record).
+  final PatientSnapshot? patientSnapshot;
+
   /// Row creation time.
   final DateTime createdAt;
 
@@ -203,6 +298,7 @@ class Prescription {
     bool? dispensedByClinic,
     String? documentHash,
     String? pdfPath,
+    PatientSnapshot? patientSnapshot,
   }) => Prescription(
     id: id,
     clinicId: clinicId,
@@ -220,6 +316,7 @@ class Prescription {
     verificationCode: verificationCode,
     documentHash: documentHash ?? this.documentHash,
     pdfPath: pdfPath ?? this.pdfPath,
+    patientSnapshot: patientSnapshot ?? this.patientSnapshot,
     createdAt: createdAt,
   );
 
@@ -241,6 +338,7 @@ class Prescription {
     'verificationCode': verificationCode,
     'documentHash': documentHash,
     'pdfPath': pdfPath,
+    'patientSnapshot': patientSnapshot?.toJson(),
     'createdAt': dateToJson(createdAt),
   };
 
@@ -272,6 +370,11 @@ class Prescription {
     verificationCode: json['verificationCode'] as String,
     documentHash: json['documentHash'] as String?,
     pdfPath: json['pdfPath'] as String?,
+    patientSnapshot: json['patientSnapshot'] == null
+        ? null
+        : PatientSnapshot.fromJson(
+            (json['patientSnapshot'] as Map).cast<String, Object?>(),
+          ),
     createdAt: dateFromJson(json['createdAt']),
   );
 }

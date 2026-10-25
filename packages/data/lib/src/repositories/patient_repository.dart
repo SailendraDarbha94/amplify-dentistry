@@ -30,6 +30,19 @@ abstract class PatientRepository {
   /// Active patients with exactly this phone (or alternate phone).
   Future<List<Patient>> findByPhone(String clinicId, String phone);
 
+  /// Patients whose guardian phone is exactly [phone] (family lookups).
+  Future<List<Patient>> findByGuardianPhone(
+    String clinicId,
+    String phone, {
+    bool includeInactive = false,
+  });
+
+  /// Stream of the most recently updated active patients, newest first.
+  Stream<List<Patient>> watchRecent(String clinicId, {int limit = 20});
+
+  /// Stream of the number of active patients.
+  Stream<int> watchCount(String clinicId);
+
   /// Patient by clinic-local number.
   Future<Patient?> findByNumber(String clinicId, String patientNumber);
 

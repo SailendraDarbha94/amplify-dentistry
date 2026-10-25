@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'core/app_shell.dart';
 import 'core/logging.dart';
 import 'core/providers.dart';
 import 'core/router.dart';
@@ -52,6 +53,7 @@ class AmpDentApp extends ConsumerWidget {
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         routerConfig: router,
+        scaffoldMessengerKey: rootScaffoldMessengerKey,
         locale: supportedLocales.first,
         supportedLocales: supportedLocales,
         localizationsDelegates: GlobalMaterialLocalizations.delegates,

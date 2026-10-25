@@ -194,6 +194,48 @@ exception when insufficient_privilege then null;
 end
 $$;
 
+-- Append-only rows (0006): the owner can insert a payment but no API role can rewrite it.
+insert into public.payments (id, clinic_id, patient_id, invoice_id, amount_paise, method, received_at, received_by)
+values ('aaaaaaaa-0000-0000-0000-0000000000a1', 'aaaaaaaa-0000-0000-0000-000000000001',
+        'aaaaaaaa-0000-0000-0000-0000000000f1', 'aaaaaaaa-0000-0000-0000-0000000000e1', 50000, 'upi', now(),
+        'aaaaaaaa-0000-0000-0000-00000000000a');
+
+do $$
+begin
+  update public.payments set amount_paise = 1 where id = 'aaaaaaaa-0000-0000-0000-0000000000a1';
+  if found then raise exception 'payments must not be updatable through the API'; end if;
+  update public.tooth_state_records set state = 'missing'
+  where clinic_id = 'aaaaaaaa-0000-0000-0000-000000000001';
+  if found then raise exception 'tooth_state_records must not be updatable through the API'; end if;
+end
+$$;
+
+-- Per-clinic settings (0006) mirror the device settings table; members read and write their own clinic's rows.
+insert into public.settings (clinic_id, setting_key, value_json)
+values ('aaaaaaaa-0000-0000-0000-000000000001', 'device.primary', '"phone-u1"'::jsonb);
+
+update public.settings set value_json = '"phone-u1b"'::jsonb
+where clinic_id = 'aaaaaaaa-0000-0000-0000-000000000001' and setting_key = 'device.primary';
+
+do $$
+declare
+  v jsonb;
+begin
+  select value_json into v from public.settings
+  where clinic_id = 'aaaaaaaa-0000-0000-0000-000000000001' and setting_key = 'device.primary';
+  if v <> '"phone-u1b"'::jsonb then raise exception 'settings row should be updatable by a member, got %', v; end if;
+end
+$$;
+
+-- Parity columns (0006) exist under their Drift names (each perform raises undefined_column otherwise).
+do $$
+begin
+  perform reminder24h_sent_at from public.appointments where false;
+  perform removed_at from public.treatment_plan_lines where false;
+  perform bpe_furcation from public.perio_exams where false;
+end
+$$;
+
 commit;
 
 -- updated_at touch and audit trail ----------------------------------------------
@@ -244,6 +286,29 @@ insert into public.clinic_members (id, clinic_id, user_id, display_name, role, p
 values ('bbbbbbbb-0000-0000-0000-00000000000a', 'bbbbbbbb-0000-0000-0000-000000000001',
         '22222222-2222-2222-2222-222222222222', 'Dr. Two', 'ownerDentist', '+919000000002');
 
+-- Clinic C: created by user 2, left without members (the creation window another user must not exploit).
+insert into public.clinics (id, name, city, state_code, pincode, phone)
+values ('cccccccc-0000-0000-0000-000000000001', 'Coral Dental', 'Kochi', '32', '682001', '+914840000001');
+
+do $$
+declare
+  v uuid;
+begin
+  select created_by into v from public.clinics where id = 'cccccccc-0000-0000-0000-000000000001';
+  if v <> '22222222-2222-2222-2222-222222222222' then raise exception 'created_by should default to the inserting user, got %', v; end if;
+end
+$$;
+
+-- created_by cannot be spoofed.
+do $$
+begin
+  insert into public.clinics (id, name, city, state_code, pincode, phone, created_by)
+  values (gen_random_uuid(), 'Spoof', 'X', '32', '682001', '+914840000002', '11111111-1111-1111-1111-111111111111');
+  raise exception 'inserting a clinic with another user as created_by should have been rejected';
+exception when insufficient_privilege then null;
+end
+$$;
+
 -- Cannot bootstrap into clinic A, which already has members.
 do $$
 begin
@@ -286,6 +351,43 @@ begin
   perform public.mint_invoice_number('aaaaaaaa-0000-0000-0000-000000000001');
   raise exception 'minting for another clinic should have been rejected';
 exception when insufficient_privilege then null;
+end
+$$;
+commit;
+
+-- Bootstrap is pinned to the creator (0006): user 3 cannot claim the empty clinic C --------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+
+do $$
+begin
+  insert into public.clinic_members (id, clinic_id, user_id, display_name, role, phone)
+  values (gen_random_uuid(), 'cccccccc-0000-0000-0000-000000000001',
+          '33333333-3333-3333-3333-333333333333', 'Squatter', 'ownerDentist', '+919000000003');
+  raise exception 'bootstrapping into a clinic created by another user should have been rejected';
+exception when insufficient_privilege then null;
+end
+$$;
+commit;
+
+-- ...while its creator can.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+
+insert into public.clinic_members (id, clinic_id, user_id, display_name, role, phone)
+values ('cccccccc-0000-0000-0000-00000000000a', 'cccccccc-0000-0000-0000-000000000001',
+        '22222222-2222-2222-2222-222222222222', 'Dr. Two', 'ownerDentist', '+919000000002');
+
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.clinics;
+  if n <> 2 then raise exception 'user 2 must now see clinics B and C, saw %', n; end if;
+  select count(*) into n from public.settings;
+  if n <> 0 then raise exception 'user 2 must not see clinic A settings, saw %', n; end if;
 end
 $$;
 commit;
@@ -404,6 +506,28 @@ begin
   from pg_class c join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;
   if missing is not null then raise exception 'tables without RLS: %', missing; end if;
+end
+$$;
+
+-- No UPDATE policy on append-only tables (0006); select and insert remain.
+do $$
+declare
+  offenders text;
+  missing text;
+begin
+  select string_agg(tablename || '.' || policyname, ', ') into offenders
+  from pg_policies
+  where schemaname = 'public' and cmd = 'UPDATE'
+    and tablename in ('payments', 'ledger_entries', 'consent_records', 'prescriptions',
+                      'medical_histories', 'tooth_state_records', 'audit_events');
+  if offenders is not null then raise exception 'unexpected update policies: %', offenders; end if;
+
+  select string_agg(t, ', ') into missing
+  from unnest(array['payments', 'ledger_entries', 'consent_records', 'prescriptions',
+                    'medical_histories', 'tooth_state_records']) as t
+  where not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = t and p.cmd = 'INSERT')
+     or not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = t and p.cmd = 'SELECT');
+  if missing is not null then raise exception 'append-only tables lost select/insert policies: %', missing; end if;
 end
 $$;
 

@@ -5,10 +5,10 @@ import 'package:ampdent_mobile/core/app_strings.dart';
 import 'package:ampdent_mobile/core/formatting.dart';
 import 'package:ampdent_mobile/core/providers.dart';
 import 'package:ampdent_mobile/features/consent/document_preview_page.dart';
+import 'package:ampdent_mobile/features/recall/patient_messenger.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'plan_dialogs.dart';
 import 'plan_model.dart';
@@ -108,32 +108,32 @@ class _EstimateSendBar extends ConsumerWidget {
   final Clinic clinic;
   final Estimate estimate;
 
+  /// Sends the ESTIMATE_LINK through the shared [PatientMessenger]: opt-in
+  /// check, guardian routing for minors, and the message-log row closed as
+  /// `sent` or `cancelled` depending on whether WhatsApp opened.
   Future<void> _send(BuildContext context, WidgetRef ref) async {
     final template = templateByCode('ESTIMATE_LINK');
     if (template == null) return;
-    final now = ref.read(clockProvider)();
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final log = await ref
-          .read(messagingProvider)
+      final result = await ref
+          .read(patientMessengerProvider)
           .send(
-            MessageRequest(
-              clinicId: clinic.id,
-              patientId: patient.id,
-              toPhone: patient.messagingPhone(now),
-              template: template,
-              variables: {
-                'patient_name': patient.firstName,
-                'document_number': '${estimate.number} v${estimate.version}',
-                'clinic_name': clinic.name,
-                'link': pendingPortalLink,
-                'clinic_phone': clinic.whatsappPhone ?? clinic.phone,
-              },
-            ),
+            patient: patient,
+            clinic: clinic,
+            template: template,
+            variables: {
+              'document_number': '${estimate.number} v${estimate.version}',
+              'link': pendingPortalLink,
+              'clinic_phone': clinic.whatsappPhone ?? clinic.phone,
+            },
+            decide: documentSendDecision,
           );
-      final uri = whatsappDeepLink(log.toPhone, log.renderedPreview);
-      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!ok) {
+      if (!result.decision.allowed) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(sendDenialText(result.decision.reason))),
+        );
+      } else if (!result.launched) {
         messenger.showSnackBar(
           const SnackBar(content: Text('WhatsApp could not be opened')),
         );

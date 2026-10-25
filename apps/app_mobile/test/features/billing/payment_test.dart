@@ -111,6 +111,36 @@ void main() {
       expect(payments.last.reference, 'UTR123');
     });
 
+    test('overpayment is refused unless recorded as an advance', () async {
+      await expectLater(
+        recorder.recordPayment(
+          patientId: testPatientId,
+          invoiceId: invoice.id,
+          amount: const Money.rupees(20000),
+          method: PaymentMethod.cash,
+          now: billingNow,
+        ),
+        throwsArgumentError,
+      );
+      expect(await env.repos.billing.paymentsForInvoice(invoice.id), isEmpty);
+      await recorder.recordPayment(
+        patientId: testPatientId,
+        invoiceId: invoice.id,
+        amount: const Money.rupees(20000),
+        method: PaymentMethod.cash,
+        allowAdvance: true,
+        now: billingNow,
+      );
+      expect(
+        (await env.repos.billing.getInvoice(invoice.id))!.status,
+        InvoiceStatus.paid,
+      );
+      expect(
+        await env.repos.billing.patientBalance(testPatientId),
+        const Money.rupees(15440 - 20000),
+      );
+    });
+
     test('card payment stores last4 and brand only, never a PAN', () async {
       await expectLater(
         recorder.recordPayment(

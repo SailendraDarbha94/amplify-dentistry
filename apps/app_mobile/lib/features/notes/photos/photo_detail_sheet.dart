@@ -11,14 +11,12 @@ import 'package:share_plus/share_plus.dart';
 
 import '../notes_providers.dart';
 import 'photo_capture_page.dart';
-
-/// Location of the consent flow for clinical photography.
-String photoConsentLocation(String patientId) =>
-    '/patients/$patientId/consent/new?templateCode=$photoUseTemplateCode';
+import 'photo_share.dart';
 
 /// Full-size view of one image with its tags and a share action. Sharing
-/// requires a signed PHOTO-USE consent; without one the sheet routes to the
-/// consent flow instead of sharing.
+/// requires an active photo-use data consent (DPDP purpose `photoUse`); its
+/// id is stored on the image as `sharingConsentId`. Without one the sheet
+/// routes to the patient's data-consent toggles instead of sharing.
 class PhotoDetailSheet extends ConsumerWidget {
   /// Creates the sheet.
   const PhotoDetailSheet({
@@ -46,28 +44,24 @@ class PhotoDetailSheet extends ConsumerWidget {
   );
 
   Future<void> _share(BuildContext context, WidgetRef ref) async {
-    final consent = await ref
-        .read(consentRepositoryProvider)
-        .consentsForPatient(patientId)
-        .then(
-          (list) => list
-              .where((c) => c.templateCode == photoUseTemplateCode)
-              .firstOrNull,
-        );
+    final consent = await photoShareConsent(
+      ref.read(consentRepositoryProvider),
+      patientId,
+    );
     if (!context.mounted) return;
     if (consent == null) {
       final go = await ConfirmSheet.show(
         context,
-        title: 'Photo consent needed',
+        title: 'Photo-use consent needed',
         message:
-            'Sharing a clinical photo needs a signed photography consent '
-            '(PHOTO-USE). Record it now?',
-        confirmLabel: 'Record consent',
-        icon: Icons.assignment_outlined,
+            'Sharing a clinical photo needs the patient\'s consent to the use '
+            'of clinical photos (DPDP). Record it on their profile now?',
+        confirmLabel: 'Open profile',
+        icon: Icons.privacy_tip_outlined,
       );
       if (go && context.mounted) {
         Navigator.of(context).pop();
-        await context.push(photoConsentLocation(patientId));
+        await context.push(dataConsentLocation(patientId));
       }
       return;
     }
@@ -78,12 +72,12 @@ class PhotoDetailSheet extends ConsumerWidget {
           .showSnackBar(const SnackBar(content: Text('Image file is missing')));
       return;
     }
-    await ref
-        .read(clinicalRepositoryProvider)
-        .updateImage(
-          ref.read(actorContextProvider),
-          image.copyWith(sharingConsentId: consent.id),
-        );
+    await markPhotoShared(
+      ref.read(clinicalRepositoryProvider),
+      ref.read(actorContextProvider),
+      image,
+      consent,
+    );
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(file.path, mimeType: 'image/jpeg')],
@@ -99,7 +93,7 @@ class PhotoDetailSheet extends ConsumerWidget {
     final notation = ref.watch(notationProvider);
     final path = ref.watch(imageFilePathProvider(image.filePath)).value;
     final hasConsent =
-        ref.watch(photoUseConsentProvider(patientId)).value != null;
+        ref.watch(photoUseDataConsentProvider(patientId)).value != null;
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.9,
       child: Column(

@@ -14,10 +14,12 @@ import 'billing_strings.dart';
 import 'invoice_draft.dart';
 import 'invoice_line_editor.dart';
 
-/// New invoice from the patient's completed-but-unbilled procedures. Totals
+/// New invoice from the patient's unbilled work: completed procedures and the
+/// reached stages of multi-sitting procedures (one instalment each). Totals
 /// use the clinic's GST rate table and `computeInvoiceTotals`; the document
-/// type follows `suggestDocumentType`. Issue saves the draft (minting the
-/// `DRAFT-` number), issues it and opens the detail page with the PDF.
+/// type follows `suggestDocumentType`. Issue saves and issues the draft in
+/// one transaction (minting the `DRAFT-` number) and opens the detail page
+/// with the PDF.
 class NewInvoicePage extends ConsumerStatefulWidget {
   /// Creates the page.
   const NewInvoicePage({
@@ -50,7 +52,7 @@ class _NewInvoicePageState extends ConsumerState<NewInvoicePage> {
   @override
   Widget build(BuildContext context) {
     final s = context.strings;
-    final procedures = ref.watch(billableProceduresProvider(widget.patientId));
+    final procedures = ref.watch(billableStagesProvider(widget.patientId));
     final catalog = ref.watch(catalogByIdProvider);
     final rates = ref.watch(gstRateTableProvider);
     final clinic = ref.watch(currentClinicProvider);
@@ -70,7 +72,7 @@ class _NewInvoicePageState extends ConsumerState<NewInvoicePage> {
         clinic.hasValue;
     if (!ready) return LoadingScaffold(message: s.loading);
 
-    final lines = _lines ??= draftLinesFromProcedures(
+    final lines = _lines ??= draftLinesFromStages(
       procedures.requireValue,
       catalog: catalog.requireValue,
       notation: notation,
@@ -109,12 +111,10 @@ class _NewInvoicePageState extends ConsumerState<NewInvoicePage> {
                 const SizedBox(height: AppSpacing.sm),
                 for (final (i, line) in lines.indexed)
                   InvoiceLineEditor(
-                    key: ValueKey(
-                      'inv-line-${line.procedure?.id ?? line.line.id}',
-                    ),
+                    key: ValueKey('inv-line-${line.keySuffix}'),
                     draft: line,
                     notation: notation,
-                    keyBase: 'inv-line-${line.procedure?.id ?? line.line.id}',
+                    keyBase: 'inv-line-${line.keySuffix}',
                     onChanged: (updated) => setState(() {
                       _lines = [...lines]..[i] = updated;
                     }),

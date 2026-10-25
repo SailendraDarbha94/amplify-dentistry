@@ -67,8 +67,24 @@ abstract final class ChartStrings {
       'Attach a radiograph or give a reason';
   static const String proceed = 'Proceed';
 
+  /// Consent guard.
+  static const String consentTitle = 'Consent not on record';
+  static const String consentBody =
+      'This procedure needs a signed consent before it starts. Get it now, '
+      'or type the reason for going ahead without one.';
+  static const String consentGet = 'Get consent';
+  static const String consentReason = 'Reason for proceeding without consent';
+  static const String consentReasonRequired =
+      'Get consent or give a reason (3+ characters)';
+  static const String consentProceed = 'Proceed anyway';
+
+  /// Fee range guard.
+  static const String feeOutsideRangeTitle = 'Fee outside the usual range';
+  static const String feeUseAnyway = 'Use this fee';
+
   /// Perio page.
   static const String bpeScreening = 'BPE screening';
+  static const String bpeFurcation = 'Furcation involvement (*)';
   static const String bpeHint =
       'Code 3 unlocks six-point charting for that sextant; code 4 unlocks '
       'the full mouth.';
@@ -78,6 +94,7 @@ abstract final class ChartStrings {
   static const String probingDepth = 'PD';
   static const String gingivalMargin = 'GM';
   static const String recession = 'Recession (-)';
+  static const String coronal = 'Above CEJ (+)';
   static const String summary = 'Summary';
   static const String sitesRecorded = 'Sites';
   static const String bleedingPercent = 'BOP';

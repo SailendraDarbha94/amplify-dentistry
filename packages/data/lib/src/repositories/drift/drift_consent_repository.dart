@@ -20,10 +20,8 @@ class DriftConsentRepository extends DatabaseAccessor<AppDatabase>
   Future<ConsentRecord> recordConsent(ActorContext ctx, ConsentRecord consent) {
     checkTenant(ctx, consent.clinicId, 'consent.clinicId');
     return writeTransaction(() async {
-      final before = await getConsent(consent.id);
-      if (before != null) {
-        throw StateError('Consent ${consent.id} is immutable once signed');
-      }
+      // Signed consents are immutable; the guard throws on an existing id.
+      await ensureAbsent(_c, consent.id);
       return audited<ConsentRecord>(
         ctx: ctx,
         table: _c,
@@ -65,18 +63,21 @@ class DriftConsentRepository extends DatabaseAccessor<AppDatabase>
   @override
   Future<DataConsent> recordDataConsent(ActorContext ctx, DataConsent consent) {
     checkTenant(ctx, consent.clinicId, 'consent.clinicId');
-    return writeTransaction(
-      () async => audited(
+    return writeTransaction(() async {
+      // One row per grant or refusal; a change of mind is a new row (or a
+      // withdrawal), never a rewrite of the recorded one.
+      await ensureAbsent(_d, consent.id);
+      return audited(
         ctx: ctx,
         table: _d,
         entityType: 'DataConsent',
         entityId: consent.id,
-        before: await _dataConsent(consent.id),
+        before: null,
         after: consent,
         insertable: consent.toInsertable(),
         toJson: (c) => c.toJson(),
-      ),
-    );
+      );
+    });
   }
 
   Future<DataConsent?> _dataConsent(String id) =>

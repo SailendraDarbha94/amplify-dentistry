@@ -11,10 +11,13 @@ import 'converters.dart';
 import 'tables_clinic.dart';
 import 'tables_patient.dart';
 
-/// Drug master (global, seeded from `ampdent_terminology`).
+/// Drug master: the seeded global rows (`clinicId` null) plus the entries
+/// a clinic adds for itself.
 @TableIndex(name: 'drugs_generic_name', columns: {#genericName})
+@TableIndex(name: 'drugs_clinic', columns: {#clinicId})
 @UseRowClass(Drug, generateInsertable: true)
 class Drugs extends IdTable {
+  TextColumn get clinicId => text().nullable().references(Clinics, #id)();
   TextColumn get genericName => text()();
   TextColumn get brandNames => text().map(const StringListConverter())();
   TextColumn get strength => text()();
@@ -53,6 +56,8 @@ class Prescriptions extends PatientScopedTable {
   TextColumn get verificationCode => text()();
   TextColumn get documentHash => text().nullable()();
   TextColumn get pdfPath => text().nullable()();
+  TextColumn get patientSnapshot =>
+      text().map(const PatientSnapshotConverter()).nullable()();
   TextColumn get createdAt => text().map(const IsoUtcDateTimeConverter())();
 }
 

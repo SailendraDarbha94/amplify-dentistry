@@ -95,39 +95,50 @@ final StreamProvider<GstRateTable> gstRateTableProvider =
           });
     });
 
-/// Billable procedures (completed or in progress) of a patient that are not
-/// yet on a non-void invoice. Waits for the invoice list before emitting so a
-/// new invoice never preselects already billed work.
-final billableProceduresProvider =
-    StreamProvider.family<List<ProcedureRecord>, String>((ref, patientId) {
+/// Billable units of a patient (completed procedures and reached stages of
+/// multi-sitting work) not yet on a non-void invoice. Waits for the invoice
+/// list before emitting so a new invoice never preselects billed work.
+final billableStagesProvider =
+    StreamProvider.family<List<BillableStage>, String>((ref, patientId) {
       final invoices = ref.watch(billingInvoicesProvider(patientId));
       if (invoices.isLoading && !invoices.hasValue) {
-        return const Stream<List<ProcedureRecord>>.empty();
+        return const Stream<List<BillableStage>>.empty();
       }
-      final billed = billedProcedureIds(invoices.value ?? const []);
+      final issued = invoices.value ?? const <Invoice>[];
       return ref
           .watch(chartRepositoryProvider)
           .watchProceduresForPatient(patientId)
-          .map(
-            (list) => [
-              for (final p in list)
-                if (p.status.isBillable && !billed.contains(p.id)) p,
-            ],
-          );
+          .map((list) => unbilledStages(list, issued));
     });
 
-/// Patients sharing a guardian phone with [patientId] (the patient first).
-final familyMembersProvider = StreamProvider.family<List<Patient>, String>((
+/// Patients sharing a guardian phone with [patientId] (the patient first):
+/// the others under the same guardian, the guardian's own record and the
+/// patient's wards, looked up by phone instead of scanning the table.
+final familyMembersProvider = FutureProvider.family<List<Patient>, String>((
   ref,
   patientId,
-) {
+) async {
   final clinicId = ref.watch(currentClinicIdProvider);
   final self = ref.watch(billingPatientProvider(patientId)).value;
-  if (clinicId == null || self == null) return Stream.value(const []);
-  return ref
-      .watch(patientRepositoryProvider)
-      .watchAll(clinicId, includeInactive: true)
-      .map((all) => familyMembers(self, all));
+  if (clinicId == null || self == null) return const [];
+  final patients = ref.watch(patientRepositoryProvider);
+  final guardianPhone = self.guardianPhone ?? '';
+  final candidates = <Patient>[
+    if (guardianPhone.isNotEmpty) ...[
+      ...await patients.findByGuardianPhone(
+        clinicId,
+        guardianPhone,
+        includeInactive: true,
+      ),
+      ...await patients.findByPhone(clinicId, guardianPhone),
+    ],
+    ...await patients.findByGuardianPhone(
+      clinicId,
+      self.phone,
+      includeInactive: true,
+    ),
+  ];
+  return familyMembers(self, candidates);
 });
 
 /// One ledger entry together with the patient it belongs to.
@@ -163,25 +174,28 @@ final billingReportProvider = FutureProvider.family<BillingReport, String>((
   final month = monthOf(ref.watch(clockProvider)());
   final clinicId = ref.watch(currentClinicIdProvider);
   if (clinicId == null) return BillingReport(month: month);
-  final patients = await ref
-      .watch(patientRepositoryProvider)
-      .watchAll(clinicId, includeInactive: true)
-      .first;
   final billing = ref.watch(billingRepositoryProvider);
   final chart = ref.watch(chartRepositoryProvider);
-  final payments = <Payment>[];
-  final procedures = <ProcedureRecord>[];
-  final invoices = <Invoice>[];
-  for (final p in patients) {
-    payments.addAll(await billing.paymentsForPatient(p.id));
-    procedures.addAll(
-      await chart.proceduresForPatient(
-        p.id,
-        statuses: const [ProcedureStatus.completed],
-      ),
-    );
-    invoices.addAll(await billing.invoicesForPatient(p.id));
+  final nextMonth = DateTime(month.year, month.month + 1);
+  // Payments, invoices and completed procedures come from clinic-wide,
+  // month-bounded queries; outstanding balances from the open-invoice index.
+  final payments = await billing.paymentsForClinic(
+    clinicId,
+    from: month,
+    to: nextMonth,
+  );
+  final invoices = <Invoice>[
+    ...await billing.invoicesForClinic(clinicId, from: month, to: nextMonth),
+  ];
+  final seen = {for (final i in invoices) i.id};
+  for (final open in await billing.outstandingInvoices(clinicId)) {
+    if (seen.add(open.id)) invoices.add(open);
   }
+  final procedures = await chart.completedProceduresForClinic(
+    clinicId,
+    from: month,
+    to: nextMonth,
+  );
   return computeBillingReport(
     month: month,
     payments: payments,

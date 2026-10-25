@@ -78,6 +78,9 @@ abstract final class BillingStrings {
   static const String invoiceIssued = 'Invoice issued';
   static const String invoiceVoided = 'Invoice voided';
   static const String linkQueued = 'Message queued in the log';
+  static const String linkSent = 'Opened in WhatsApp; logged as sent';
+  static const String advanceOnAccount =
+      'Amount above the balance is kept as credit on account';
   static const String couldNotOpenApp = 'Could not open the app';
 
   /// Reports tab.

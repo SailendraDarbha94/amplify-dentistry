@@ -233,6 +233,7 @@ class DriftTreatmentPlanRepository extends DatabaseAccessor<AppDatabase>
     String planId, {
     required String signerName,
     String? signatureHash,
+    String? estimateDeclinedReason,
     DateTime? at,
   }) => writeTransaction(() async {
     final plan = await getPlan(planId);
@@ -240,15 +241,27 @@ class DriftTreatmentPlanRepository extends DatabaseAccessor<AppDatabase>
     if (plan.isAccepted) throw StateError('Plan $planId already accepted');
     final lines = await linesForPlan(planId);
     final now = nowUtc(at);
+    final declined = estimateDeclinedReason?.trim();
     final after = plan.copyWith(
       status: TreatmentPlanStatus.accepted,
       acceptedAt: now,
       acceptedBySignerName: signerName,
       acceptedSignatureHash: signatureHash,
       snapshotHash: computePlanSnapshotHash(plan, lines),
+      estimateDeclinedReason: declined == null || declined.isEmpty
+          ? null
+          : declined,
       updatedAt: now,
     );
-    return _writePlan(ctx, plan, after, action: AuditAction.statusChange);
+    return _writePlan(
+      ctx,
+      plan,
+      after,
+      action: AuditAction.statusChange,
+      reason: declined == null || declined.isEmpty
+          ? null
+          : 'Patient declined a written estimate: $declined',
+    );
   });
 
   @override

@@ -46,6 +46,7 @@ abstract class TreatmentPlanRepository {
     String planId, {
     required String signerName,
     String? signatureHash,
+    String? estimateDeclinedReason,
     DateTime? at,
   });
 

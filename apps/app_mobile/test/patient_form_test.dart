@@ -24,6 +24,16 @@ void main() {
       );
     });
 
+    test('DOB or an approximate age is required', () {
+      expect(
+        PatientValidators.approxAge('', required: true),
+        PatientStrings.ageRequired,
+      );
+      expect(PatientValidators.approxAge('', required: false), isNull);
+      expect(PatientValidators.approxAge('42', required: true), isNull);
+      expect(PatientValidators.approxAge('abc', required: true), isNotNull);
+    });
+
     test('approximate age is used when DOB is unknown', () {
       expect(patientIsMinor(approxAgeYears: 10, now: now), isTrue);
       expect(patientIsMinor(approxAgeYears: 18, now: now), isFalse);
@@ -77,6 +87,21 @@ void main() {
           dateOfBirth: DateTime(2016, 10, 25),
         );
         await expectLater(saver.save(minor, now: now), throwsStateError);
+        // Unknown age is never saved as an adult: it must be resolved first.
+        await expectLater(
+          saver.save(
+            const PatientFormData(firstName: 'Ravi', phone: '9876543211'),
+            now: now,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              PatientStrings.ageRequired,
+            ),
+          ),
+        );
+        expect(await env.repos.patients.count(testClinicId), 0);
 
         final saved = await saver.save(
           PatientFormData(
@@ -181,6 +206,24 @@ void main() {
       expect(saved.first.guardianName, 'Lakshmi');
       expect(saved.first.approxAgeYears, 10);
       expect(env.location, '/patients/${saved.first.id}');
+    });
+
+    testWidgets('neither DOB nor age blocks the save', (tester) async {
+      await env.pumpApp(tester);
+      await env.go(tester, '/patients/new');
+      await tester.enterText(
+        find.byKey(const ValueKey('patient-first-name')),
+        'Ravi',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('patient-phone')),
+        '9123456789',
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('patient-save')));
+      await settle(tester);
+      expect(find.text(PatientStrings.ageRequired), findsOneWidget);
+      expect(await env.repos.patients.count(testClinicId), 0);
     });
 
     testWidgets('adult saves without guardian', (tester) async {

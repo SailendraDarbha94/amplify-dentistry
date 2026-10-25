@@ -1,6 +1,9 @@
 import 'package:ampdent_core/ampdent_core.dart';
+import 'package:ampdent_data/ampdent_data.dart';
+import 'package:ampdent_mobile/features/billing/billing_actions.dart';
 import 'package:ampdent_mobile/features/billing/billing_reports.dart';
 import 'package:ampdent_mobile/features/billing/invoice_draft.dart';
+import 'package:ampdent_terminology/ampdent_terminology.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'billing_fixtures.dart';
@@ -169,6 +172,167 @@ void main() {
         expect(audit.map((a) => a.action), contains(AuditAction.statusChange));
       },
     );
+  });
+
+  group('multi-sitting work is billed per stage', () {
+    late BillingTestEnv env;
+
+    setUp(() async => env = await BillingTestEnv.open());
+    tearDown(() => env.close());
+
+    ProcedureRecord stagedRct() {
+      final seed = procedureSeedByCode('RCT-MOL')!;
+      return ProcedureRecord(
+        id: 'proc-rct',
+        clinicId: testClinicId,
+        patientId: testPatientId,
+        catalogItemId: seedId('catalog', 'RCT-MOL'),
+        code: 'RCT-MOL',
+        name: seed.name,
+        tooth: ToothId.parse('46'),
+        treatmentArea: seed.treatmentArea,
+        providerId: testDentistId,
+        fee: const Money.rupees(6000),
+        totalStages: 3,
+        stageNames: const ['Access', 'Obturation', 'Review'],
+        createdAt: billingNow.toUtc(),
+        updatedAt: billingNow.toUtc(),
+      );
+    }
+
+    Future<Invoice> issueUnbilled(DateTime at) async {
+      final procedures = await env.repos.chart.proceduresForPatient(
+        testPatientId,
+      );
+      final invoices = await env.repos.billing.invoicesForPatient(
+        testPatientId,
+      );
+      final stages = unbilledStages(procedures, invoices);
+      expect(stages, hasLength(1), reason: 'one new stage per sitting');
+      final lines = draftLinesFromStages(
+        stages,
+        catalog: fixtureCatalog(),
+        notation: ToothNotation.fdi,
+      );
+      expect(lines.single.selected, isTrue);
+      final rates = await env.repos.clinics.loadGstRateTable(testClinicId);
+      return InvoiceIssuer(billing: env.repos.billing, ctx: testCtx).issue(
+        buildDraftInvoice(
+          id: newId(),
+          clinicId: testClinicId,
+          patientId: testPatientId,
+          issuedBy: testDentistId,
+          lines: lines,
+          rates: rates,
+          clinicGstRegistered: true,
+          now: at,
+        ),
+        rates: rates,
+        at: at,
+      );
+    }
+
+    test('an RCT is billed across three invoices summing to the fee', () async {
+      await env.repos.chart.createProcedure(testCtx, stagedRct());
+      expect(
+        unbilledStages(
+          await env.repos.chart.proceduresForPatient(testPatientId),
+          const [],
+        ),
+        isEmpty,
+        reason: 'planned work is not billable',
+      );
+
+      final issued = <Invoice>[];
+      for (var sitting = 0; sitting < 3; sitting++) {
+        final at = billingNow.add(Duration(days: 7 * sitting));
+        await env.repos.chart.advanceStage(testCtx, 'proc-rct', at: at);
+        issued.add(await issueUnbilled(at));
+        final line = issued.last.lines.single;
+        expect(line.procedureId, 'proc-rct');
+        expect(line.stageIndex, sitting);
+        expect(line.unitPrice, const Money.rupees(2000));
+        expect(line.description, contains('stage ${sitting + 1} of 3'));
+      }
+      expect(issued.map((i) => i.lines.single.description).toList(), [
+        contains('Access'),
+        contains('Obturation'),
+        contains('Review'),
+      ]);
+      expect(issued.map((i) => i.grandTotal).total, const Money.rupees(6000));
+      final proc = (await env.repos.chart.getProcedure('proc-rct'))!;
+      expect(proc.status, ProcedureStatus.completed);
+      expect(
+        unbilledStages([
+          proc,
+        ], await env.repos.billing.invoicesForPatient(testPatientId)),
+        isEmpty,
+        reason: 'nothing left to bill once every stage is on an invoice',
+      );
+      expect(
+        await env.repos.billing.patientBalance(testPatientId),
+        const Money.rupees(6000),
+      );
+    });
+
+    test('completed single-sitting work bills once in full', () async {
+      final procedures = await seedTwoProcedures(env);
+      final stages = unbilledStages(procedures, const []);
+      expect(stages.map((s) => s.stageIndex), [null, null]);
+      expect(stages.first.fee, procedures.first.fee);
+      final lines = draftLinesFromStages(
+        stages,
+        catalog: fixtureCatalog(),
+        notation: ToothNotation.fdi,
+      );
+      expect(lines.map((l) => l.keySuffix), ['proc-rct', 'proc-whitening']);
+      expect(lines.first.line.description, isNot(contains('stage')));
+      final invoice = await issueFixtureInvoice(env, procedures);
+      expect(
+        unbilledStages(procedures, [invoice]),
+        isEmpty,
+        reason: 'billed work is excluded forever (until voided)',
+      );
+    });
+
+    test('stage instalments split the fee and discount exactly', () {
+      final rct = stagedRct().copyWith(
+        fee: const Money.rupees(5000),
+        discount: const Money.rupees(100),
+        status: ProcedureStatus.completed,
+        stageIndex: 2,
+      );
+      final stages = reachedStages(rct);
+      expect(stages.map((s) => s.stageIndex), [0, 1, 2]);
+      expect(stages.map((s) => s.fee).total, const Money.rupees(5000));
+      expect(stages.map((s) => s.discount).total, const Money.rupees(100));
+      expect(stages.map((s) => s.key), [
+        'proc-rct-s0',
+        'proc-rct-s1',
+        'proc-rct-s2',
+      ]);
+    });
+
+    test('a refused issue strands no DRAFT invoice', () async {
+      await env.repos.clinics.upsertMember(
+        testCtx,
+        testDentist().copyWith(registrationNumber: ''),
+      );
+      final procedures = await seedTwoProcedures(env);
+      await expectLater(
+        issueFixtureInvoice(env, procedures),
+        throwsA(isA<NoRegisteredClinician>()),
+      );
+      expect(
+        await env.repos.billing.invoicesForPatient(testPatientId),
+        isEmpty,
+      );
+      expect(
+        unbilledStages(procedures, const []),
+        hasLength(2),
+        reason: 'the work is still billable',
+      );
+    });
   });
 
   group('ledger helpers', () {

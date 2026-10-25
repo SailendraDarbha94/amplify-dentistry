@@ -7,6 +7,23 @@ import 'package:drift/drift.dart';
 import '../../db/app_database.dart';
 import '../../db/tables_clinic.dart';
 import '../actor_context.dart';
+import 'repository_exception.dart';
+
+/// SQL names of the tables whose rows are never rewritten: an id that already
+/// exists is rejected by [AuditedWriter.ensureAbsent] instead of being
+/// overwritten through `insertOnConflictUpdate`.
+const Set<String> appendOnlyTables = {
+  'consent_records',
+  'data_consents',
+  'payments',
+  'ledger_entries',
+  'prescriptions',
+  'tooth_state_records',
+  'audit_events',
+  'medical_histories',
+  'perio_exams',
+  'sterilisation_cycles',
+};
 
 /// Mixin for Drift repositories: every write goes through [audited] or
 /// [recordWrite], which, inside the same transaction, appends an
@@ -16,11 +33,42 @@ import '../actor_context.dart';
 /// No method here deletes anything; soft deletes are status changes recorded
 /// with [AuditAction.softDelete].
 mixin AuditedWriter on DatabaseAccessor<AppDatabase> {
+  static const Logger _log = Logger('AuditedWriter');
+
   /// Current UTC time, or [at] normalised to UTC.
   DateTime nowUtc([DateTime? at]) => (at ?? DateTime.now()).toUtc();
 
   /// Runs [body] in one transaction (nested calls join the outer one).
-  Future<T> writeTransaction<T>(Future<T> Function() body) => transaction(body);
+  ///
+  /// A SQLite failure is rethrown as a [RepositoryException], which carries
+  /// the result code, table and constraint identifiers but not the bound
+  /// values, so nothing downstream can log patient data by printing the
+  /// error. Application errors ([StateError], [ArgumentError]) pass through.
+  Future<T> writeTransaction<T>(Future<T> Function() body) async {
+    try {
+      return await transaction(body);
+    } catch (e, st) {
+      final safe = RepositoryException.sanitise(e);
+      if (safe == null) rethrow;
+      _log.warning('write failed: $safe');
+      Error.throwWithStackTrace(safe, st);
+    }
+  }
+
+  /// Throws [StateError] when [table] already holds a row with [id]. Call
+  /// before inserting into an append-only table (see [appendOnlyTables]);
+  /// [audited] does so itself for a create on one of those tables.
+  Future<void> ensureAbsent(TableInfo<Table, Object?> table, String id) async {
+    final name = table.actualTableName;
+    final rows = await customSelect(
+      'SELECT 1 FROM "$name" WHERE id = ? LIMIT 1',
+      variables: [Variable.withString(id)],
+      readsFrom: {table},
+    ).get();
+    if (rows.isNotEmpty) {
+      throw StateError('$name is append-only: row $id already exists');
+    }
+  }
 
   /// Throws [ArgumentError] when a row's clinic differs from the actor's.
   void checkTenant(ActorContext ctx, String? clinicId, String what) {
@@ -82,7 +130,9 @@ mixin AuditedWriter on DatabaseAccessor<AppDatabase> {
 
   /// Upserts [after] into [table] and records the write. [before] is the
   /// stored row prior to the write (null for a create). The action defaults
-  /// to create/update by presence of [before].
+  /// to create/update by presence of [before]. On an [appendOnlyTables]
+  /// table a create whose id already exists throws [StateError] instead of
+  /// silently overwriting the row.
   Future<T> audited<T>({
     required ActorContext ctx,
     required TableInfo<Table, T> table,
@@ -95,6 +145,9 @@ mixin AuditedWriter on DatabaseAccessor<AppDatabase> {
     AuditAction? action,
     String? reason,
   }) async {
+    if (before == null && appendOnlyTables.contains(table.actualTableName)) {
+      await ensureAbsent(table, entityId);
+    }
     await into(table).insertOnConflictUpdate(insertable);
     await recordWrite(
       ctx: ctx,

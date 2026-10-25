@@ -98,13 +98,27 @@ AttendanceTally attendanceInMonth(
   return AttendanceTally(completed: completed, noShow: noShow);
 }
 
-/// Value of accepted treatment that has no appointment yet.
+/// Procedures completed on the local calendar day of [day], for the
+/// production tile's detail sheet.
+List<ProcedureRecord> completedOn(
+  Iterable<ProcedureRecord> procedures,
+  DateTime day,
+) => procedures
+    .where(
+      (p) =>
+          p.status == ProcedureStatus.completed &&
+          p.completedAt != null &&
+          sameLocalDay(p.completedAt!, day),
+    )
+    .toList();
+
+/// Accepted treatment lines that have no appointment yet.
 ///
 /// A line counts when its plan is accepted, it is not an alternative, and
 /// the work is still open: its procedure (if any) is neither completed nor
 /// in progress, and no live appointment (scheduled, confirmed, arrived or in
 /// chair) lists that procedure among its planned procedures.
-Money unscheduledAcceptedValue({
+List<TreatmentPlanLine> unscheduledAcceptedLines({
   required Iterable<TreatmentPlan> plans,
   required Iterable<TreatmentPlanLine> lines,
   required Iterable<ProcedureRecord> procedures,
@@ -114,13 +128,13 @@ Money unscheduledAcceptedValue({
     for (final p in plans)
       if (p.status == TreatmentPlanStatus.accepted) p.id,
   };
-  if (acceptedPlanIds.isEmpty) return const Money.zero();
+  if (acceptedPlanIds.isEmpty) return const [];
   final proceduresById = {for (final p in procedures) p.id: p};
   final scheduledProcedureIds = <String>{
     for (final a in appointments)
       if (a.status.occupiesChair) ...a.plannedProcedureIds,
   };
-  var total = const Money.zero();
+  final out = <TreatmentPlanLine>[];
   for (final line in lines) {
     if (line.isAlternative || !acceptedPlanIds.contains(line.planId)) continue;
     final procedureId = line.procedureId;
@@ -134,10 +148,23 @@ Money unscheduledAcceptedValue({
       }
       if (scheduledProcedureIds.contains(procedureId)) continue;
     }
-    total += line.net;
+    out.add(line);
   }
-  return total;
+  return out;
 }
+
+/// Value of [unscheduledAcceptedLines].
+Money unscheduledAcceptedValue({
+  required Iterable<TreatmentPlan> plans,
+  required Iterable<TreatmentPlanLine> lines,
+  required Iterable<ProcedureRecord> procedures,
+  required Iterable<Appointment> appointments,
+}) => unscheduledAcceptedLines(
+  plans: plans,
+  lines: lines,
+  procedures: procedures,
+  appointments: appointments,
+).map((l) => l.net).total;
 
 /// The five dashboard numbers, computed once per data change.
 @immutable
@@ -195,3 +222,14 @@ class TodayKpis {
 /// `12%` style label for a rate in `[0, 1]`; `-` when null.
 String formatRate(double? rate) =>
     rate == null ? '-' : '${(rate * 100).round()}%';
+
+/// Screen-reader text for the no-show tile: the dash alone says nothing.
+String noShowSemanticLabel(TodayKpis? kpis) {
+  if (kpis == null) return 'No-show rate this month, loading';
+  final rate = kpis.noShowRate;
+  if (rate == null) {
+    return 'No-show rate this month: no completed or missed appointments '
+        'yet';
+  }
+  return 'No-show rate this month: ${formatRate(rate)}';
+}

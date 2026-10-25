@@ -60,7 +60,11 @@ class _PrescriptionEditorPageState
     final drugs = await ref.read(drugsProvider.future);
     if (!mounted || rx == null) return;
     setState(() {
-      _draft = RxDraft.repeatOf(rx, drugs: {for (final d in drugs) d.id: d});
+      _draft = RxDraft.repeatOf(
+        rx,
+        drugs: {for (final d in drugs) d.id: d},
+        at: ref.read(clockProvider)(),
+      );
       _diagnosis.text = _draft.diagnosis;
       _loadedRepeat = true;
     });
@@ -99,7 +103,10 @@ class _PrescriptionEditorPageState
     }
     final line = await RxLineSheet.show(
       context,
-      initial: RxLineDraft.fromDrug(drug).copyWith(overrideReason: override),
+      initial: RxLineDraft.fromDrug(
+        drug,
+        at: ref.read(clockProvider)(),
+      ).copyWith(overrideReason: override),
     );
     if (line == null || !mounted) return;
     setState(() => _draft = _draft.copyWith(lines: [..._draft.lines, line]));
@@ -144,6 +151,7 @@ class _PrescriptionEditorPageState
         draft: _draft.copyWith(diagnosis: _diagnosis.text),
         patientId: widget.patientId,
         prescriber: member,
+        patient: ref.read(rxPatientProvider(widget.patientId)).value,
         visitId: visit?.id,
         now: ref.read(clockProvider)(),
       );

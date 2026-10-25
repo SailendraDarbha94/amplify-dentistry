@@ -114,6 +114,8 @@ class Estimate {
     this.justification,
     this.validUntil,
     this.status = EstimateStatus.draft,
+    this.planVersion,
+    this.planSnapshotHash,
     required this.createdAt,
   }) : assert(
          version == 1 || justification != null,
@@ -168,6 +170,13 @@ class Estimate {
   /// Lifecycle status.
   final EstimateStatus status;
 
+  /// Version of the plan this estimate was produced from.
+  final int? planVersion;
+
+  /// `computePlanSnapshotHash` of the plan lines at issue, so acceptance can
+  /// detect that the plan changed after the patient saw the estimate.
+  final String? planSnapshotHash;
+
   /// Row creation time.
   final DateTime createdAt;
 
@@ -182,6 +191,8 @@ class Estimate {
     String? justification,
     DateTime? validUntil,
     EstimateStatus? status,
+    int? planVersion,
+    String? planSnapshotHash,
   }) => Estimate(
     id: id,
     clinicId: clinicId,
@@ -199,6 +210,8 @@ class Estimate {
     justification: justification ?? this.justification,
     validUntil: validUntil ?? this.validUntil,
     status: status ?? this.status,
+    planVersion: planVersion ?? this.planVersion,
+    planSnapshotHash: planSnapshotHash ?? this.planSnapshotHash,
     createdAt: createdAt,
   );
 
@@ -220,6 +233,8 @@ class Estimate {
     'justification': justification,
     'validUntil': dateToJson(validUntil),
     'status': status.name,
+    'planVersion': planVersion,
+    'planSnapshotHash': planSnapshotHash,
     'createdAt': dateToJson(createdAt),
   };
 
@@ -247,6 +262,8 @@ class Estimate {
     justification: json['justification'] as String?,
     validUntil: dateFromJsonOrNull(json['validUntil']),
     status: enumFromJson(EstimateStatus.values, json['status']),
+    planVersion: json['planVersion'] as int?,
+    planSnapshotHash: json['planSnapshotHash'] as String?,
     createdAt: dateFromJson(json['createdAt']),
   );
 }

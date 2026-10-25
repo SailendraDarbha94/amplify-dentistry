@@ -2,6 +2,7 @@ import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_mobile/core/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'photos/photo_share.dart';
 import 'photos/photo_source.dart';
 import 'photos/photo_store.dart';
 import 'red_flags.dart';
@@ -60,6 +61,15 @@ final photoUseConsentProvider = StreamProvider.family<ConsentRecord?, String>(
         matches.sort((a, b) => b.signedAt.compareTo(a.signedAt));
         return matches.first;
       }),
+);
+
+/// The patient's active photo-use data consent (DPDP purpose `photoUse`), or
+/// null when none is granted or it was withdrawn. Sharing a photo requires it.
+final photoUseDataConsentProvider = StreamProvider.family<DataConsent?, String>(
+  (ref, patientId) => ref
+      .watch(consentRepositoryProvider)
+      .watchDataConsents(patientId)
+      .map(activePhotoUseConsent),
 );
 
 /// The patient a notes screen belongs to.

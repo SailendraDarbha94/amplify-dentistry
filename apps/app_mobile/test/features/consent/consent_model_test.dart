@@ -117,6 +117,29 @@ void main() {
       guardianPhone: '+919123456789',
     );
 
+    test('an unknown age blocks signing until it is recorded', () {
+      final unknown = Patient(
+        id: 'p-unknown',
+        clinicId: testClinicId,
+        patientNumber: 'P-00009',
+        firstName: 'Ravi',
+        phone: '+919123456789',
+        createdAt: now,
+        updatedAt: now,
+      );
+      expect(
+        validateConsentSigning(
+          patient: unknown,
+          now: now,
+          relation: SignerRelation.self,
+          signerName: 'Ravi',
+          discussionNote: 'Discussed',
+          hasSignature: true,
+        ),
+        ConsentStrings.ageUnknown,
+      );
+    });
+
     test('a minor cannot self-sign', () {
       expect(
         validateConsentSigning(

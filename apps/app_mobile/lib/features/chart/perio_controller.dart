@@ -15,10 +15,11 @@ class PerioDraft {
     this.sites = const {},
     this.teeth = const {},
     this.bpe = const {},
+    this.bpeFurcation = const {},
     this.arch = Arch.upper,
     this.aspect = PerioAspect.facial,
     this.measure = PerioMeasurementType.probingDepth,
-    this.recession = false,
+    this.recession = true,
     this.chartAll = false,
     this.cursor = 0,
     this.lastEntered,
@@ -34,6 +35,9 @@ class PerioDraft {
   /// BPE code per sextant.
   final Map<Sextant, BpeCode> bpe;
 
+  /// Sextants flagged `*` (furcation involvement) beside their code.
+  final Set<Sextant> bpeFurcation;
+
   /// Arch shown.
   final Arch arch;
 
@@ -43,7 +47,9 @@ class PerioDraft {
   /// What the number pad digits set: probing depth or gingival margin.
   final PerioMeasurementType measure;
 
-  /// When entering gingival margin, store digits as recession (negative).
+  /// When entering gingival margin, store digits as recession (negative,
+  /// the common case and the default). The clinician toggles it off for a
+  /// margin coronal to the CEJ; the choice persists across saved exams.
   final bool recession;
 
   /// Clinician override: chart every sextant regardless of BPE.
@@ -68,24 +74,26 @@ class PerioDraft {
   PerioSummary get summary => PerioSummary.from(readings);
 
   /// Whether anything worth saving was entered.
-  bool get hasContent => readings.isNotEmpty || bpe.isNotEmpty;
+  bool get hasContent =>
+      readings.isNotEmpty || bpe.isNotEmpty || bpeFurcation.isNotEmpty;
 
   /// BPE code 4 anywhere (or the override) unlocks the whole mouth.
   bool get fullMouthUnlocked =>
       chartAll || bpe.values.any((c) => c == BpeCode.code4);
 
   /// Whether six-point charting is unlocked for a sextant: full mouth, or
-  /// that sextant scored 3 (or `*`).
+  /// that sextant scored 3 or carries the furcation `*`.
   bool sextantUnlocked(Sextant sextant) =>
       fullMouthUnlocked ||
       bpe[sextant] == BpeCode.code3 ||
-      bpe[sextant] == BpeCode.furcation;
+      bpeFurcation.contains(sextant);
 
   /// Returns a copy with the given fields replaced.
   PerioDraft copyWith({
     Map<PerioCellKey, PerioSiteReading>? sites,
     Map<ToothId, PerioToothReading>? teeth,
     Map<Sextant, BpeCode>? bpe,
+    Set<Sextant>? bpeFurcation,
     Arch? arch,
     PerioAspect? aspect,
     PerioMeasurementType? measure,
@@ -100,6 +108,7 @@ class PerioDraft {
     sites: sites ?? this.sites,
     teeth: teeth ?? this.teeth,
     bpe: bpe ?? this.bpe,
+    bpeFurcation: bpeFurcation ?? this.bpeFurcation,
     arch: arch ?? this.arch,
     aspect: aspect ?? this.aspect,
     measure: measure ?? this.measure,
@@ -169,6 +178,17 @@ class PerioController extends Notifier<PerioDraft> {
       bpe[sextant] = code;
     }
     state = state.copyWith(bpe: bpe, cursor: 0, clearLastEntered: true);
+  }
+
+  /// Toggles the furcation `*` flag of a sextant (kept beside its code).
+  void toggleBpeFurcation(Sextant sextant) {
+    final flags = Set<Sextant>.of(state.bpeFurcation);
+    if (!flags.remove(sextant)) flags.add(sextant);
+    state = state.copyWith(
+      bpeFurcation: flags,
+      cursor: 0,
+      clearLastEntered: true,
+    );
   }
 
   /// Switches arch; the cursor restarts.
@@ -361,11 +381,12 @@ class PerioController extends Notifier<PerioDraft> {
       sites: state.readings,
       teeth: teeth.values.toList(),
       bpe: state.bpe,
+      bpeFurcation: state.bpeFurcation,
       stage: state.acceptedStage,
       createdAt: at,
     );
     final saved = await repo.saveExam(ctx, exam);
-    state = const PerioDraft();
+    state = PerioDraft(recession: state.recession);
     return saved;
   }
 }

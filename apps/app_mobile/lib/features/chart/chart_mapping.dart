@@ -8,6 +8,9 @@ enum ProcedureKind {
   crown,
   extraction,
   implant,
+
+  /// Removal of a failed implant; leaves the site missing, not implant.
+  explant,
   veneer,
   sealant,
   other,
@@ -37,6 +40,7 @@ ProcedureKind classifyProcedure(String code, {ProcedureCategory? category}) {
   }
   if (starts('EXT-') || c == 'PED-EXT') return ProcedureKind.extraction;
   if (c == 'IMP-PLACE') return ProcedureKind.implant;
+  if (c == 'IMP-REMOVE' || starts('EXPLANT')) return ProcedureKind.explant;
   if (starts('VNR-') || c == 'SMILE-VNR') return ProcedureKind.veneer;
   if (c == 'PFS') return ProcedureKind.sealant;
   if (starts('COMP-') ||
@@ -54,8 +58,9 @@ ProcedureKind classifyProcedure(String code, {ProcedureCategory? category}) {
 }
 
 /// Whether starting a procedure of [kind] needs a pre-operative radiograph
-/// on record (or a documented reason). Endodontic, extraction, implant and
-/// crown work always do; the catalogue flag extends the rule.
+/// on record (or a documented reason). Endodontic, extraction, implant
+/// (placement or removal) and crown work always do; the catalogue flag
+/// extends the rule.
 bool procedureNeedsPreOpRadiograph(
   ProcedureKind kind, {
   bool catalogFlag = false,
@@ -64,6 +69,7 @@ bool procedureNeedsPreOpRadiograph(
     kind == ProcedureKind.rootCanal ||
     kind == ProcedureKind.extraction ||
     kind == ProcedureKind.implant ||
+    kind == ProcedureKind.explant ||
     kind == ProcedureKind.crown;
 
 /// Overlay drawn for a procedure, or null when it leaves no mark.
@@ -91,6 +97,7 @@ ToothOverlay? overlayForProcedure(ProcedureRecord p, ProcedureKind kind) {
         kind: planned ? OverlayKind.plannedCrown : OverlayKind.crown,
       );
     case ProcedureKind.extraction:
+    case ProcedureKind.explant:
       return ToothOverlay(
         kind: p.status.isDone
             ? OverlayKind.missing

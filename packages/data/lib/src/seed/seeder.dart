@@ -183,8 +183,8 @@ class Seeder {
   }
 
   /// Writes the default settings for a freshly created clinic: GST rate
-  /// history, display notation and zeroed numbering counters. Existing keys
-  /// are left untouched.
+  /// history, display notation, zeroed numbering counters and the creating
+  /// device as the primary device. Existing keys are left untouched.
   Future<void> seedClinicDefaults(ActorContext ctx, Clinic clinic) async {
     final now = DateTime.now().toUtc();
     final defaults = <String, String>{
@@ -194,6 +194,7 @@ class Seeder {
       SettingKeys.draftInvoiceCounter: counterToJson(0),
       SettingKeys.draftEstimateCounter: counterToJson(0),
       SettingKeys.sterilisationCycleCounter: counterToJson(0),
+      SettingKeys.primaryDeviceId: stringSettingToJson(ctx.deviceId),
     };
     await db.batch((b) {
       for (final e in defaults.entries) {

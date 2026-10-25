@@ -135,6 +135,21 @@ void main() {
         await consents.hasActiveDataConsent(patientId, DataPurpose.research),
         isFalse,
       );
+      // Recording the same id again is refused rather than overwriting the
+      // grant that was actually given.
+      await expectLater(
+        consents.recordDataConsent(
+          ctx,
+          dataConsent(id: 'dc-1', granted: false),
+        ),
+        throwsStateError,
+      );
+      expect(
+        (await consents.latestDataConsents(
+          patientId,
+        ))[DataPurpose.appointmentReminders]!.granted,
+        isTrue,
+      );
     });
   });
 
@@ -160,6 +175,71 @@ void main() {
         1,
       );
     });
+
+    test(
+      'exams are append-only: no overwrite, no reading ever removed',
+      () async {
+        final perio = env.repos.perio;
+        final e1 = perioExam();
+        await perio.saveExam(ctx, e1);
+        final auditBefore = await env.repos.audit.count(clinicId);
+        final rowsBefore = await env.db.select(env.db.perioSiteReadings).get();
+        expect(rowsBefore, hasLength(2));
+
+        // Same id with different readings: refused, nothing changes.
+        final edited = e1.copyWith(
+          sites: [
+            PerioSiteReading(
+              tooth: ToothId.parse('16'),
+              site: PerioSite.mesioBuccal,
+              probingDepth: 9,
+            ),
+          ],
+          note: 'tampered',
+        );
+        await expectLater(perio.saveExam(ctx, edited), throwsStateError);
+        expect((await perio.getExam(e1.id))!.toJson(), equals(e1.toJson()));
+        expect(
+          (await env.db.select(env.db.perioSiteReadings).get()).map(
+            (r) => r.probingDepth,
+          ),
+          rowsBefore.map((r) => r.probingDepth),
+        );
+        expect(await env.repos.audit.count(clinicId), auditBefore);
+
+        // A re-examination is a new exam id; history keeps both.
+        final e2 = perioExam(id: 'perio-2', examinedAt: t2);
+        await perio.saveExam(ctx, e2);
+        expect(
+          await env.db.select(env.db.perioSiteReadings).get(),
+          hasLength(4),
+        );
+        expect(
+          (await perio.siteHistory(
+            patientId,
+            ToothId.parse('16'),
+            PerioSite.mesioBuccal,
+          )).map((p) => p.examId),
+          ['perio-1', 'perio-2'],
+        );
+
+        // The same site twice in one exam is a caller error, not a replace.
+        final doubled = perioExam(id: 'perio-3').copyWith(
+          sites: [
+            PerioSiteReading(
+              tooth: ToothId.parse('16'),
+              site: PerioSite.buccal,
+            ),
+            PerioSiteReading(
+              tooth: ToothId.parse('16'),
+              site: PerioSite.buccal,
+              probingDepth: 3,
+            ),
+          ],
+        );
+        expect(() => perio.saveExam(ctx, doubled), throwsArgumentError);
+      },
+    );
   });
 
   group('prescriptions', () {
@@ -187,6 +267,26 @@ void main() {
       expect(minted.verificationCode, hasLength(8));
       expect((await rx.prescriptionsForPatient(patientId)).first.id, 'rx-2');
     });
+
+    test(
+      'a clinic-added drug is tenant-checked and keeps its clinic',
+      () async {
+        final rx = env.repos.prescriptions;
+        await rx.upsertDrug(ctx, drug(id: 'drug-own'));
+        expect((await rx.getDrug('drug-own'))!.clinicId, clinicId);
+        // Global master rows carry no clinic and need no tenant check.
+        await rx.upsertDrug(ctx, drug(id: 'drug-global', clinicId: null));
+        expect((await rx.getDrug('drug-global'))!.clinicId, isNull);
+        expect(
+          () => rx.upsertDrug(
+            ctx,
+            drug(id: 'drug-foreign', clinicId: 'clinic-2'),
+          ),
+          throwsArgumentError,
+        );
+        expect(await rx.getDrug('drug-foreign'), isNull);
+      },
+    );
   });
 
   group('recalls', () {
@@ -308,6 +408,105 @@ void main() {
         );
         expect((await env.repos.recalls.forProcedure(completed.id))!.id, r.id);
         expect(await env.repos.recalls.forProcedure('nope'), isNull);
+      },
+    );
+
+    test(
+      'a newer recall of the same type supersedes the older open one',
+      () async {
+        final recalls = env.repos.recalls;
+        final first = (await recalls.createFromProcedure(
+          ctx,
+          procedure(
+            id: 'proc-scale-1',
+            code: 'SCALING-ADULT',
+            totalStages: 1,
+            status: ProcedureStatus.completed,
+          ),
+          completedOn: t0,
+        ))!;
+        final second = (await recalls.createFromProcedure(
+          ctx,
+          procedure(
+            id: 'proc-scale-2',
+            code: 'SCALING-ADULT',
+            totalStages: 1,
+            status: ProcedureStatus.completed,
+          ),
+          completedOn: t2,
+        ))!;
+        expect(second.id, isNot(first.id));
+        expect(second.type, first.type);
+
+        // Exactly one open hygiene recall: the KPI and reminders count once.
+        final horizon = DateTime.utc(2028, 1, 1);
+        final due = await recalls.due(clinicId, until: horizon);
+        expect(due.map((r) => r.id), [second.id]);
+        expect(
+          await recalls.dueValue(clinicId, until: horizon),
+          second.estimatedValue,
+        );
+        final older = (await recalls.getById(first.id))!;
+        expect(older.status, RecallStatus.dismissed);
+        final events = await env.repos.audit.forEntity(
+          clinicId,
+          'Recall',
+          first.id,
+        );
+        expect(events.last.action, AuditAction.statusChange);
+        expect(events.last.reason, 'superseded by recall ${second.id}');
+
+        // Idempotent: replaying either completion neither reopens the older
+        // recall nor adds a third row.
+        expect(
+          (await recalls.createFromProcedure(
+            ctx,
+            procedure(id: 'proc-scale-1', code: 'SCALING-ADULT'),
+          ))!.id,
+          first.id,
+        );
+        expect(
+          (await recalls.createFromProcedure(
+            ctx,
+            procedure(id: 'proc-scale-2', code: 'SCALING-ADULT'),
+          ))!.id,
+          second.id,
+        );
+        expect(await recalls.forPatient(patientId), hasLength(2));
+        expect(
+          (await recalls.due(clinicId, until: horizon)).single.id,
+          second.id,
+        );
+
+        // A recall of another type is left alone.
+        await recalls.upsert(
+          ctx,
+          recall(id: 'r-review', type: RecallType.review),
+        );
+        await recalls.createFromProcedure(
+          ctx,
+          procedure(
+            id: 'proc-scale-3',
+            code: 'SCALING-ADULT',
+            totalStages: 1,
+            status: ProcedureStatus.completed,
+          ),
+          completedOn: t2,
+        );
+        expect(
+          (await recalls.due(
+            clinicId,
+            until: horizon,
+          )).map((r) => r.type).toSet(),
+          {RecallType.hygiene, RecallType.review},
+        );
+        expect(
+          (await recalls.due(
+            clinicId,
+            until: horizon,
+          )).where((r) => r.type == RecallType.hygiene).length,
+          1,
+        );
       },
     );
   });

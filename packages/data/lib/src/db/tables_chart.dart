@@ -136,6 +136,7 @@ class TreatmentPlans extends PatientScopedTable {
   TextColumn get acceptedBySignerName => text().nullable()();
   TextColumn get acceptedSignatureHash => text().nullable()();
   TextColumn get snapshotHash => text().nullable()();
+  TextColumn get estimateDeclinedReason => text().nullable()();
   TextColumn get createdBy => text()();
   TextColumn get createdAt => text().map(const IsoUtcDateTimeConverter())();
   TextColumn get updatedAt => text().map(const IsoUtcDateTimeConverter())();
@@ -193,6 +194,8 @@ class Estimates extends PatientScopedTable {
   TextColumn get validUntil =>
       text().map(const IsoUtcDateTimeConverter()).nullable()();
   TextColumn get status => textEnum<EstimateStatus>()();
+  IntColumn get planVersion => integer().nullable()();
+  TextColumn get planSnapshotHash => text().nullable()();
   TextColumn get createdAt => text().map(const IsoUtcDateTimeConverter())();
 }
 
@@ -208,6 +211,9 @@ class PerioExams extends PatientScopedTable {
   TextColumn get sites => text().map(const PerioSitesConverter())();
   TextColumn get teeth => text().map(const PerioTeethConverter())();
   TextColumn get bpe => text().map(const BpeMapConverter())();
+  TextColumn get bpeFurcation => text()
+      .map(const SextantSetConverter())
+      .withDefault(const Constant('[]'))();
   TextColumn get stage => textEnum<PeriodontitisStage>().nullable()();
   TextColumn get grade => textEnum<PeriodontitisGrade>().nullable()();
   TextColumn get note => text().nullable()();

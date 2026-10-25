@@ -74,7 +74,10 @@ class AdaptiveScaffold extends StatelessWidget {
   /// Optional FAB (placed in the rail's leading slot on wide layouts).
   final Widget? floatingActionButton;
 
-  /// Optional banner above the body (e.g. an `OfflineBanner`).
+  /// Optional banner above the body (e.g. an `OfflineBanner`). Pass null
+  /// when there is nothing to show: the banner is placed inside the top safe
+  /// area (below the status bar / notch) and the body then starts directly
+  /// under it, so an empty banner would leave a gap.
   final Widget? banner;
 
   /// Widget above the rail destinations; defaults to the FAB when present.
@@ -95,8 +98,14 @@ class AdaptiveScaffold extends StatelessWidget {
             ? body
             : Column(
                 children: [
-                  banner!,
-                  Expanded(child: body),
+                  SafeArea(bottom: false, child: banner!),
+                  Expanded(
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeTop: true,
+                      child: body,
+                    ),
+                  ),
                 ],
               );
         if (wide) {

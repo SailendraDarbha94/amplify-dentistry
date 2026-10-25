@@ -183,6 +183,35 @@ void main() {
       );
       expect(builder.footerNote, contains('Repeatable'));
     });
+
+    test('renders the patient snapshot frozen at issue, not the live row', () {
+      final rx = samplePrescription();
+      final frozen = PatientSnapshot.of(patient, rx.issuedAt);
+      final moved = patient.copyWith(
+        firstName: 'Ravindra',
+        addressLines: const ['New address'],
+        city: 'Bengaluru',
+      );
+      final builder = PrescriptionPdf(
+        clinic: clinic,
+        dentist: dentist,
+        patient: moved,
+        prescription: rx.copyWith(patientSnapshot: frozen),
+        theme: testTheme(),
+      );
+      expect(builder.printedPatient.displayName, 'Ravi Kumar');
+      expect(builder.printedPatient.city, 'Hyderabad');
+      expect(builder.printedPatient.ageYears, isNotNull);
+      // Rows issued before the snapshot existed fall back to the live row.
+      final legacy = PrescriptionPdf(
+        clinic: clinic,
+        dentist: dentist,
+        patient: moved,
+        prescription: rx,
+        theme: testTheme(),
+      );
+      expect(legacy.printedPatient.displayName, 'Ravindra Kumar');
+    });
   });
 
   group('ConsentPdf', () {

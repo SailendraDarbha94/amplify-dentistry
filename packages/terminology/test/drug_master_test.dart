@@ -93,4 +93,74 @@ void main() {
       expect(searchDrugs('augmentin').single.code, 'AMOX-CLAV-625');
     });
   });
+
+  group('schedule history', () {
+    final pregabalin = drugSeedByCode('PREGAB-75')!;
+    Drug stored(DrugSeed seed) => Drug(
+      id: 'drug-${seed.code}',
+      genericName: seed.genericName,
+      brandNames: seed.brandNames,
+      strength: seed.strength,
+      form: DrugForm.capsule,
+      schedule: seed.schedule,
+      scheduleEffectiveFrom: seed.scheduleEffectiveFrom,
+      category: seed.category,
+      defaultDose: seed.defaultDose,
+      defaultFrequency: seed.defaultFrequency,
+      defaultDurationDays: seed.defaultDurationDays,
+      route: seed.route,
+    );
+
+    test('pregabalin is Schedule H before 16 Nov 2026 and H1 after', () {
+      expect(scheduleAt(pregabalin, DateTime.utc(2026, 10, 1)), DrugSchedule.h);
+      expect(
+        scheduleAt(pregabalin, DateTime.utc(2026, 12, 1)),
+        DrugSchedule.h1,
+      );
+      expect(
+        scheduleAt(pregabalin, DateTime.utc(2026, 11, 16)),
+        DrugSchedule.h1,
+      );
+    });
+
+    test('a stored master drug resolves through its seed history', () {
+      final drug = stored(pregabalin);
+      expect(drugSeedForDrug(drug)?.code, 'PREGAB-75');
+      expect(
+        scheduleForDrugAt(drug, DateTime.utc(2026, 10, 1)),
+        DrugSchedule.h,
+      );
+      expect(
+        scheduleForDrugAt(drug, DateTime.utc(2026, 12, 1)),
+        DrugSchedule.h1,
+      );
+    });
+
+    test('a clinic-added drug keeps its stored schedule', () {
+      final custom = Drug(
+        id: 'drug-custom',
+        genericName: 'Custom-X',
+        strength: '75 mg',
+        form: DrugForm.capsule,
+        schedule: DrugSchedule.h1,
+        scheduleEffectiveFrom: DateTime.utc(2026, 11, 16),
+        category: 'other',
+        defaultDose: '1 capsule',
+        defaultFrequency: 'HS',
+        defaultDurationDays: 14,
+        route: 'oral',
+      );
+      expect(drugSeedForDrug(custom), isNull);
+      expect(
+        scheduleForDrugAt(custom, DateTime.utc(2026, 10, 1)),
+        DrugSchedule.h1,
+      );
+    });
+
+    test('a drug without history is unchanged on any date', () {
+      final amox = stored(drugSeedByCode('AMOX-500')!);
+      expect(scheduleForDrugAt(amox, DateTime.utc(2020)), DrugSchedule.h);
+      expect(scheduleForDrugAt(amox, DateTime.utc(2030)), DrugSchedule.h);
+    });
+  });
 }

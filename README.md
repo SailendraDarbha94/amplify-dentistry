@@ -38,7 +38,10 @@ What works now, all offline on the phone's SQLite store:
 
 Not yet: sync to Supabase (the outbox fills, a no-op engine drains nothing),
 WhatsApp Cloud API or SMS sends (deep links only), server-minted invoice
-numbers (local numbers are `DRAFT-` prefixed), Hindi and Telugu strings,
+numbers (local numbers are `DRAFT-` prefixed and device-coded), encryption of
+the local SQLite file (planned: SQLCipher through drift's encrypted
+`NativeDatabase`, once PowerSync compatibility is confirmed; until then the
+store relies on the OS sandbox and device lock), Hindi and Telugu strings,
 ABDM, payments gateway, patient app, web front desk. See
 [docs/research/02-product-spec.md](docs/research/02-product-spec.md) for the
 build order.

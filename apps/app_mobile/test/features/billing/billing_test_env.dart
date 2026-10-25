@@ -4,6 +4,7 @@ import 'package:ampdent_mobile/core/navigation_keys.dart';
 import 'package:ampdent_mobile/core/providers.dart';
 import 'package:ampdent_mobile/core/session.dart';
 import 'package:ampdent_mobile/features/billing/routes.dart';
+import 'package:ampdent_mobile/features/recall/patient_messenger.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -32,15 +33,23 @@ final DateTime billingNow = DateTime(2026, 10, 25, 10);
 /// app, hosting only the billing routes so the tests do not depend on sibling
 /// features compiling. Call [open] in `setUp` and [close] in `tearDown`.
 class BillingTestEnv {
-  BillingTestEnv._(this.db, this.session)
-    : repos = DriftRepositories(db),
-      container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-          initialSessionProvider.overrideWithValue(session),
-          clockProvider.overrideWithValue(() => billingNow),
-        ],
-      ) {
+  BillingTestEnv._(
+    this.db,
+    this.session,
+    this.launched, {
+    bool launchSucceeds = true,
+  }) : repos = DriftRepositories(db),
+       container = ProviderContainer(
+         overrides: [
+           databaseProvider.overrideWithValue(db),
+           initialSessionProvider.overrideWithValue(session),
+           clockProvider.overrideWithValue(() => billingNow),
+           linkLauncherProvider.overrideWithValue((uri) async {
+             launched.add(uri);
+             return launchSucceeds;
+           }),
+         ],
+       ) {
     router = GoRouter(
       navigatorKey: rootNavigatorKey,
       initialLocation: '/patients/$testPatientId/billing',
@@ -66,12 +75,16 @@ class BillingTestEnv {
   /// Riverpod container with the app overrides.
   final ProviderContainer container;
 
+  /// Deep links handed to the launcher, in order (WhatsApp sends).
+  final List<Uri> launched;
+
   /// Router over the billing routes only.
   late final GoRouter router;
 
   /// Opens a fresh environment with a GST-registered clinic, owner dentist,
-  /// one chair, the seed catalogue and an adult patient.
-  static Future<BillingTestEnv> open() async {
+  /// one chair, the seed catalogue and an adult patient. [launchSucceeds]
+  /// is what the recorded deep-link launcher reports.
+  static Future<BillingTestEnv> open({bool launchSucceeds = true}) async {
     await initializeDateFormatting('en_IN');
     final db = AppDatabase.inMemory(seedOnOpen: false);
     final repos = DriftRepositories(db);
@@ -95,6 +108,8 @@ class BillingTestEnv {
         clinicId: testClinicId,
         memberId: testDentistId,
       ),
+      <Uri>[],
+      launchSucceeds: launchSucceeds,
     );
   }
 

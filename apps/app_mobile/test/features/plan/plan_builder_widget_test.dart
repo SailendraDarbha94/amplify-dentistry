@@ -1,7 +1,9 @@
 import 'package:ampdent_core/ampdent_core.dart';
+import 'package:ampdent_mobile/features/plan/plan_accept_sheet.dart';
 import 'package:ampdent_mobile/features/plan/plan_model.dart';
 import 'package:ampdent_mobile/features/plan/plan_phase_section.dart';
 import 'package:ampdent_mobile/features/plan/plan_service.dart';
+import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,6 +23,23 @@ void main() {
     await settle(tester);
     await tester.tap(find.byKey(ValueKey(item)));
     await settle(tester, frames: 10);
+  }
+
+  /// Scrolls the accept sheet until [key] is built and visible.
+  Future<Finder> inSheet(WidgetTester tester, String key) async {
+    final finder = find.byKey(ValueKey(key));
+    await tester.scrollUntilVisible(
+      finder,
+      80,
+      scrollable: find
+          .descendant(
+            of: find.byType(PlanAcceptSheet),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await settle(tester, frames: 2);
+    return finder;
   }
 
   testWidgets(
@@ -72,13 +91,31 @@ void main() {
       expect(find.textContaining('Presented'), findsWidgets);
 
       await openMenu(tester, 'plan-menu-accept');
-      expect(find.byKey(const ValueKey('accept-signature')), findsOneWidget);
+      // No estimate was issued: the sheet says so and the confirm button
+      // stays disabled until the patient's refusal is recorded.
+      expect(
+        find.byKey(const ValueKey('accept-estimate-missing')),
+        findsOneWidget,
+      );
       await tester.drag(
-        find.byKey(const ValueKey('accept-signature')),
+        await inSheet(tester, 'accept-signature'),
         const Offset(80, 20),
       );
       await settle(tester, frames: 2);
-      await tester.tap(find.byKey(const ValueKey('accept-confirm')));
+      expect(
+        tester
+            .widget<BigActionButton>(await inSheet(tester, 'accept-confirm'))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(await inSheet(tester, 'accept-estimate-declined'));
+      await settle(tester, frames: 2);
+      await tester.enterText(
+        await inSheet(tester, 'accept-estimate-declined-reason'),
+        'Wants to start today, declined the paper estimate',
+      );
+      await settle(tester, frames: 2);
+      await tester.tap(await inSheet(tester, 'accept-confirm'));
       await settle(tester, frames: 15);
 
       final accepted = await env.repos.treatmentPlans.getPlan(plan.id);

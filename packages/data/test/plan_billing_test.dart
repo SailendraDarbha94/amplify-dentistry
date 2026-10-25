@@ -118,6 +118,17 @@ void main() {
       expect(v1.grandTotal, const Money.rupees(15000 + 1710));
       expect(v1.status, EstimateStatus.issued);
       expect((await plans.getEstimate(v1.id))!.toJson(), equals(v1.toJson()));
+      // The estimate is bound to the plan version and lines it was issued
+      // from, and the binding survives the round trip.
+      final stored = (await plans.getEstimate(v1.id))!;
+      expect(stored.planVersion, 1);
+      expect(
+        stored.planSnapshotHash,
+        computePlanSnapshotHash(
+          (await plans.getPlan('plan-1'))!,
+          await plans.linesForPlan('plan-1'),
+        ),
+      );
 
       expect(() => plans.estimateFromPlan(ctx, 'plan-1'), throwsArgumentError);
       expect(
@@ -162,7 +173,12 @@ void main() {
       final billing = env.repos.billing;
       final draft = await billing.saveDraft(ctx, draftInvoice());
       expect(draft.status, InvoiceStatus.draft);
-      expect(draft.number, startsWith('DRAFT-INV-'));
+      // Device-coded like estimates, so two phones never mint the same
+      // number: DRAFT-INV-yyyyMM-<code>-0001.
+      expect(
+        draft.number,
+        matches(RegExp(r'^DRAFT-INV-\d{6}-[A-Z0-9]{4}-\d{4}$')),
+      );
       expect(draft.isDraftNumber, isTrue);
       expect(draft.subtotal, const Money.rupees(15000));
       expect(await billing.ledger(patientId), isEmpty);
@@ -467,13 +483,24 @@ void main() {
 
     test('aging buckets outstanding balances', () async {
       final billing = env.repos.billing;
+      // Each invoice bills its own work: the same procedure cannot be billed
+      // on two live invoices.
       Future<void> issue(String id, DateTime issuedAt) async {
         await billing.saveDraft(
           ctx,
           draftInvoice(
             id: id,
             issuedAt: issuedAt,
-            lines: [invoiceLine(id: 'l-$id')],
+            lines: [
+              InvoiceLine(
+                id: 'l-$id',
+                procedureId: 'proc-$id',
+                description: 'Root canal (back tooth)',
+                unitPrice: const Money.rupees(5000),
+                gstClass: GstClass.exemptHealthcare,
+                sacHsnCode: '999312',
+              ),
+            ],
           ),
         );
         await billing.issueInvoice(ctx, id, at: issuedAt);

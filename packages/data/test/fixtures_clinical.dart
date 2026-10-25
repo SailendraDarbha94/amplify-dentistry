@@ -274,14 +274,20 @@ PerioExam perioExam({String id = 'perio-1', DateTime? examinedAt}) => PerioExam(
     ),
   ],
   bpe: const {Sextant.upperRightPosterior: BpeCode.code3},
+  bpeFurcation: const {Sextant.upperRightPosterior},
   stage: PeriodontitisStage.stage2,
   grade: PeriodontitisGrade.gradeB,
   note: 'perio note',
   createdAt: examinedAt ?? t0,
 );
 
-Drug drug({String id = 'drug-1', String? allergyGroup = 'penicillin'}) => Drug(
+Drug drug({
+  String id = 'drug-1',
+  String? allergyGroup = 'penicillin',
+  String? clinicId = clinicId,
+}) => Drug(
   id: id,
+  clinicId: clinicId,
   genericName: 'Amoxicillin',
   brandNames: const ['Mox', 'Novamox'],
   strength: '500 mg',
@@ -330,6 +336,16 @@ Prescription prescription({String id = 'rx-1'}) => Prescription(
   verificationCode: 'ABCD1234',
   documentHash: 'hash',
   pdfPath: '/pdf/rx.pdf',
+  patientSnapshot: const PatientSnapshot(
+    displayName: 'Anil Kumar',
+    patientNumber: 'P-00001',
+    ageYears: 36,
+    sex: Sex.male,
+    addressLines: ['4 Park Lane'],
+    city: 'Hyderabad',
+    pincode: '500001',
+    phone: '9000000002',
+  ),
   createdAt: t0,
 );
 

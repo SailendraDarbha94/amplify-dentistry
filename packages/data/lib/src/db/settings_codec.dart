@@ -13,14 +13,22 @@ abstract final class SettingKeys {
   /// Tooth notation shown in the UI (`ToothNotation.name`).
   static const String notation = 'display.notation';
 
-  /// Counter behind `P-00001` patient numbers.
+  /// Counter behind `P-00001` patient numbers on the primary device. Other
+  /// devices mint `P-<code>-00001` from `counter.patientNumber.<code>`.
   static const String patientNumberCounter = 'counter.patientNumber';
 
-  /// Counter behind local `DRAFT-INV-...` invoice numbers.
+  /// Counter behind local `DRAFT-INV-yyyyMM-<code>-0001` invoice numbers;
+  /// keyed per device as `counter.draftInvoice.<code>`.
   static const String draftInvoiceCounter = 'counter.draftInvoice';
 
-  /// Counter behind local `DRAFT-EST-...` estimate numbers.
+  /// Counter behind local `DRAFT-EST-yyyyMM-<code>-0001` estimate numbers;
+  /// keyed per device as `counter.draftEstimate.<code>`.
   static const String draftEstimateCounter = 'counter.draftEstimate';
+
+  /// Device id (JSON string) of the clinic's primary device: the only one
+  /// that mints plain `P-00001` patient numbers. Seeded with the device that
+  /// created the clinic; claimed by the first minting device when unset.
+  static const String primaryDeviceId = 'device.primary';
 
   /// Counter behind `SC-00001` sterilisation cycle numbers.
   static const String sterilisationCycleCounter = 'counter.sterilisationCycle';
@@ -73,4 +81,14 @@ T enumSettingFromJson<T extends Enum>(
 ) {
   if (json == null) return fallback;
   return enumFromJsonOrNull(values, jsonDecode(json)) ?? fallback;
+}
+
+/// Encodes a plain string setting.
+String stringSettingToJson(String value) => jsonEncode(value);
+
+/// Decodes a string setting (null or non-string input yields null).
+String? stringSettingFromJson(String? json) {
+  if (json == null) return null;
+  final decoded = jsonDecode(json);
+  return decoded is String ? decoded : null;
 }

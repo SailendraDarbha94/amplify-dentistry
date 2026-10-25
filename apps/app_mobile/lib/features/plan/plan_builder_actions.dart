@@ -171,12 +171,15 @@ mixin PlanBuilderActions on ConsumerState<PlanBuilderPage> {
       return;
     }
     final now = ref.read(clockProvider)();
+    final estimates = await ref.read(planEstimatesProvider(e.plan.id).future);
+    if (!mounted) return;
     final acceptance = await PlanAcceptSheet.show(
       context,
       editor: e,
       patient: patient,
       now: now,
       exporter: ref.read(signatureExporterProvider),
+      hasEstimate: latestEstimate(estimates) != null,
     );
     if (acceptance == null) return;
     final plan = await _guard(
@@ -188,6 +191,7 @@ mixin PlanBuilderActions on ConsumerState<PlanBuilderPage> {
             signerName: acceptance.signerName,
             relation: acceptance.relation,
             signaturePng: acceptance.signaturePng,
+            estimateDeclinedReason: acceptance.estimateDeclinedReason,
             now: now,
           ),
     );

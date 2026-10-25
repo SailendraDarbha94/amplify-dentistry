@@ -72,8 +72,21 @@ void main() {
       'MOD',
     );
     const bpe = BpeMapConverter();
-    final map = {Sextant.lowerAnterior: BpeCode.furcation};
+    final map = {Sextant.lowerAnterior: BpeCode.code2};
     expect(bpe.fromSql(bpe.toSql(map)), map);
+    // Legacy rows stored the printed label or '*'; the label still loads and
+    // the '*' marker (a flag, not a code) is left out of the code map.
+    expect(bpe.fromSql('{"upperAnterior":"3","lowerAnterior":"*"}'), {
+      Sextant.upperAnterior: BpeCode.code3,
+    });
+    const furcation = SextantSetConverter();
+    expect(furcation.fromSql('[]'), <Sextant>{});
+    expect(
+      furcation.fromSql(
+        furcation.toSql({Sextant.lowerAnterior, Sextant.upperAnterior}),
+      ),
+      {Sextant.lowerAnterior, Sextant.upperAnterior},
+    );
     const json = JsonObjectConverter();
     expect(json.fromSql(json.toSql({'a': 1, 'b': null})), {'a': 1, 'b': null});
     const date = IsoUtcDateTimeConverter();
@@ -83,6 +96,34 @@ void main() {
       DateTime.utc(2026, 1, 1),
     );
   });
+
+  test(
+    'v4 upgrade moves the legacy BPE * code into the furcation flag',
+    () async {
+      final db = env.db;
+      // A pre-v3 row, written when '*' was a BpeCode and the flag column did
+      // not exist yet (its default is an empty set).
+      await db.customStatement(
+        'INSERT INTO perio_exams (id, clinic_id, patient_id, examined_at, '
+        'examiner_id, sites, teeth, bpe, bpe_furcation, created_at) VALUES '
+        "('perio-legacy', '$clinicId', '$patientId', '${encodeIsoUtc(t0)}', "
+        "'$dentistId', '[]', '[]', "
+        '\'{"upperAnterior":"3","lowerAnterior":"*","upperRightPosterior":"*"}\', '
+        "'[\"upperRightPosterior\"]', '${encodeIsoUtc(t0)}')",
+      );
+      await db.migrateLegacyBpeFurcation();
+      final exam = (await env.repos.perio.getExam('perio-legacy'))!;
+      expect(exam.bpe, {Sextant.upperAnterior: BpeCode.code3});
+      expect(exam.bpeFurcation, {
+        Sextant.lowerAnterior,
+        Sextant.upperRightPosterior,
+      });
+      final raw = await db
+          .customSelect("SELECT bpe FROM perio_exams WHERE id = 'perio-legacy'")
+          .getSingle();
+      expect(raw.read<String>('bpe'), '{"upperAnterior":"code3"}');
+    },
+  );
 
   test('settings codec', () {
     final rates = defaultGstRates();
@@ -174,6 +215,9 @@ void main() {
     );
     await r.perio.saveExam(ctx, perioExam());
     expect((await r.perio.getExam('perio-1'))!.toJson(), perioExam().toJson());
+    expect((await r.perio.getExam('perio-1'))!.bpeFurcation, {
+      Sextant.upperRightPosterior,
+    });
     await r.prescriptions.upsertDrug(ctx, drug());
     expect(
       (await r.prescriptions.getDrug('drug-1'))!.toJson(),

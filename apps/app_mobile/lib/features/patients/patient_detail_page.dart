@@ -132,7 +132,9 @@ class _Overview extends StatelessWidget {
       ),
       (
         Icons.event_available_outlined,
-        s.appointment,
+        // Short label: 'Appointment' wraps mid-word in a three-column grid on
+        // a 402 pt phone.
+        'Book',
         '/schedule/new?patientId=${patient.id}',
         const ValueKey('qa-appointment'),
       ),

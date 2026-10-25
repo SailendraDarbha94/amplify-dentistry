@@ -11,6 +11,7 @@ Future<void> _pumpChart(
   required double width,
   required double height,
   bool mixed = false,
+  bool compact = false,
   ToothId? selected,
   SurfaceSet selectedSurfaces = const SurfaceSet.empty(),
 }) async {
@@ -28,6 +29,7 @@ Future<void> _pumpChart(
               teeth: teeth,
               notation: ToothNotation.fdi,
               mixedDentition: mixed,
+              compact: compact,
               selectedTooth: selected,
               selectedSurfaces: selectedSurfaces,
             ),
@@ -82,4 +84,34 @@ void main() {
       );
     });
   }
+
+  // Compact (stacked quadrant) mode on a 360 px phone: UR, UL, LR, LL.
+  testWidgets('adult chart compact 360x800', (tester) async {
+    await _pumpChart(
+      tester,
+      teeth: DemoCharts.adult(),
+      width: 360,
+      height: 800,
+      compact: true,
+    );
+    await expectLater(
+      find.byKey(_key),
+      matchesGoldenFile('goldens/adult_compact_360x800.png'),
+    );
+  });
+
+  testWidgets('mixed dentition chart (age 8) compact 360x800', (tester) async {
+    await _pumpChart(
+      tester,
+      teeth: DemoCharts.mixedAge8(),
+      width: 360,
+      height: 800,
+      mixed: true,
+      compact: true,
+    );
+    await expectLater(
+      find.byKey(_key),
+      matchesGoldenFile('goldens/mixed_age8_compact_360x800.png'),
+    );
+  });
 }

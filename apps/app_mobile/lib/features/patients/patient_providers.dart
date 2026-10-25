@@ -21,23 +21,16 @@ final StreamProvider<List<Patient>> recentPatientsProvider =
     StreamProvider<List<Patient>>((ref) {
       final clinicId = ref.watch(currentClinicIdProvider);
       if (clinicId == null) return Stream.value(const []);
-      return ref.watch(patientRepositoryProvider).watchAll(clinicId).map((
-        list,
-      ) {
-        final sorted = list.toList()
-          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-        return sorted.take(20).toList();
-      });
+      return ref
+          .watch(patientRepositoryProvider)
+          .watchRecent(clinicId, limit: 20);
     });
 
 /// Number of active patients in the clinic.
 final StreamProvider<int> patientCountProvider = StreamProvider<int>((ref) {
   final clinicId = ref.watch(currentClinicIdProvider);
   if (clinicId == null) return Stream.value(0);
-  return ref
-      .watch(patientRepositoryProvider)
-      .watchAll(clinicId)
-      .map((list) => list.length);
+  return ref.watch(patientRepositoryProvider).watchCount(clinicId);
 });
 
 /// One patient by id (null when not found).

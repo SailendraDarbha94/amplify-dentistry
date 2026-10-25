@@ -1,3 +1,4 @@
+import 'package:ampdent_terminology/ampdent_terminology.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +71,9 @@ class ChairsStep extends ConsumerWidget {
                 label: 'Location',
                 value: [
                   draft.city,
-                  draft.stateCode ?? '',
+                  gstStateByCode(draft.stateCode ?? '')?.name ??
+                      draft.stateCode ??
+                      '',
                 ].where((s) => s.isNotEmpty).join(', '),
               ),
               LabeledValue(label: 'Phone', value: draft.phone),

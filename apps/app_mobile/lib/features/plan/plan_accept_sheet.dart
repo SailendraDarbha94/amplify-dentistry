@@ -19,6 +19,7 @@ class PlanAcceptance {
     required this.signerName,
     required this.relation,
     required this.signaturePng,
+    this.estimateDeclinedReason,
   });
 
   /// Who signed.
@@ -29,10 +30,14 @@ class PlanAcceptance {
 
   /// Drawn signature.
   final Uint8List signaturePng;
+
+  /// Why no written estimate was issued, when the patient declined one.
+  final String? estimateDeclinedReason;
 }
 
 /// Captures the signer's name, capacity and a stylus signature to accept a
-/// plan. A minor cannot self-sign.
+/// plan. A minor cannot self-sign. Without an issued estimate the sheet
+/// requires the patient's refusal of a written estimate to be recorded.
 class PlanAcceptSheet extends StatefulWidget {
   /// Creates the sheet.
   const PlanAcceptSheet({
@@ -41,6 +46,7 @@ class PlanAcceptSheet extends StatefulWidget {
     required this.patient,
     required this.now,
     required this.exporter,
+    this.hasEstimate = true,
   });
 
   /// Plan being accepted.
@@ -55,6 +61,9 @@ class PlanAcceptSheet extends StatefulWidget {
   /// Turns the strokes into PNG bytes.
   final SignatureExporter exporter;
 
+  /// Whether an estimate has been issued for the plan.
+  final bool hasEstimate;
+
   /// Shows the sheet; null when cancelled.
   static Future<PlanAcceptance?> show(
     BuildContext context, {
@@ -62,6 +71,7 @@ class PlanAcceptSheet extends StatefulWidget {
     required Patient patient,
     required DateTime now,
     required SignatureExporter exporter,
+    bool hasEstimate = true,
   }) => showModalBottomSheet<PlanAcceptance>(
     context: context,
     isScrollControlled: true,
@@ -71,6 +81,7 @@ class PlanAcceptSheet extends StatefulWidget {
       patient: patient,
       now: now,
       exporter: exporter,
+      hasEstimate: hasEstimate,
     ),
   );
 
@@ -81,8 +92,10 @@ class PlanAcceptSheet extends StatefulWidget {
 class _PlanAcceptSheetState extends State<PlanAcceptSheet> {
   late SignerRelation _relation;
   late final TextEditingController _name;
+  final TextEditingController _declinedReason = TextEditingController();
   final SignatureController _signature = newSignatureController();
   bool _busy = false;
+  bool _estimateDeclined = false;
 
   bool get _isMinor => widget.patient.isMinor(widget.now);
 
@@ -107,8 +120,13 @@ class _PlanAcceptSheetState extends State<PlanAcceptSheet> {
     _signature.removeListener(_onChanged);
     _signature.dispose();
     _name.dispose();
+    _declinedReason.dispose();
     super.dispose();
   }
+
+  bool get _estimateOk =>
+      widget.hasEstimate ||
+      (_estimateDeclined && _declinedReason.text.trim().isNotEmpty);
 
   Future<void> _confirm() async {
     setState(() => _busy = true);
@@ -126,6 +144,9 @@ class _PlanAcceptSheetState extends State<PlanAcceptSheet> {
         signerName: _name.text,
         relation: _relation,
         signaturePng: png,
+        estimateDeclinedReason: widget.hasEstimate || !_estimateDeclined
+            ? null
+            : _declinedReason.text.trim(),
       ),
     );
   }
@@ -138,6 +159,7 @@ class _PlanAcceptSheetState extends State<PlanAcceptSheet> {
     final canConfirm =
         !blocked &&
         !_busy &&
+        _estimateOk &&
         _name.text.trim().isNotEmpty &&
         _signature.isNotEmpty;
     return Padding(
@@ -158,6 +180,33 @@ class _PlanAcceptSheetState extends State<PlanAcceptSheet> {
             'revision.',
             style: theme.textTheme.bodyMedium,
           ),
+          if (!widget.hasEstimate) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              PlanStrings.estimateRequired,
+              key: const ValueKey('accept-estimate-missing'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            CheckboxListTile(
+              key: const ValueKey('accept-estimate-declined'),
+              value: _estimateDeclined,
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('Patient declined a written estimate'),
+              onChanged: (v) => setState(() => _estimateDeclined = v ?? false),
+            ),
+            if (_estimateDeclined)
+              TextField(
+                key: const ValueKey('accept-estimate-declined-reason'),
+                controller: _declinedReason,
+                decoration: const InputDecoration(
+                  labelText: 'How the patient declined (recorded on the plan)',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+          ],
           const SizedBox(height: AppSpacing.lg),
           SignerRelationSelector(
             value: _relation,

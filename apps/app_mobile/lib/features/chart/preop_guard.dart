@@ -37,15 +37,32 @@ class PreOpCheck {
   bool get blocks => outcome == PreOpOutcome.missing;
 }
 
+/// How old a radiograph of the tooth may be and still count as the pre-op
+/// film for work starting now (unless it is explicitly marked pre-op).
+const Duration preOpRadiographMaxAge = Duration(days: 90);
+
+/// Whether [image] can stand as the pre-operative radiograph for work that
+/// starts at [at]: it is flagged pre-op, or it was captured in the
+/// [preOpRadiographMaxAge] window before [at]. Films taken after the start
+/// never count.
+bool radiographCountsAsPreOp(ImageRecord image, DateTime at) {
+  if (!image.kind.isRadiograph) return false;
+  if (image.isPreOperative) return true;
+  final age = at.difference(image.capturedAt);
+  return !age.isNegative && age <= preOpRadiographMaxAge;
+}
+
 /// Decides whether work of [kind] may start without a pre-op radiograph.
 ///
 /// The guard applies when the kind (or the catalogue flag) requires one and
 /// the work has not started yet ([alreadyStarted] is false). Radiographs
 /// already linked in [preOpImageIds], a documented reason in [note], or a
-/// radiograph of one of [teeth] (or of [procedureId]) among [images]
-/// satisfies it; the last case is auto-attached.
+/// radiograph of one of [teeth] (or of [procedureId]) among [images] that
+/// [radiographCountsAsPreOp] at [at] satisfies it; the last case is
+/// auto-attached. Older films are offered as candidates only.
 PreOpCheck checkPreOpRadiograph({
   required ProcedureKind kind,
+  required DateTime at,
   bool catalogFlag = false,
   bool alreadyStarted = false,
   Iterable<ToothId> teeth = const [],
@@ -72,8 +89,9 @@ PreOpCheck checkPreOpRadiograph({
   final matched = radiographs
       .where(
         (i) =>
-            (procedureId != null && i.procedureId == procedureId) ||
-            (targets.isNotEmpty && i.teeth.any(targets.contains)),
+            radiographCountsAsPreOp(i, at) &&
+            ((procedureId != null && i.procedureId == procedureId) ||
+                (targets.isNotEmpty && i.teeth.any(targets.contains))),
       )
       .map((i) => i.id)
       .toList();
@@ -91,10 +109,12 @@ PreOpCheck checkPreOpRadiograph({
 PreOpCheck checkProcedurePreOp(
   ProcedureRecord procedure, {
   required ProcedureKind kind,
+  required DateTime at,
   bool catalogFlag = false,
   Iterable<ImageRecord> images = const [],
 }) => checkPreOpRadiograph(
   kind: kind,
+  at: at,
   catalogFlag: catalogFlag,
   alreadyStarted: procedure.status == ProcedureStatus.inProgress,
   teeth: procedureTeeth(procedure),

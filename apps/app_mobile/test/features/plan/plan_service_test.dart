@@ -98,6 +98,7 @@ void main() {
 
   test('accepting a plan sets its procedures to accepted', () async {
     final editor = await planWithRct();
+    await service.issueEstimate(editor.plan.id, now: now);
     final patient = (await env.repos.patients.getById(testPatientId))!;
     final signature = Uint8List.fromList(List<int>.generate(32, (i) => i));
     final accepted = await service.accept(
@@ -124,12 +125,164 @@ void main() {
     expect(funnel.accepted, isTrue);
     expect(funnel.scheduled, isFalse);
     expect(funnel.completed, isFalse);
+    expect(snapshotIntact(accepted, editor.lines), isTrue);
+    expect(
+      snapshotIntact(accepted, [
+        editor.lines.single.copyWith(unitFee: const Money.rupees(1)),
+      ]),
+      isFalse,
+    );
+  });
+
+  test(
+    'no written estimate: acceptance needs the patient\'s refusal',
+    () async {
+      final editor = await planWithRct();
+      final patient = (await env.repos.patients.getById(testPatientId))!;
+      final signature = Uint8List(4);
+      expect(
+        await service.estimateGap(editor.plan, editor.lines),
+        PlanStrings.estimateRequired,
+      );
+      await expectLater(
+        service.ensureEstimateBeforeTreatment(editor.plan.id),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            PlanStrings.estimateRequired,
+          ),
+        ),
+      );
+      await expectLater(
+        service.accept(
+          editor,
+          patient: patient,
+          signerName: 'Asha Rao',
+          relation: SignerRelation.self,
+          signaturePng: signature,
+          now: now,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            PlanStrings.estimateRequired,
+          ),
+        ),
+      );
+      expect(
+        (await env.repos.treatmentPlans.getPlan(editor.plan.id))!.isAccepted,
+        isFalse,
+      );
+      expect(
+        (await env.repos.chart.getProcedure('proc-rct'))!.status,
+        ProcedureStatus.planned,
+      );
+
+      final accepted = await service.accept(
+        editor,
+        patient: patient,
+        signerName: 'Asha Rao',
+        relation: SignerRelation.self,
+        signaturePng: signature,
+        estimateDeclinedReason: 'Patient did not want a written estimate',
+        now: now,
+      );
+      expect(accepted.isAccepted, isTrue);
+      expect(
+        accepted.estimateDeclinedReason,
+        'Patient did not want a written estimate',
+      );
+      expect(
+        await service.estimateGap(accepted, editor.lines),
+        isNull,
+        reason: 'the recorded refusal satisfies the gate',
+      );
+      final events = await env.repos.audit.forEntity(
+        testClinicId,
+        'TreatmentPlan',
+        editor.plan.id,
+      );
+      expect(events.last.reason, contains('declined a written estimate'));
+    },
+  );
+
+  test('an estimate is bound to the plan version and snapshot hash', () async {
+    final editor = await planWithRct();
+    final v1 = await service.issueEstimate(editor.plan.id, now: now);
+    expect(v1.planVersion, editor.plan.version);
+    expect(
+      v1.planSnapshotHash,
+      computePlanSnapshotHash(editor.plan, editor.lines),
+    );
+    expect(estimateMatchesPlan(v1, editor.plan, editor.lines), isTrue);
+    final changed = [
+      editor.lines.single.copyWith(unitFee: const Money.rupees(1)),
+    ];
+    expect(estimateMatchesPlan(v1, editor.plan, changed), isFalse);
+    expect(estimateMatchesPlan(v1.copyWith(), editor.plan, changed), isFalse);
+    // An estimate issued before hashes existed cannot be verified; being a
+    // later version it is also the one `latestEstimate` picks.
+    final legacy = Estimate(
+      id: 'legacy',
+      clinicId: testClinicId,
+      patientId: testPatientId,
+      planId: editor.plan.id,
+      version: 2,
+      justification: 'Issued before plan binding existed',
+      number: 'DRAFT-EST-2',
+      subtotal: const Money.zero(),
+      discountTotal: const Money.zero(),
+      taxTotal: const Money.zero(),
+      grandTotal: const Money.zero(),
+      issuedAt: now,
+      issuedBy: testDentistId,
+      status: EstimateStatus.issued,
+      createdAt: now,
+    );
+    expect(estimateMatchesPlan(legacy, editor.plan, changed), isNull);
+    expect(latestEstimate([legacy, v1])?.id, 'legacy');
+    expect(latestEstimate([v1])?.id, v1.id);
+    expect(latestEstimate(const []), isNull);
+  });
+
+  test('a patient of unknown age cannot accept', () async {
+    final editor = await planWithRct();
+    await service.issueEstimate(editor.plan.id, now: now);
+    final unknown = Patient(
+      id: 'p-unknown',
+      clinicId: testClinicId,
+      patientNumber: 'P-00009',
+      firstName: 'Ravi',
+      phone: '+919123456789',
+      createdAt: now,
+      updatedAt: now,
+    );
+    await expectLater(
+      service.accept(
+        editor,
+        patient: unknown,
+        signerName: 'Ravi',
+        relation: SignerRelation.self,
+        signaturePng: Uint8List(4),
+        now: now,
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (e) => e.message,
+          'message',
+          ConsentStrings.ageUnknown,
+        ),
+      ),
+    );
   });
 
   test(
     'a minor cannot accept for themselves; no signature is refused',
     () async {
       final editor = await planWithRct();
+      await service.issueEstimate(editor.plan.id, now: now);
       final minor = (await env.repos.patients.getById(testPatientId))!.copyWith(
         dateOfBirth: DateTime.utc(2016, 1, 1),
         guardianName: 'Lakshmi',

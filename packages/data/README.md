@@ -68,13 +68,68 @@ Each write runs in one transaction that also appends:
 Nothing hard-deletes. "Delete" methods move rows to a `deleted` status or
 `isActive = false` and audit with `softDelete`; plan lines dropped from an
 unaccepted plan get `removedAt`; signed notes are superseded by a new version;
-medical histories, payments, consents, prescriptions and sterilisation cycles
-refuse re-writes. `test/audit_export_test.dart` greps the sources to prove no
-drift delete API is called.
+perio exams, medical histories, payments, ledger entries, consents,
+prescriptions, tooth states and sterilisation cycles refuse re-writes.
+`test/audit_export_test.dart` greps the sources to prove no drift delete API
+is called.
+
+Append-only tables are listed in `appendOnlyTables` (`audited_writer.dart`).
+`audited()` calls `ensureAbsent(table, id)` before a create on one of them and
+throws `StateError` when the id already exists, so an upsert path can never
+silently overwrite a signed consent or a payment; repositories may also call
+`ensureAbsent` directly for a clearer message. Perio site readings are plain
+inserts (no `insertOrReplace`): a re-examination is a new exam id.
+
+Recalls created from completed procedures are idempotent per triggering
+procedure, and a new recall dismisses any older open recall of the same type
+for the patient (audit reason `superseded by recall <id>`), so the overdue
+KPI and reminders count each patient once per recall type.
 
 Ledger postings are written in the same transaction as the invoice issue,
-payment or adjustment they mirror. Invoice numbers are local `DRAFT-INV-...`
-until the server mints the sequential number on first sync.
+payment or adjustment they mirror.
+
+## Errors
+
+`writeTransaction` rethrows SQLite failures as `RepositoryException`, which
+carries the extended result code (`SQLITE_CONSTRAINT_UNIQUE`, ...), the table
+and the violated constraint's column identifiers, and nothing else. The raw
+`SqliteException` is dropped because its `toString()` prints the statement's
+bound parameters, i.e. the patient row. Log `RepositoryException` freely;
+never catch and log the drift/sqlite exception underneath it. Application
+errors (`StateError`, `ArgumentError`) pass through unchanged.
+
+## Numbering
+
+Identifiers minted offline must survive the server's unique indexes
+(`patients (clinic_id, patient_number)`, `invoices (clinic_id, number)`,
+`estimates (clinic_id, number)`) when several phones of one clinic sync.
+
+* Every device has a four-character **device code**: the first four
+  alphanumerics of its device id, upper-cased (`SettingsAccess.deviceCode`;
+  device ids are UUID v4, so these are hex digits).
+* **Draft documents**: `DRAFT-INV-yyyyMM-<code>-0001`,
+  `DRAFT-EST-yyyyMM-<code>-0001`, from the per-device counters
+  `counter.draftInvoice.<code>` / `counter.draftEstimate.<code>`
+  (`SettingsAccess.mintLocalDraftNumber`). The server replaces the whole
+  string when it mints the real number.
+* **Patient numbers**: the clinic has one **primary device**
+  (`SettingKeys.primaryDeviceId` = `device.primary`, seeded with the device
+  that created the clinic, movable with `ClinicRepository.setPrimaryDevice`).
+  Only the primary mints plain `P-00001` from `counter.patientNumber`; every
+  other device mints `P-<code>-00001` from `counter.patientNumber.<code>`.
+  A clinic with no recorded primary (created before the setting existed) is
+  claimed by the first device that mints a number.
+* Sterilisation cycle numbers (`SC-00001`) stay per clinic: they are not
+  unique server-side.
+
+## Encryption at rest
+
+The SQLite file is **not encrypted yet**; it relies on the OS app sandbox and
+the device lock. Decision: SQLCipher through drift's encrypted
+`NativeDatabase` (`sqlcipher_flutter_libs`, `PRAGMA key` in the `setup`
+callback, key in the platform keystore), enabled once PowerSync confirms it
+can attach to a SQLCipher database. The `TODO(security)` sits on
+`AppDatabase.open`.
 
 ## Seeding
 
@@ -90,6 +145,17 @@ numbering counters into `settings`. No demo data.
 `NoopSyncEngine` is the local-only implementation. `OutboxRepository` reads
 pending rows and stamps `ackedAt`; acknowledged rows are kept (compaction is
 left to the sync stage).
+
+## Server parity
+
+`supabase/migrations/*.sql` mirrors these tables. `test/schema_parity_test.dart`
+parses the migrations and fails when a Drift table has no `create table
+public.<name>` (outbox rows would have no target) or a server tenant table has
+no Drift table. Deliberate exceptions, each with its reason in the test:
+local-only `sync_outbox` and `perio_site_readings`; server-only `profiles` and
+`gst_rates`. Column names follow drift's snake_case of the Dart field
+(`reminder24hSentAt` -> `reminder24h_sent_at`); money columns are suffixed
+`_paise` server-side.
 
 ## Tests
 

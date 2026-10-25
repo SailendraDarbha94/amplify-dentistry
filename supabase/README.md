@@ -10,9 +10,11 @@ migrations/0002_rls.sql        membership helpers + policies on every table
 migrations/0003_functions.sql  audit trigger, updated_at touch, hard-delete guard, invoice/patient numbering
 migrations/0004_storage.sql    private bucket clinic-media + object policies
 migrations/0005_invoice_dentist_and_number.sql  treating dentist frozen on issued invoices; minted invoice numbers immutable
+migrations/0006_immutable_rows_bootstrap_parity.sql  no UPDATE on append-only tables; bootstrap pinned to clinics.created_by; Drift parity (settings table, renamed/added columns)
+migrations/0007_estimate_binding_rx_snapshot.sql  Drift v4 parity: estimate plan binding, declined-estimate reason, prescription patient snapshot
 seed.sql                       intentionally empty (catalogue/drug seeds ship in the app)
 tests/local_supabase_stub.sql  auth/storage shims so the migrations run on plain PostgreSQL
-tests/smoke.sql                behavioural checks (isolation, roles, numbering, append-only, audit)
+tests/smoke.sql                behavioural checks (isolation, roles, numbering, append-only, bootstrap, parity columns, audit)
 tests/run_local.sh             initdb a scratch cluster and run everything above
 ```
 
@@ -61,12 +63,19 @@ macOS's 103-byte Unix-socket path limit. Docker-based `supabase start` / `supaba
 | `DateTime` | `timestamptz`; pure dates (`date_of_birth`, `expiry_date`, `schedule_effective_from`) are `date` |
 | `createdAt` / `updatedAt` | `created_at` / `updated_at timestamptz not null default now()`; `updated_at` touched by trigger |
 
-Column names are the snake_case of the Dart field names (`historyOfPresentIllness` -> `history_of_present_illness`,
-`reminder24hSentAt` -> `reminder_24h_sent_at`). Dart `toJson()` keys are camelCase; the data layer maps them.
+Column names are drift's snake_case of the Dart field names, exactly as the Drift tables in `packages/data` spell
+them (`historyOfPresentIllness` -> `history_of_present_illness`, `reminder24hSentAt` -> `reminder24h_sent_at`; the
+digit does not get its own underscore). Dart `toJson()` keys are camelCase; the data layer maps them. The Dart side is
+the contract: `packages/data/test/schema_parity_test.dart` parses these migrations and fails when a Drift table has no
+`create table public.<name>` here or a tenant table here has no Drift table (allowed exceptions: local-only
+`sync_outbox` and `perio_site_readings`; server-only `profiles` and `gst_rates`).
 
 Extra columns not in the Dart entities: `clinics.region` (default `'in'`, for later UK/EU/GCC pinning),
-`clinic_members.user_id` (link to `auth.users`, drives RLS), `profiles` (one row per auth user),
-`gst_rates` (per-clinic GST rate history per `GstClass`, required by CLAUDE.md), and `audit_events.created_at`.
+`clinics.created_by` (inserting auth user; gates owner bootstrap), `clinic_members.user_id` (link to `auth.users`,
+drives RLS), `drugs.clinic_id` (nullable; the Dart `Drug` entity does not carry it yet), `profiles` (one row per auth
+user), `gst_rates` (per-clinic GST rate history per `GstClass`, required by CLAUDE.md), and `audit_events.created_at`.
+Data-layer columns the entities lack but the Drift tables have: `treatment_plan_lines.removed_at`,
+`perio_exams.bpe_furcation`, and the `settings` table.
 
 ## Tables
 
@@ -77,7 +86,9 @@ Tenant (clinic_id not null): `patients`, `appointments`, `visits`, `tooth_state_
 `clinical_notes`, `medical_histories`, `perio_exams`, `treatment_plans`, `treatment_plan_lines`, `procedures`,
 `estimates`, `consent_records`, `data_consents`, `invoices`, `payments`, `adjustments`, `ledger_entries`,
 `prescriptions`, `image_records`, `lab_cases`, `implant_records`, `recalls`, `message_logs`,
-`sterilisation_cycles`, `licences`, `audit_events`.
+`sterilisation_cycles`, `licences`, `audit_events`, `settings` (key/value per clinic, primary key
+`(clinic_id, setting_key)`, `value_json jsonb`; the device's `settings` table, so outbox rows targeting it have a
+server table. It is not audited by trigger because it has no `id`; the client audits settings changes itself).
 
 Internal (`app` schema, not exposed): `app.invoice_counters (clinic_id, fy_start, last_value)`,
 `app.patient_counters (clinic_id, last_value)`.
@@ -94,11 +105,16 @@ patient-scoped table and `clinic_members (user_id)` for the RLS lookup.
 - Membership lives in `clinic_members (user_id, clinic_id, role, is_active)`, unique per `(clinic_id, user_id)`.
   Helpers are `STABLE SECURITY DEFINER` with `search_path = ''`: `app.current_clinic_ids()`,
   `app.clinic_ids_with_role(variadic roles)`, `app.has_role(clinic, variadic roles)` (RPC checks only),
-  `app.clinic_has_members(clinic)`. `auth.uid()` is always wrapped as `(select auth.uid())` and every policy
+  `app.clinic_has_members(clinic)`, `app.clinic_created_by(clinic)`. `auth.uid()` is always wrapped as `(select auth.uid())` and every policy
   predicate has the shape `clinic_id in (select app.<set_returning_helper>(...))`, so the planner evaluates the
   membership lookup once per statement as an InitPlan rather than once per row (Supabase RLS performance guidance).
 - Every policy is `to authenticated`. Tenant tables: `select`/`insert`/`update` where
   `clinic_id in (select app.current_clinic_ids())`.
+- **No UPDATE policy** on the append-only tables `payments`, `ledger_entries`, `consent_records`, `prescriptions`,
+  `medical_histories`, `tooth_state_records` (0006) nor on `audit_events`. The data layer never rewrites these rows
+  (a correction is a new row: refund, adjustment, new consent, new prescription, new snapshot, new tooth state), so an
+  `update` through the API affects zero rows. Invoices keep their update policy because status, `amount_paid` and
+  the minted number legitimately change.
 - **No DELETE policy** on clinical or financial tables (`procedures`, `findings`, `tooth_state_records`,
   `consent_records`, `data_consents`, `clinical_notes`, `perio_exams`, `prescriptions`, `invoices`, `payments`,
   `ledger_entries`, `audit_events`, `message_logs` and the rest). A `delete` through the API affects zero rows. A
@@ -108,8 +124,10 @@ patient-scoped table and `clinic_members (user_id)` for the RLS lookup.
   `receptionist`, `accountant`; insert/update for `ownerDentist`, `receptionist`, via
   `clinic_id in (select app.clinic_ids_with_role(...))`. Associate dentists do not see money.
 - `audit_events`: select + insert for members (clients log `view`/`export`/`print`); no update, no delete.
-- `clinics`: any signed-in user may insert one; a user may then insert themselves as `ownerDentist` only while
-  the clinic has no members (`app.clinic_has_members`). Owners manage `clinic_members` and clinic settings.
+- `clinics`: any signed-in user may insert one, and the row must carry them as `created_by` (default
+  `auth.uid()`, spoofing is rejected). Only that user may then insert themselves as `ownerDentist`, and only while
+  the clinic has no members (`app.clinic_created_by`, `app.clinic_has_members`, both `SECURITY DEFINER` because the
+  caller cannot yet read the clinic row under RLS). Owners manage `clinic_members` and clinic settings.
 - `catalog_items` / `drugs`: rows with `clinic_id is null` are readable by all members and writable by nobody
   through the API; clinic rows are tenant-scoped, owners may delete them.
 - `profiles`: self only.

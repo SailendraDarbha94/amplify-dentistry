@@ -6,8 +6,19 @@ import 'package:go_router/go_router.dart';
 import 'app_strings.dart';
 import 'providers.dart';
 
+/// Key for the app's root [ScaffoldMessenger] (the one `MaterialApp.router`
+/// in `main.dart` owns; pass it as `scaffoldMessengerKey` there). A page
+/// that shows a SnackBar whose action may fire after the page is gone (the
+/// chart's "Add to bill") shows it through this key, falling back to
+/// `ScaffoldMessenger.of` until the key is bound. The shell deliberately
+/// does not nest a second messenger: nested messengers split SnackBars
+/// between two hosts and the test harnesses only clear the root one.
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>(debugLabel: 'rootMessenger');
+
 /// Shell around the four tab branches: bottom navigation on phones, a rail
-/// on wider screens, with the offline / pending-sync banner on top.
+/// on wider screens, with the single pending-sync banner inside the top
+/// safe area. Pages never render their own copy of the banner.
 class AppShell extends ConsumerWidget {
   /// Creates the shell for [navigationShell].
   const AppShell({super.key, required this.navigationShell});
@@ -27,7 +38,15 @@ class AppShell extends ConsumerWidget {
         index,
         initialLocation: index == navigationShell.currentIndex,
       ),
-      banner: OfflineBanner(isOffline: false, pendingCount: pending),
+      // Null (not an empty banner) when nothing is pending, so the body
+      // keeps its own top inset; see AdaptiveScaffold.banner.
+      banner: pending > 0
+          ? OfflineBanner(
+              key: const ValueKey('shell-sync-banner'),
+              isOffline: false,
+              pendingCount: pending,
+            )
+          : null,
       destinations: [
         AdaptiveDestination(
           icon: Icons.today_outlined,

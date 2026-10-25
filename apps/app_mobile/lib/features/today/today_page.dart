@@ -2,8 +2,8 @@
 // docs/research/02-product-spec.md ("Reports and KPIs") are: today's
 // production, this month's collections, overdue recall value,
 // accepted-but-unscheduled treatment value and no-show rate. Below them:
-// today's appointment list with "Start visit", quick actions and the
-// pending-sync banner.
+// today's appointment list with "Start visit" and quick actions. The
+// pending-sync banner belongs to the app shell, not to this page.
 
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_mobile/core/app_strings.dart';
@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 import 'today_appointments.dart';
 import 'today_kpis.dart';
 import 'today_providers.dart';
+import 'today_sheets.dart';
 
 export 'today_providers.dart'
     show overdueRecallValueProvider, todaysAppointmentsProvider;
@@ -36,7 +37,6 @@ class TodayPage extends ConsumerWidget {
     final now = ref.watch(clockProvider)();
     final appointments = ref.watch(todaysAppointmentsProvider).value;
     final kpis = ref.watch(todayKpisProvider);
-    final pending = ref.watch(pendingOutboxCountProvider).value ?? 0;
     final alerts = ref.watch(complianceAlertCountProvider);
     String money(TodayKpis? k, Money Function(TodayKpis) pick) =>
         k == null ? '-' : AppFormat.money(pick(k), showPaise: false);
@@ -54,12 +54,6 @@ class TodayPage extends ConsumerWidget {
       body: ListView(
         padding: AppSpacing.screenPadding,
         children: [
-          OfflineBanner(
-            key: const ValueKey('today-offline-banner'),
-            isOffline: false,
-            pendingCount: pending,
-          ),
-          if (pending > 0) const SizedBox(height: AppSpacing.sm),
           Text(AppFormat.weekdayDate(now), style: theme.textTheme.labelLarge),
           if (member != null)
             Text(
@@ -81,6 +75,8 @@ class TodayPage extends ConsumerWidget {
                 value: money(kpis, (k) => k.productionToday),
                 icon: Icons.trending_up,
                 pending: kpis == null,
+                onTap: () =>
+                    showTodaySheet(context, const CompletedTodaySheet()),
               ),
               KpiTile(
                 key: const ValueKey('kpi-collections'),
@@ -103,12 +99,14 @@ class TodayPage extends ConsumerWidget {
                 value: money(kpis, (k) => k.acceptedUnscheduledValue),
                 icon: Icons.pending_actions_outlined,
                 pending: kpis == null,
-                onTap: () => context.go('/schedule'),
+                onTap: () =>
+                    showTodaySheet(context, const UnscheduledPlanSheet()),
               ),
               KpiTile(
                 key: const ValueKey('kpi-noshow'),
                 label: 'No-show rate this month',
                 value: kpis == null ? '-' : formatRate(kpis.noShowRate),
+                semanticLabel: noShowSemanticLabel(kpis),
                 icon: Icons.person_off_outlined,
                 pending: kpis == null,
                 onTap: () => context.go('/schedule'),
@@ -189,6 +187,7 @@ class KpiTile extends StatelessWidget {
     required this.icon,
     this.onTap,
     this.pending = false,
+    this.semanticLabel,
   });
 
   /// Caption.
@@ -196,6 +195,10 @@ class KpiTile extends StatelessWidget {
 
   /// Headline number or text.
   final String value;
+
+  /// Screen-reader text replacing the visible value and caption when the
+  /// value alone (a dash) would not read as anything.
+  final String? semanticLabel;
 
   /// Corner icon.
   final IconData icon;
@@ -210,7 +213,7 @@ class KpiTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
-    return Card(
+    final card = Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -239,6 +242,15 @@ class KpiTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+    final semantic = semanticLabel;
+    if (semantic == null) return card;
+    return Semantics(
+      container: true,
+      label: semantic,
+      button: onTap != null,
+      onTap: onTap,
+      child: ExcludeSemantics(child: card),
     );
   }
 }

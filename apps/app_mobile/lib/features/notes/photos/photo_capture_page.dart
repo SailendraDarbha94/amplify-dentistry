@@ -119,7 +119,9 @@ class _PhotoCapturePageState extends ConsumerState<PhotoCapturePage> {
       if (context.canPop()) {
         context.pop();
       } else {
-        context.go('/patients/${widget.patientId}/notes');
+        // Deep-linked without a stack: swap this page for the notes page so
+        // the Patients branch stack is not collapsed by a `go`.
+        context.pushReplacement('/patients/${widget.patientId}/notes');
       }
     } finally {
       if (mounted) setState(() => _saving = false);

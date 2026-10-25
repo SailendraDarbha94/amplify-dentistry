@@ -1,5 +1,13 @@
 /// Per-clinic settings and numbering counters shared by several Drift
 /// repositories.
+///
+/// Locally minted identifiers must not collide across a clinic's devices,
+/// because the server enforces `unique (clinic_id, patient_number)` and
+/// `unique (clinic_id, number)` on first sync. Draft document numbers carry
+/// a four-character device code (`DRAFT-INV-202610-A3F9-0001`), and plain
+/// `P-00001` patient numbers are minted only on the clinic's primary device
+/// ([SettingKeys.primaryDeviceId]); every other device mints
+/// `P-<code>-00001`. See packages/data/README.md, "Numbering".
 library;
 
 import 'package:ampdent_core/ampdent_core.dart';
@@ -74,6 +82,77 @@ mixin SettingsAccess on DatabaseAccessor<AppDatabase>, AuditedWriter {
         );
         return next;
       });
+
+  /// Four upper-case alphanumerics from the start of [deviceId] (device ids
+  /// are UUID v4, so these are the first four hex digits), padded when the
+  /// id is shorter.
+  static String deviceCode(String deviceId) {
+    final cleaned = deviceId
+        .replaceAll(RegExp('[^A-Za-z0-9]'), '')
+        .toUpperCase();
+    return cleaned.padRight(4, '0').substring(0, 4);
+  }
+
+  /// Device id recorded as the clinic's primary device, or null when unset.
+  Future<String?> primaryDeviceId(String clinicId) async =>
+      stringSettingFromJson(
+        await readSetting(clinicId, SettingKeys.primaryDeviceId),
+      );
+
+  /// Records [deviceId] as the clinic's primary device (audited).
+  Future<void> setPrimaryDevice(ActorContext ctx, String deviceId) =>
+      writeSetting(
+        ctx,
+        SettingKeys.primaryDeviceId,
+        stringSettingToJson(deviceId),
+      );
+
+  /// Whether the actor's device is the clinic's primary device. When no
+  /// primary is recorded yet (clinic created before the setting existed) the
+  /// calling device claims the role so the clinic always has exactly one.
+  Future<bool> isPrimaryDevice(ActorContext ctx) => writeTransaction(() async {
+    final primary = await primaryDeviceId(ctx.clinicId);
+    if (primary == null) {
+      await setPrimaryDevice(ctx, ctx.deviceId);
+      return true;
+    }
+    return primary == ctx.deviceId;
+  });
+
+  /// Mints the next patient number: `P-00001` on the primary device,
+  /// `P-<code>-00001` elsewhere, each from its own counter.
+  Future<String> mintPatientNumber(ActorContext ctx) =>
+      writeTransaction(() async {
+        if (await isPrimaryDevice(ctx)) {
+          final n = await nextCounter(ctx, SettingKeys.patientNumberCounter);
+          return 'P-${n.toString().padLeft(5, '0')}';
+        }
+        final code = deviceCode(ctx.deviceId);
+        final n = await nextCounter(
+          ctx,
+          '${SettingKeys.patientNumberCounter}.$code',
+        );
+        return 'P-$code-${n.toString().padLeft(5, '0')}';
+      });
+
+  /// Mints the next local draft number for [prefix] (`INV` or `EST`):
+  /// `DRAFT-INV-yyyyMM-<code>-0001`, from a per-device counter.
+  Future<String> mintLocalDraftNumber(
+    ActorContext ctx,
+    String prefix, {
+    DateTime? now,
+  }) => writeTransaction(() async {
+    final code = deviceCode(ctx.deviceId);
+    final counterKey = switch (prefix) {
+      'INV' => SettingKeys.draftInvoiceCounter,
+      'EST' => SettingKeys.draftEstimateCounter,
+      _ => 'counter.draft$prefix',
+    };
+    final n = await nextCounter(ctx, '$counterKey.$code');
+    final at = nowUtc(now);
+    final month = at.month.toString().padLeft(2, '0');
+    return 'DRAFT-$prefix-${at.year}$month-$code-${n.toString().padLeft(4, '0')}';
+  });
 
   /// Loads the clinic's GST rate history as a [GstRateTable], falling back to
   /// India defaults when the clinic has none configured.

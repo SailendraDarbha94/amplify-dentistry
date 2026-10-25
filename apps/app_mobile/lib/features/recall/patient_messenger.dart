@@ -9,7 +9,9 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 typedef LinkLauncher = Future<bool> Function(Uri uri);
 
 /// Default launcher: `url_launcher` in an external application. Any platform
-/// failure (plugin missing, no WhatsApp installed) reports false.
+/// failure (plugin missing, no WhatsApp installed) reports false. The log
+/// line names only the scheme and host: the URI's query carries the rendered
+/// message, which must never reach device logs.
 Future<bool> launchExternal(Uri uri) async {
   try {
     return await launcher.launchUrl(
@@ -17,7 +19,9 @@ Future<bool> launchExternal(Uri uri) async {
       mode: launcher.LaunchMode.externalApplication,
     );
   } on Exception catch (e) {
-    const Logger('recall.launch').warning('could not launch $uri: $e');
+    const Logger('recall.launch').warning(
+      'could not launch ${uri.scheme}://${uri.host} (${e.runtimeType})',
+    );
     return false;
   }
 }
@@ -37,6 +41,9 @@ SendDecision reminderSendDecision({
   required DateTime now,
   MessageCategory category = MessageCategory.utility,
 }) {
+  if (patient.ageStatus(now) == AgeStatus.unknown) {
+    return const SendDecision.deny('age_unknown');
+  }
   final isMinor = patient.isMinor(now);
   final toGuardian = isMinor && (patient.guardianPhone ?? '').trim().isNotEmpty;
   if (isMinor && !toGuardian) {
@@ -73,6 +80,9 @@ SendDecision documentSendDecision({
   required DateTime now,
   MessageCategory category = MessageCategory.utility,
 }) {
+  if (patient.ageStatus(now) == AgeStatus.unknown) {
+    return const SendDecision.deny('age_unknown');
+  }
   final isMinor = patient.isMinor(now);
   final toGuardian = isMinor && (patient.guardianPhone ?? '').trim().isNotEmpty;
   return OptInPolicy.canSend(
@@ -85,6 +95,9 @@ SendDecision documentSendDecision({
 
 /// Human text for a denied [SendDecision.reason].
 String sendDenialText(String reason) => switch (reason) {
+  'age_unknown' =>
+    'Record the patient\'s date of birth or age first: a minor\'s messages '
+        'must go to the guardian',
   'minor_not_routed_to_guardian' =>
     'Patient is under 18 and has no guardian phone on record',
   'transactional_consent_missing' =>
@@ -129,8 +142,11 @@ class PatientMessageResult {
 
 /// Sends one templated utility message to a patient: opt-in check, render
 /// through the logged [MessagingProvider], open the deep link, then mark the
-/// log row `sent` (or `cancelled` when the link could not open).
+/// log row `sent` (or `cancelled` when the link could not open). Log lines
+/// carry the template code and a masked phone only, never the message body.
 class PatientMessenger {
+  static const Logger _log = Logger('recall.messenger');
+
   /// Creates a messenger.
   const PatientMessenger({
     required this.messaging,
@@ -206,6 +222,12 @@ class PatientMessenger {
         ? smsDeepLink(log.toPhone, log.renderedPreview)
         : whatsappDeepLink(log.toPhone, log.renderedPreview);
     final launched = await launch(uri);
+    final masked = PhoneNumbers.mask(log.toPhone);
+    if (launched) {
+      _log.debug('launched ${template.code} to $masked');
+    } else {
+      _log.info('launch failed ${template.code} to $masked');
+    }
     final updated = await logs.updateStatus(
       ctx,
       log.id,

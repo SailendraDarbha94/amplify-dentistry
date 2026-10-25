@@ -31,6 +31,10 @@ bool consentLanguageAvailable(String languageCode) =>
 
 /// User-facing strings for the consent flow (English; translation hook).
 abstract final class ConsentStrings {
+  /// Age unknown: the signer capacity cannot be decided.
+  static const String ageUnknown =
+      'Record the patient\'s date of birth or age before taking consent';
+
   /// Block shown when a minor tries to sign for themselves.
   static const String minorCannotSelfSign =
       'Patients under 18 cannot sign for themselves. A parent or guardian '
@@ -197,6 +201,9 @@ String? validateConsentSigning({
   required String discussionNote,
   required bool hasSignature,
 }) {
+  if (patient.ageStatus(now) == AgeStatus.unknown) {
+    return ConsentStrings.ageUnknown;
+  }
   if (patient.isMinor(now) && relation == SignerRelation.self) {
     return ConsentStrings.minorCannotSelfSign;
   }

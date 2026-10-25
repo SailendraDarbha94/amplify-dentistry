@@ -32,6 +32,13 @@ const List<(String, String)> patientLanguages = [
   ('te', 'Telugu'),
 ];
 
+/// Patient-form copy (English; translation hook via `AppStrings` later).
+abstract final class PatientStrings {
+  /// Shown when neither a date of birth nor an approximate age is given.
+  static const String ageRequired =
+      'Enter the date of birth or an approximate age';
+}
+
 /// Guardian relations offered in the form.
 const List<String> guardianRelations = [
   'Mother',
@@ -88,10 +95,11 @@ abstract final class PatientValidators {
     return _email.hasMatch(v) ? null : 'Enter a valid email';
   }
 
-  /// Approximate age: blank or 0-120.
-  static String? approxAge(String? value) {
+  /// Approximate age: 0-120; blank only when a date of birth is recorded
+  /// ([required] is false), so a patient is never saved with an unknown age.
+  static String? approxAge(String? value, {bool required = false}) {
     final v = (value ?? '').trim();
-    if (v.isEmpty) return null;
+    if (v.isEmpty) return required ? PatientStrings.ageRequired : null;
     final n = num.tryParse(v);
     if (n == null || n < 0 || n > 120) return 'Enter an age in years';
     return null;
@@ -309,8 +317,9 @@ class PatientSaver {
   /// Actor for the writes.
   final ActorContext ctx;
 
-  /// Saves and returns the stored patient. Throws [StateError] when a minor
-  /// has no guardian.
+  /// Saves and returns the stored patient. Throws [StateError] when the age
+  /// is unknown (no date of birth or approximate age) or a minor has no
+  /// guardian.
   Future<Patient> save(
     PatientFormData data, {
     Patient? existing,
@@ -324,6 +333,7 @@ class PatientSaver {
       now: at,
       createdAt: existing?.createdAt,
     );
+    if (!patient.hasKnownAge) throw StateError(PatientStrings.ageRequired);
     if (patient.requiresGuardian(at)) {
       throw StateError(MobileStrings.guardianRequiredForMinor);
     }

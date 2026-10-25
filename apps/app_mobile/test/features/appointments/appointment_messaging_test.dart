@@ -31,6 +31,29 @@ void main() {
       );
     });
 
+    test('refuses a patient whose age is unknown, like the reminder rule', () {
+      final t = DateTime.utc(2026, 10, 2);
+      final unknown = Patient(
+        id: 'unknown',
+        clinicId: testClinicId,
+        patientNumber: '',
+        firstName: 'Nobody',
+        phone: '+919876543210',
+        sex: Sex.female,
+        createdAt: t,
+        updatedAt: t,
+      );
+      expect(unknown.ageStatus(now), AgeStatus.unknown);
+      final decision = AppointmentMessenger.decide(
+        patient: unknown,
+        consents: [reminderConsent(unknown.id)],
+        now: now,
+      );
+      expect(decision.allowed, isFalse);
+      expect(decision.reason, 'age_unknown');
+      expect(sendDenialMessage(decision.reason), contains('date of birth'));
+    });
+
     test('routes a minor to the guardian phone and refuses one without', () {
       final minor = testPatient(
         id: 'kid',

@@ -35,6 +35,32 @@ PerioSiteReading perioSiteReadingFromJson(Map<String, Object?> json) =>
       mucogingivalJunction: json['mucogingivalJunction'] as int?,
     );
 
+/// Parses a BPE map (`{sextantName: code}`) where the code may be the enum
+/// name (`code3`) or the printed label (`3`). A sextant stored with the
+/// legacy `*` marker carries no numeric code and is left out; see
+/// [legacyBpeFurcationFromJson] for the flag it stands for.
+Map<Sextant, BpeCode> bpeMapFromJson(Object? json) {
+  final map = json as Map?;
+  if (map == null) return const {};
+  return {
+    for (final e in map.entries)
+      if (!BpeCode.isFurcationMarker(e.value))
+        enumFromJson(Sextant.values, e.key): BpeCode.parse(e.value),
+  };
+}
+
+/// Sextants a legacy BPE map (`{sextantName: '*'}`) flagged for furcation
+/// before `PerioExam.bpeFurcation` existed.
+Set<Sextant> legacyBpeFurcationFromJson(Object? json) {
+  final map = json as Map?;
+  if (map == null) return const {};
+  return {
+    for (final e in map.entries)
+      if (BpeCode.isFurcationMarker(e.value))
+        enumFromJson(Sextant.values, e.key),
+  };
+}
+
 /// JSON support for [PerioToothReading] (defined in `dental/perio.dart`).
 extension PerioToothReadingJson on PerioToothReading {
   /// JSON form.
@@ -58,7 +84,8 @@ PerioToothReading perioToothReadingFromJson(Map<String, Object?> json) =>
     );
 
 /// A periodontal examination: six-point site readings, per-tooth mobility and
-/// furcation, BPE screening per sextant and the clinician's stage/grade.
+/// furcation, BPE screening per sextant (numeric code plus a furcation `*`
+/// flag) and the clinician's stage/grade.
 @immutable
 class PerioExam {
   /// Creates a perio exam.
@@ -72,6 +99,7 @@ class PerioExam {
     this.sites = const [],
     this.teeth = const [],
     this.bpe = const {},
+    this.bpeFurcation = const {},
     this.stage,
     this.grade,
     this.note,
@@ -102,8 +130,12 @@ class PerioExam {
   /// Per-tooth readings.
   final List<PerioToothReading> teeth;
 
-  /// BPE code per sextant.
+  /// BPE code per sextant (numeric 0-4).
   final Map<Sextant, BpeCode> bpe;
+
+  /// Sextants with furcation involvement (`*` on the BPE form), recorded
+  /// alongside the numeric code in [bpe].
+  final Set<Sextant> bpeFurcation;
 
   /// 2017 AAP/EFP stage (clinician-entered).
   final PeriodontitisStage? stage;
@@ -126,6 +158,7 @@ class PerioExam {
     List<PerioSiteReading>? sites,
     List<PerioToothReading>? teeth,
     Map<Sextant, BpeCode>? bpe,
+    Set<Sextant>? bpeFurcation,
     PeriodontitisStage? stage,
     PeriodontitisGrade? grade,
     String? note,
@@ -139,6 +172,7 @@ class PerioExam {
     sites: sites ?? this.sites,
     teeth: teeth ?? this.teeth,
     bpe: bpe ?? this.bpe,
+    bpeFurcation: bpeFurcation ?? this.bpeFurcation,
     stage: stage ?? this.stage,
     grade: grade ?? this.grade,
     note: note ?? this.note,
@@ -156,6 +190,7 @@ class PerioExam {
     'sites': sites.map((s) => s.toJson()).toList(),
     'teeth': teeth.map((t) => t.toJson()).toList(),
     'bpe': {for (final e in bpe.entries) e.key.name: e.value.name},
+    'bpeFurcation': enumListToJson(bpeFurcation),
     'stage': stage?.name,
     'grade': grade?.name,
     'note': note,
@@ -186,14 +221,11 @@ class PerioExam {
             )
             .toList() ??
         const [],
-    bpe:
-        (json['bpe'] as Map?)?.map(
-          (k, v) => MapEntry(
-            enumFromJson(Sextant.values, k),
-            enumFromJson(BpeCode.values, v),
-          ),
-        ) ??
-        const {},
+    bpe: bpeMapFromJson(json['bpe']),
+    bpeFurcation: {
+      ...enumListFromJson(Sextant.values, json['bpeFurcation']),
+      ...legacyBpeFurcationFromJson(json['bpe']),
+    },
     stage: enumFromJsonOrNull(PeriodontitisStage.values, json['stage']),
     grade: enumFromJsonOrNull(PeriodontitisGrade.values, json['grade']),
     note: json['note'] as String?,

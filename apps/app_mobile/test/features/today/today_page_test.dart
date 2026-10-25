@@ -156,6 +156,47 @@ void main() {
     expect(find.text('3'), findsOneWidget);
   });
 
+  testWidgets('the no-show tile reads its rate to a screen reader', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await env.pumpApp(tester);
+    await settle(tester, frames: 12);
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('kpi-noshow'))).label,
+      'No-show rate this month: 50%',
+    );
+    handle.dispose();
+  });
+
+  testWidgets('the production tile opens the list of work completed today', (
+    tester,
+  ) async {
+    await env.pumpApp(tester);
+    await settle(tester, frames: 12);
+    await tester.tap(find.byKey(const ValueKey('kpi-production')));
+    await settle(tester, frames: 12);
+    expect(find.byKey(const ValueKey('completed-today-sheet')), findsOneWidget);
+    expect(find.byKey(const ValueKey('completed-proc-done')), findsOneWidget);
+    expect(find.textContaining('Root canal (molar)'), findsOneWidget);
+    expect(find.textContaining('Asha'), findsWidgets);
+  });
+
+  testWidgets('the unscheduled tile lists accepted plan lines with Book', (
+    tester,
+  ) async {
+    await env.pumpApp(tester);
+    await settle(tester, frames: 12);
+    await tester.tap(find.byKey(const ValueKey('kpi-unscheduled')));
+    await settle(tester, frames: 12);
+    expect(find.byKey(const ValueKey('unscheduled-sheet')), findsOneWidget);
+    expect(find.text('Zirconia crown'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('book-line-1')));
+    await settle(tester, frames: 12);
+    expect(env.location, '/schedule/new');
+    expect(find.byKey(const ValueKey('unscheduled-sheet')), findsNothing);
+  });
+
   testWidgets('today list offers Start visit and opens the patient', (
     tester,
   ) async {

@@ -6,7 +6,9 @@ import '../theme/app_spacing.dart';
 
 /// Thin banner shown at the top of a screen when the device is offline or has
 /// local changes waiting to sync. Renders nothing when online with no
-/// pending changes.
+/// pending changes. While no sync backend exists the pending copy says so
+/// honestly ("Not synced yet - 3 changes waiting"); it never claims to be
+/// syncing.
 class OfflineBanner extends StatelessWidget {
   /// Creates the banner.
   const OfflineBanner({
@@ -32,12 +34,13 @@ class OfflineBanner extends StatelessWidget {
     final colors = AppColors.of(context);
     final theme = Theme.of(context);
     final color = isOffline ? colors.warning : colors.info;
-    final icon = isOffline ? Icons.cloud_off_outlined : Icons.sync;
+    final icon = isOffline ? Icons.cloud_off_outlined : Icons.cloud_queue;
     final text = isOffline
         ? pendingCount > 0
               ? '${strings.offline} - ${strings.pendingChangesCount(pendingCount)}'
               : strings.offline
-        : '${strings.syncing} - ${strings.pendingChangesCount(pendingCount)}';
+        : '${strings.notSyncedYet} - '
+              '${strings.changesWaitingCount(pendingCount)}';
     return Semantics(
       liveRegion: true,
       child: Material(

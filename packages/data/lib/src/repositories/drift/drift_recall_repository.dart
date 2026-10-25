@@ -163,28 +163,61 @@ class DriftRecallRepository extends DatabaseAccessor<AppDatabase>
     ActorContext ctx,
     ProcedureRecord procedure, {
     DateTime? completedOn,
-  }) async {
+  }) {
     final seed = procedureSeedByCode(procedure.code);
-    if (seed == null) return null;
+    if (seed == null) return Future.value();
     final rule = recallRuleFor(seed);
-    if (rule == null) return null;
-    final existing = await forProcedure(procedure.id);
-    if (existing != null) return existing;
-    final from = nowUtc(completedOn ?? procedure.completedAt);
-    final now = nowUtc();
-    final recall = Recall(
-      id: newId(),
-      clinicId: procedure.clinicId,
-      patientId: procedure.patientId,
-      type: RecallType.values.byName(rule.type),
-      triggeredByProcedureId: procedure.id,
-      dueAt: from.add(Duration(days: rule.dueAfterDays)),
-      interval: seed.recallInterval,
-      estimatedValue: Money.paise(rule.estimatedValuePaise),
-      note: '${seed.name} (${rule.intervalLabel})',
-      createdAt: now,
-      updatedAt: now,
-    );
-    return upsert(ctx, recall);
+    if (rule == null) return Future.value();
+    checkTenant(ctx, procedure.clinicId, 'procedure.clinicId');
+    return writeTransaction(() async {
+      // Idempotent per triggering procedure (which fixes patient and type):
+      // the lookup and the insert share one transaction.
+      final existing = await forProcedure(procedure.id);
+      if (existing != null) return existing;
+      final from = nowUtc(completedOn ?? procedure.completedAt);
+      final now = nowUtc();
+      final recall = Recall(
+        id: newId(),
+        clinicId: procedure.clinicId,
+        patientId: procedure.patientId,
+        type: RecallType.values.byName(rule.type),
+        triggeredByProcedureId: procedure.id,
+        dueAt: from.add(Duration(days: rule.dueAfterDays)),
+        interval: seed.recallInterval,
+        estimatedValue: Money.paise(rule.estimatedValuePaise),
+        note: '${seed.name} (${rule.intervalLabel})',
+        createdAt: now,
+        updatedAt: now,
+      );
+      final written = await _write(ctx, null, recall);
+      await _supersedeOlderOpen(ctx, written);
+      return written;
+    });
+  }
+
+  /// Closes every other open recall of the same type for the patient: a
+  /// later completion of the same kind of procedure replaces the earlier
+  /// recall instead of leaving two due rows that double the overdue KPI and
+  /// the reminders. The audit reason names the superseding recall.
+  Future<void> _supersedeOlderOpen(ActorContext ctx, Recall newer) async {
+    final older =
+        await (select(_t)..where(
+              (t) =>
+                  t.clinicId.equals(newer.clinicId) &
+                  t.patientId.equals(newer.patientId) &
+                  t.type.equalsValue(newer.type) &
+                  t.status.isInValues(_open) &
+                  t.id.equals(newer.id).not(),
+            ))
+            .get();
+    for (final r in older) {
+      await _write(
+        ctx,
+        r,
+        r.copyWith(status: RecallStatus.dismissed, updatedAt: nowUtc()),
+        action: AuditAction.statusChange,
+        reason: 'superseded by recall ${newer.id}',
+      );
+    }
   }
 }

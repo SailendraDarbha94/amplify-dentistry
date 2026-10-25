@@ -2,6 +2,8 @@ import 'package:ampdent_core/ampdent_core.dart';
 import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
+import '../../db/converters.dart';
+import '../../db/tables_clinic.dart';
 import '../actor_context.dart';
 import '../chart_repository.dart';
 import 'audited_writer.dart';
@@ -70,6 +72,62 @@ class DriftChartRepository extends DatabaseAccessor<AppDatabase>
         toJson: (r) => r.toJson(),
       ),
     );
+  }
+
+  @override
+  Future<List<ToothStateRecord>> recordToothStates(
+    ActorContext ctx,
+    List<ToothStateRecord> records,
+  ) {
+    if (records.isEmpty) return Future.value(const []);
+    return writeTransaction(() async {
+      // Every row, audit event and outbox entry goes in one batch stamped
+      // with one instant, so the seed is a single write in the log and a
+      // single transaction on disk instead of one per tooth.
+      final occurredAt = nowUtc();
+      final events = <AuditEvent>[];
+      final outbox = <SyncOutboxCompanion>[];
+      for (final record in records) {
+        checkTenant(ctx, record.clinicId, 'record.clinicId');
+        final after = record.toJson();
+        events.add(
+          AuditEvent(
+            id: newId(),
+            clinicId: ctx.clinicId,
+            actorId: ctx.actorId,
+            action: AuditAction.create,
+            entityType: 'ToothStateRecord',
+            entityId: record.id,
+            after: after,
+            deviceId: ctx.deviceId,
+            occurredAt: occurredAt,
+          ),
+        );
+        outbox.add(
+          SyncOutboxCompanion.insert(
+            id: newId(),
+            clinicId: ctx.clinicId,
+            targetTable: _states.actualTableName,
+            rowId: record.id,
+            operation: OutboxOperation.insert,
+            payload: after,
+            createdAt: occurredAt,
+          ),
+        );
+      }
+      await batch((b) {
+        b.insertAllOnConflictUpdate(
+          _states,
+          records.map((r) => r.toInsertable()),
+        );
+        b.insertAll(
+          attachedDatabase.auditEvents,
+          events.map((e) => e.toInsertable()),
+        );
+        b.insertAll(attachedDatabase.syncOutbox, outbox);
+      });
+      return records;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -216,6 +274,31 @@ class DriftChartRepository extends DatabaseAccessor<AppDatabase>
     String patientId, {
     bool includeDeleted = false,
   }) => _procedureQuery(patientId, includeDeleted: includeDeleted).watch();
+
+  @override
+  Future<List<ProcedureRecord>> completedProceduresForClinic(
+    String clinicId, {
+    DateTime? from,
+    DateTime? to,
+  }) =>
+      (select(_procedures)
+            ..where((t) {
+              var where =
+                  t.clinicId.equals(clinicId) &
+                  t.status.equalsValue(ProcedureStatus.completed);
+              if (from != null) {
+                where =
+                    where &
+                    t.completedAt.isBiggerOrEqualValue(encodeIsoUtc(from));
+              }
+              if (to != null) {
+                where =
+                    where & t.completedAt.isSmallerThanValue(encodeIsoUtc(to));
+              }
+              return where;
+            })
+            ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
+          .get();
 
   Future<ProcedureRecord> _writeProcedure(
     ActorContext ctx,

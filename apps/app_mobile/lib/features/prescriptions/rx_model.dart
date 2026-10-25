@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_data/ampdent_data.dart';
+import 'package:ampdent_terminology/ampdent_terminology.dart';
 import 'package:flutter/foundation.dart';
 
 /// Frequency chips offered on a line; free text is also accepted.
@@ -179,47 +180,65 @@ class RxLineDraft {
     required this.route,
     this.instructions = '',
     this.schedule = DrugSchedule.h,
+    this.scheduleEffectiveFrom,
+    this.scheduleBefore,
+    this.scheduleAfter,
     this.allergyGroup,
     this.pregnancyCaution = false,
     this.pediatricCaution = false,
     this.overrideReason,
   });
 
-  /// Starts a line from a drug master entry with its defaults.
-  factory RxLineDraft.fromDrug(Drug d) => RxLineDraft(
-    drugId: d.id,
-    genericName: d.genericName,
-    brandName: d.brandNames.isEmpty ? null : d.brandNames.first,
-    strength: d.strength,
-    form: d.form,
-    dose: d.defaultDose,
-    frequency: d.defaultFrequency,
-    durationDays: d.defaultDurationDays,
-    route: d.route,
-    schedule: d.schedule,
-    allergyGroup: d.allergyGroup,
-    pregnancyCaution: d.pregnancyCaution,
-    pediatricCaution: d.pediatricCaution,
-  );
+  /// Starts a line from a drug master entry with its defaults. The schedule
+  /// tag is the one in force at [at] (now when omitted): a drug notified into
+  /// Schedule H1 from a future date is still Schedule H until then.
+  factory RxLineDraft.fromDrug(Drug d, {DateTime? at}) {
+    final history = _ScheduleHistory.of(d);
+    return RxLineDraft(
+      drugId: d.id,
+      genericName: d.genericName,
+      brandName: d.brandNames.isEmpty ? null : d.brandNames.first,
+      strength: d.strength,
+      form: d.form,
+      dose: d.defaultDose,
+      frequency: d.defaultFrequency,
+      durationDays: d.defaultDurationDays,
+      route: d.route,
+      schedule: history.at(at ?? DateTime.now()),
+      scheduleEffectiveFrom: history.effectiveFrom,
+      scheduleBefore: history.before,
+      scheduleAfter: history.after,
+      allergyGroup: d.allergyGroup,
+      pregnancyCaution: d.pregnancyCaution,
+      pediatricCaution: d.pediatricCaution,
+    );
+  }
 
-  /// Copies a stored line (for repeats).
-  factory RxLineDraft.fromLine(PrescriptionLine l, {Drug? drug}) => RxLineDraft(
-    drugId: l.drugId,
-    genericName: l.genericName,
-    brandName: l.brandName,
-    strength: l.strength,
-    form: l.form,
-    dose: l.dose,
-    frequency: l.frequency,
-    durationDays: l.durationDays,
-    quantity: l.quantity,
-    route: l.route,
-    instructions: l.instructions ?? '',
-    schedule: l.schedule,
-    allergyGroup: drug?.allergyGroup,
-    pregnancyCaution: drug?.pregnancyCaution ?? false,
-    pediatricCaution: drug?.pediatricCaution ?? false,
-  );
+  /// Copies a stored line (for repeats). With [drug] the schedule history
+  /// comes along, so the repeat resolves its own tag at [at] (or at issue).
+  factory RxLineDraft.fromLine(PrescriptionLine l, {Drug? drug, DateTime? at}) {
+    final history = drug == null ? null : _ScheduleHistory.of(drug);
+    return RxLineDraft(
+      drugId: l.drugId,
+      genericName: l.genericName,
+      brandName: l.brandName,
+      strength: l.strength,
+      form: l.form,
+      dose: l.dose,
+      frequency: l.frequency,
+      durationDays: l.durationDays,
+      quantity: l.quantity,
+      route: l.route,
+      instructions: l.instructions ?? '',
+      schedule: history == null || at == null ? l.schedule : history.at(at),
+      scheduleEffectiveFrom: history?.effectiveFrom,
+      scheduleBefore: history?.before,
+      scheduleAfter: history?.after,
+      allergyGroup: drug?.allergyGroup,
+      pregnancyCaution: drug?.pregnancyCaution ?? false,
+      pediatricCaution: drug?.pediatricCaution ?? false,
+    );
+  }
 
   /// Drug master id.
   final String? drugId;
@@ -254,8 +273,18 @@ class RxLineDraft {
   /// Instructions (`after food`).
   final String instructions;
 
-  /// Schedule tag.
+  /// Schedule tag as resolved when the line was created.
   final DrugSchedule schedule;
+
+  /// Date from which [scheduleAfter] applies; null when the drug's schedule
+  /// has no pending change.
+  final DateTime? scheduleEffectiveFrom;
+
+  /// Schedule before [scheduleEffectiveFrom].
+  final DrugSchedule? scheduleBefore;
+
+  /// Schedule on and after [scheduleEffectiveFrom].
+  final DrugSchedule? scheduleAfter;
 
   /// Allergy group of the drug.
   final String? allergyGroup;
@@ -279,14 +308,24 @@ class RxLineDraft {
         form: form,
       );
 
-  /// Schedule H1 line.
+  /// Schedule H1 line (as resolved when the line was created).
   bool get isScheduleH1 => schedule == DrugSchedule.h1;
+
+  /// Schedule in force at [at]: [scheduleBefore] before
+  /// [scheduleEffectiveFrom], [scheduleAfter] from then on, else [schedule].
+  DrugSchedule scheduleAt(DateTime at) {
+    final from = scheduleEffectiveFrom;
+    if (from == null) return schedule;
+    if (at.isBefore(from)) return scheduleBefore ?? schedule;
+    return scheduleAfter ?? schedule;
+  }
 
   /// Generic name in capitals.
   String get genericUpper => genericName.toUpperCase();
 
-  /// Stored line.
-  PrescriptionLine toLine() => PrescriptionLine(
+  /// Stored line. With [at] (the issue time) the schedule tag is the one in
+  /// force on that date.
+  PrescriptionLine toLine({DateTime? at}) => PrescriptionLine(
     drugId: drugId,
     genericName: genericUpper,
     brandName: brandName,
@@ -298,7 +337,7 @@ class RxLineDraft {
     quantity: effectiveQuantity,
     route: route,
     instructions: instructions.trim().isEmpty ? null : instructions.trim(),
-    schedule: schedule,
+    schedule: at == null ? schedule : scheduleAt(at),
   );
 
   /// Returns a copy with the given fields replaced; [clearQuantity] returns
@@ -326,11 +365,46 @@ class RxLineDraft {
     route: route ?? this.route,
     instructions: instructions ?? this.instructions,
     schedule: schedule,
+    scheduleEffectiveFrom: scheduleEffectiveFrom,
+    scheduleBefore: scheduleBefore,
+    scheduleAfter: scheduleAfter,
     allergyGroup: allergyGroup,
     pregnancyCaution: pregnancyCaution,
     pediatricCaution: pediatricCaution,
     overrideReason: overrideReason ?? this.overrideReason,
   );
+}
+
+/// Schedule history of a drug: the master seed's notified change when the
+/// drug comes from the master (`scheduleForDrugAt`), else the stored tag.
+class _ScheduleHistory {
+  const _ScheduleHistory({
+    this.effectiveFrom,
+    this.before,
+    required this.after,
+  });
+
+  factory _ScheduleHistory.of(Drug d) {
+    final seed = drugSeedForDrug(d);
+    if (seed != null && seed.schedule == d.schedule) {
+      return _ScheduleHistory(
+        effectiveFrom: seed.scheduleEffectiveFrom,
+        before: seed.previousSchedule,
+        after: seed.schedule,
+      );
+    }
+    return _ScheduleHistory(after: d.schedule);
+  }
+
+  final DateTime? effectiveFrom;
+  final DrugSchedule? before;
+  final DrugSchedule after;
+
+  DrugSchedule at(DateTime at) {
+    final from = effectiveFrom;
+    if (from != null && at.isBefore(from)) return before ?? after;
+    return after;
+  }
 }
 
 /// Whole prescription being composed.
@@ -344,10 +418,12 @@ class RxDraft {
     this.dispensedByClinic = false,
   });
 
-  /// Copies a stored prescription into a fresh draft (repeat).
+  /// Copies a stored prescription into a fresh draft (repeat). Schedule tags
+  /// are re-resolved at [at] for lines whose drug is in [drugs].
   factory RxDraft.repeatOf(
     Prescription rx, {
     Map<String, Drug> drugs = const {},
+    DateTime? at,
   }) => RxDraft(
     diagnosis: rx.diagnosis ?? '',
     lines: [
@@ -355,6 +431,7 @@ class RxDraft {
         RxLineDraft.fromLine(
           l,
           drug: l.drugId == null ? null : drugs[l.drugId!],
+          at: at,
         ),
     ],
     isRepeatable: rx.isRepeatable,
@@ -389,7 +466,9 @@ class RxDraft {
     dispensedByClinic: dispensedByClinic ?? this.dispensedByClinic,
   );
 
-  /// Builds the immutable prescription.
+  /// Builds the immutable prescription. Schedule tags are resolved as of
+  /// [now] (the issue time) and [patient], when given, is frozen onto the
+  /// row as the demographics the document prints.
   Prescription toPrescription({
     required String id,
     required String clinicId,
@@ -398,6 +477,7 @@ class RxDraft {
     required String verificationCode,
     required DateTime now,
     String? visitId,
+    Patient? patient,
   }) => Prescription(
     id: id,
     clinicId: clinicId,
@@ -409,10 +489,11 @@ class RxDraft {
     prescriberQualifications: prescriber.qualifications,
     issuedAt: now,
     diagnosis: diagnosis.trim().isEmpty ? null : diagnosis.trim(),
-    lines: [for (final l in lines) l.toLine()],
+    lines: [for (final l in lines) l.toLine(at: now)],
     isRepeatable: isRepeatable,
     dispensedByClinic: dispensedByClinic,
     verificationCode: verificationCode,
+    patientSnapshot: patient == null ? null : PatientSnapshot.of(patient, now),
     createdAt: now,
   );
 }

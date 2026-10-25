@@ -56,24 +56,36 @@ class PrescriptionPdf extends DocumentBuilder {
   @override
   String get suggestedFileName => 'Rx_${prescription.verificationCode}.pdf';
 
+  /// Demographics printed on the document: the snapshot frozen at issue, so
+  /// a reprint matches the signed original; the live [patient] only for rows
+  /// issued before the snapshot existed.
+  PatientSnapshot get printedPatient =>
+      prescription.patientSnapshot ??
+      PatientSnapshot.of(patient, prescription.issuedAt);
+
   @override
   List<pw.Widget> buildBody(pw.Context context) {
-    final asOf = prescription.issuedAt;
+    final p = printedPatient;
+    final age = p.ageYears == null ? 'Age unknown' : '${p.ageYears} y';
+    final address = [
+      ...p.addressLines.where((l) => l.trim().isNotEmpty),
+      if (p.city != null && p.city!.isNotEmpty) p.city!,
+      if (p.pincode != null && p.pincode!.isNotEmpty) p.pincode!,
+    ].join(', ');
     return [
       DocumentWidgets.infoColumns(
         theme,
         left: [
-          MapEntry('Patient', patient.displayName),
-          MapEntry('Age / Sex', formatAgeSex(patient, asOf)),
-          MapEntry('Address', formatPatientAddress(patient)),
-          MapEntry('Phone', patient.phone),
+          MapEntry('Patient', p.displayName),
+          MapEntry('Age / Sex', '$age / ${formatSex(p.sex)}'),
+          MapEntry('Address', address),
+          MapEntry('Phone', p.phone),
         ],
         right: [
-          MapEntry('Patient No.', patient.patientNumber),
+          MapEntry('Patient No.', p.patientNumber),
           MapEntry('Date', formatDate(prescription.issuedAt)),
           MapEntry('Diagnosis', prescription.diagnosis),
-          if (patient.requiresGuardian(asOf))
-            MapEntry('Guardian', patient.guardianName),
+          if (p.guardianName != null) MapEntry('Guardian', p.guardianName),
         ],
       ),
       pw.SizedBox(height: 6),

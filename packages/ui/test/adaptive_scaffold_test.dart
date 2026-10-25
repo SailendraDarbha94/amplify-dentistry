@@ -81,5 +81,55 @@ void main() {
       expect(find.textContaining('Offline'), findsOneWidget);
       expect(find.textContaining('3 changes'), findsOneWidget);
     });
+
+    testWidgets('banner sits below the status bar and the body starts under '
+        'it without a second top inset', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = const FakeViewPadding(top: 47);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: AdaptiveScaffold(
+            body: Builder(
+              builder: (context) => Text(
+                'top ${MediaQuery.paddingOf(context).top}',
+                key: const ValueKey('body'),
+              ),
+            ),
+            banner: const OfflineBanner(isOffline: false, pendingCount: 2),
+            destinations: destinations,
+            selectedIndex: 0,
+            onDestinationSelected: (_) {},
+          ),
+        ),
+      );
+      final banner = find.byType(OfflineBanner);
+      expect(banner, findsOneWidget);
+      expect(tester.getTopLeft(banner).dy, 47);
+      expect(find.text('Not synced yet - 2 changes waiting'), findsOneWidget);
+      expect(find.textContaining('Syncing'), findsNothing);
+      // The body no longer sees the top inset the banner already consumed.
+      expect(find.text('top 0.0'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('body'))).dy,
+        tester.getBottomLeft(banner).dy,
+      );
+    });
+
+    testWidgets('a single pending change reads in the singular', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: OfflineBanner(isOffline: false, pendingCount: 1),
+          ),
+        ),
+      );
+      expect(find.text('Not synced yet - 1 change waiting'), findsOneWidget);
+    });
   });
 }

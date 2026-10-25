@@ -9,6 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'chart_mapping.dart';
 import 'chart_providers.dart';
 import 'chart_strings.dart';
+import 'consent_guard.dart';
+import 'consent_guard_dialog.dart';
+import 'fee_guard.dart';
 import 'preop_guard.dart';
 import 'preop_guard_dialog.dart';
 import 'surface_picker.dart';
@@ -32,12 +35,13 @@ List<CatalogItem> filterCatalog(
 
 /// Adds a procedure to the selected tooth from the catalogue: fee
 /// prefilled, surfaces from the chart selection, planned or done today, and
-/// a stage control for multi-sitting work. The pre-op radiograph guard runs
+/// a stage control for multi-sitting work. A fee outside the catalogue
+/// range needs a confirm tap; the consent and pre-op radiograph guards run
 /// before any `done` status is written.
 /// Test keys: `procedure-search`, `procedure-category-<name>`,
 /// `procedure-item-<code>`, `procedure-change`, `procedure-fee`,
 /// `procedure-status-planned`, `procedure-status-done`, `procedure-stage`,
-/// `procedure-note`, `procedure-save`.
+/// `procedure-note`, `procedure-save`, `fee-confirm`, `fee-cancel`.
 class ProcedureTab extends ConsumerStatefulWidget {
   /// Creates the tab.
   const ProcedureTab({
@@ -110,21 +114,54 @@ class _ProcedureTabState extends ConsumerState<ProcedureTab> {
       setState(() => _error = ChartStrings.surfacesRequired);
       return;
     }
+    if (!feeInRange(item, fee)) {
+      // Modal, so a second tap on Save cannot land while it is open.
+      if (!await confirmFeeOutsideRange(context, item, fee) || !mounted) {
+        return;
+      }
+    }
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
-      final status = _status;
+      var status = _status;
       final kind = classifyProcedure(item.code, category: item.category);
       var note = _note.text.trim();
       var imageIds = const <String>[];
+      var getConsentFirst = false;
+      if (status != ProcedureStatus.planned) {
+        final consents = await ref
+            .read(consentRepositoryProvider)
+            .consentsForPatient(widget.patientId);
+        final consentCheck = checkProcedureConsent(
+          item: item,
+          consents: consents,
+        );
+        if (consentCheck.blocks) {
+          if (!mounted) return;
+          final choice = await ConsentGuardDialog.show(
+            context,
+            procedureName: item.name,
+          );
+          if (choice == null) return;
+          if (choice.getConsent) {
+            // Plan it now so the consent form has a procedure to cover; the
+            // clinician marks it done from the chart once signed.
+            getConsentFirst = true;
+            status = ProcedureStatus.planned;
+          } else {
+            note = appendConsentReason(note, choice.reason!);
+          }
+        }
+      }
       if (status != ProcedureStatus.planned) {
         final images = await ref
             .read(clinicalRepositoryProvider)
             .imagesForPatient(widget.patientId);
         final check = checkPreOpRadiograph(
           kind: kind,
+          at: ref.read(clockProvider)(),
           catalogFlag: item.requiresPreOpRadiograph,
           teeth: [widget.tooth],
           images: images,
@@ -160,7 +197,14 @@ class _ProcedureTabState extends ConsumerState<ProcedureTab> {
             preOpImageIds: imageIds,
           );
       if (!mounted) return;
-      Navigator.of(context).pop(ToothSheetResult.forProcedure(result));
+      Navigator.of(context).pop(
+        ToothSheetResult.forProcedure(
+          result,
+          nextRoute: getConsentFirst
+              ? consentRouteFor(widget.patientId, result.procedure.id)
+              : null,
+        ),
+      );
     } on Object catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());

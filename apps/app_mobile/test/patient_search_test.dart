@@ -61,6 +61,30 @@ void main() {
     expect(find.text('Ravi Kumar'), findsNothing);
   });
 
+  testWidgets('search is debounced: no query until typing pauses', (
+    tester,
+  ) async {
+    await env.pumpApp(tester);
+    await env.go(tester, '/patients');
+    await tester.enterText(find.byKey(const ValueKey('patients-search')), 'r');
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(find.byKey(const ValueKey('patients-search')), 'ra');
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(
+      find.byKey(const ValueKey('patients-search')),
+      'rav',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    // Still inside the 300 ms window: the recent list is untouched.
+    expect(find.text('Recently seen'), findsOneWidget);
+    expect(find.text('Asha Rao'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 250));
+    await settle(tester);
+    expect(find.text('Recently seen'), findsNothing);
+    expect(find.text('Ravi Kumar'), findsOneWidget);
+    expect(find.text('Asha Rao'), findsNothing);
+  });
+
   testWidgets('no match shows an empty state', (tester) async {
     await env.pumpApp(tester);
     await env.go(tester, '/patients');

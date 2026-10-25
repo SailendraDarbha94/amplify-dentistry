@@ -52,6 +52,7 @@ class TreatmentPlan {
     this.acceptedBySignerName,
     this.acceptedSignatureHash,
     this.snapshotHash,
+    this.estimateDeclinedReason,
     required this.createdBy,
     required this.createdAt,
     required this.updatedAt,
@@ -96,6 +97,10 @@ class TreatmentPlan {
   /// Hash of the lines at acceptance (see [computePlanSnapshotHash]).
   final String? snapshotHash;
 
+  /// Recorded when the patient declined a written estimate before accepting
+  /// (an issued estimate is otherwise required before acceptance).
+  final String? estimateDeclinedReason;
+
   /// Authoring clinician.
   final String createdBy;
 
@@ -120,6 +125,7 @@ class TreatmentPlan {
     String? acceptedBySignerName,
     String? acceptedSignatureHash,
     String? snapshotHash,
+    String? estimateDeclinedReason,
     DateTime? updatedAt,
   }) => TreatmentPlan(
     id: id,
@@ -135,6 +141,8 @@ class TreatmentPlan {
     acceptedBySignerName: acceptedBySignerName ?? this.acceptedBySignerName,
     acceptedSignatureHash: acceptedSignatureHash ?? this.acceptedSignatureHash,
     snapshotHash: snapshotHash ?? this.snapshotHash,
+    estimateDeclinedReason:
+        estimateDeclinedReason ?? this.estimateDeclinedReason,
     createdBy: createdBy,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -155,6 +163,7 @@ class TreatmentPlan {
     'acceptedBySignerName': acceptedBySignerName,
     'acceptedSignatureHash': acceptedSignatureHash,
     'snapshotHash': snapshotHash,
+    'estimateDeclinedReason': estimateDeclinedReason,
     'createdBy': createdBy,
     'createdAt': dateToJson(createdAt),
     'updatedAt': dateToJson(updatedAt),
@@ -179,6 +188,7 @@ class TreatmentPlan {
     acceptedBySignerName: json['acceptedBySignerName'] as String?,
     acceptedSignatureHash: json['acceptedSignatureHash'] as String?,
     snapshotHash: json['snapshotHash'] as String?,
+    estimateDeclinedReason: json['estimateDeclinedReason'] as String?,
     createdBy: json['createdBy'] as String,
     createdAt: dateFromJson(json['createdAt']),
     updatedAt: dateFromJson(json['updatedAt']),

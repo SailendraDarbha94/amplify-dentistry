@@ -26,6 +26,7 @@ class Drug {
   /// Creates a drug.
   const Drug({
     required this.id,
+    this.clinicId,
     required this.genericName,
     this.brandNames = const [],
     required this.strength,
@@ -45,6 +46,9 @@ class Drug {
 
   /// UUID v4.
   final String id;
+
+  /// Clinic that added this entry; null for the seeded global master.
+  final String? clinicId;
 
   /// INN / generic name (`Amoxicillin`).
   final String genericName;
@@ -109,6 +113,7 @@ class Drug {
     bool? isActive,
   }) => Drug(
     id: id,
+    clinicId: clinicId,
     genericName: genericName,
     brandNames: brandNames ?? this.brandNames,
     strength: strength ?? this.strength,
@@ -129,6 +134,7 @@ class Drug {
   /// JSON form.
   Map<String, Object?> toJson() => {
     'id': id,
+    'clinicId': clinicId,
     'genericName': genericName,
     'brandNames': brandNames,
     'strength': strength,
@@ -149,6 +155,7 @@ class Drug {
   /// Parses the JSON form.
   factory Drug.fromJson(Map<String, Object?> json) => Drug(
     id: json['id'] as String,
+    clinicId: json['clinicId'] as String?,
     genericName: json['genericName'] as String,
     brandNames: stringListFromJson(json['brandNames']),
     strength: json['strength'] as String,

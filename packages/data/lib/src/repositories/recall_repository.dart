@@ -44,9 +44,13 @@ abstract class RecallRepository {
   Future<Recall> dismiss(ActorContext ctx, String id, String reason);
 
   /// Creates the recall implied by a completed procedure's code via the
-  /// default recall rules; null when no rule matches. Idempotent: when the
-  /// procedure already triggered a recall, that recall is returned and no
-  /// second one is written.
+  /// default recall rules; null when no rule matches. Idempotent per
+  /// (patient, type, triggering procedure): when the procedure already
+  /// triggered a recall, that recall is returned and no second one is
+  /// written. When a new recall is created, any older open recall of the
+  /// same type for the patient is dismissed with the reason
+  /// `superseded by recall <id>`, so the patient has at most one open recall
+  /// per type.
   Future<Recall?> createFromProcedure(
     ActorContext ctx,
     ProcedureRecord procedure, {

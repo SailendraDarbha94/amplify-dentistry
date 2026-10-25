@@ -19,17 +19,31 @@ enum ToothSheetTab { finding, procedure, state, history }
 /// What a tab reports back when it saved something.
 class ToothSheetResult {
   /// Creates a result with a snackbar [message].
-  const ToothSheetResult(this.message, {this.procedure, this.recall});
+  const ToothSheetResult(
+    this.message, {
+    this.procedure,
+    this.recall,
+    this.nextRoute,
+  });
 
-  /// Result for a procedure write.
-  factory ToothSheetResult.forProcedure(MarkDoneResult result) {
+  /// Result for a procedure write. [nextRoute] is pushed by the chart page
+  /// once the sheet has closed (the consent form, for instance).
+  factory ToothSheetResult.forProcedure(
+    MarkDoneResult result, {
+    String? nextRoute,
+  }) {
     final p = result.procedure;
     final message = result.completed
         ? ChartStrings.procedureCompleted
         : (p.status == ProcedureStatus.inProgress
               ? ChartStrings.stageAdvanced
               : '${p.name} planned');
-    return ToothSheetResult(message, procedure: p, recall: result.recall);
+    return ToothSheetResult(
+      message,
+      procedure: p,
+      recall: result.recall,
+      nextRoute: nextRoute,
+    );
   }
 
   /// Snackbar text.
@@ -40,6 +54,9 @@ class ToothSheetResult {
 
   /// Recall created, when any.
   final Recall? recall;
+
+  /// Route the chart page pushes after the sheet closes, when any.
+  final String? nextRoute;
 }
 
 /// Modal sheet for one tooth: add a finding, add a procedure, change the

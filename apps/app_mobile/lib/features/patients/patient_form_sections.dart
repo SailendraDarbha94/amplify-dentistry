@@ -164,10 +164,11 @@ class PatientIdentitySection extends StatelessWidget {
               enabled: dateOfBirth == null,
               decoration: const InputDecoration(
                 labelText: 'Age (years)',
-                helperText: 'If DOB unknown',
+                helperText: 'Required if DOB unknown',
               ),
               keyboardType: TextInputType.number,
-              validator: PatientValidators.approxAge,
+              validator: (v) =>
+                  PatientValidators.approxAge(v, required: dateOfBirth == null),
               onChanged: onAgeChanged,
             ),
           ],

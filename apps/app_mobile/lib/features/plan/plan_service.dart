@@ -168,8 +168,45 @@ class PlanService {
   /// Every estimate from version 2 on needs a justification (DCI 5.7.1).
   static bool estimateNeedsJustification(int version) => version > 1;
 
-  /// Issues the next estimate version from the plan's live lines. Throws
-  /// [ArgumentError] when a revision has no justification.
+  /// Why the plan cannot be accepted (or its treatment started) yet, or null
+  /// when it can: an estimate must have been issued for [plan], unless the
+  /// patient's refusal of a written estimate is recorded (on the plan, or
+  /// given as [estimateDeclinedReason] for this acceptance). When the latest
+  /// estimate carries a plan snapshot hash and [lines] differ from it, the
+  /// plan changed since the patient saw the estimate.
+  Future<String?> estimateGap(
+    TreatmentPlan plan,
+    Iterable<TreatmentPlanLine> lines, {
+    String? estimateDeclinedReason,
+  }) async {
+    final declined = (estimateDeclinedReason ?? plan.estimateDeclinedReason)
+        ?.trim();
+    final latest = latestEstimate(await plans.estimatesForPlan(plan.id));
+    if (latest == null) {
+      return declined == null || declined.isEmpty
+          ? PlanStrings.estimateRequired
+          : null;
+    }
+    if (estimateMatchesPlan(latest, plan, lines) == false) {
+      return PlanStrings.planChangedSinceEstimate;
+    }
+    return null;
+  }
+
+  /// Throws [StateError] when treatment on [planId] may not start yet: no
+  /// estimate was issued and no refusal recorded (see [estimateGap]). Call
+  /// before moving a plan line's procedure to in progress.
+  Future<void> ensureEstimateBeforeTreatment(String planId) async {
+    final plan = await plans.getPlan(planId);
+    if (plan == null) return;
+    final gap = await estimateGap(plan, await plans.linesForPlan(planId));
+    if (gap != null) throw StateError(gap);
+  }
+
+  /// Issues the next estimate version from the plan's live lines and binds
+  /// it to the plan version and snapshot hash of those lines, so acceptance
+  /// can tell when the plan changed after the patient saw the estimate.
+  /// Throws [ArgumentError] when a revision has no justification.
   Future<Estimate> issueEstimate(
     String planId, {
     String? justification,
@@ -185,6 +222,8 @@ class PlanService {
         'required for estimate version $version',
       );
     }
+    // The repository binds the estimate to the plan version and the
+    // snapshot hash of the lines it was issued from.
     return plans.estimateFromPlan(
       ctx,
       planId,
@@ -196,16 +235,22 @@ class PlanService {
 
   /// Records acceptance with the signer and signature, freezes the lines
   /// (snapshot hash) and moves every default line's procedure to
-  /// `accepted`. A minor cannot accept for themselves.
+  /// `accepted`. Requires an issued estimate that still matches the lines,
+  /// unless [estimateDeclinedReason] records that the patient declined a
+  /// written one. A minor cannot accept for themselves; an unknown age blocks.
   Future<TreatmentPlan> accept(
     PlanEditor editor, {
     required Patient patient,
     required String signerName,
     required SignerRelation relation,
     Uint8List? signaturePng,
+    String? estimateDeclinedReason,
     DateTime? now,
   }) async {
     final t = (now ?? DateTime.now()).toUtc();
+    if (patient.ageStatus(t) == AgeStatus.unknown) {
+      throw StateError(ConsentStrings.ageUnknown);
+    }
     if (patient.isMinor(t) && relation == SignerRelation.self) {
       throw StateError(ConsentStrings.minorCannotSelfSign);
     }
@@ -216,11 +261,18 @@ class PlanService {
       throw StateError(ConsentStrings.signatureRequired);
     }
     if (editor.dirty) throw StateError('Save the plan before accepting it');
+    final gap = await estimateGap(
+      editor.plan,
+      editor.lines,
+      estimateDeclinedReason: estimateDeclinedReason,
+    );
+    if (gap != null) throw StateError(gap);
     final plan = await plans.acceptPlan(
       ctx,
       editor.plan.id,
       signerName: '${signerName.trim()} (${signerRelationLabel(relation)})',
       signatureHash: sha256Hex(signaturePng),
+      estimateDeclinedReason: estimateDeclinedReason,
       at: t,
     );
     for (final l in editor.lines) {

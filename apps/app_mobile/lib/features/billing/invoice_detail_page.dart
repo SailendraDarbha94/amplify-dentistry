@@ -1,12 +1,11 @@
 import 'package:ampdent_core/ampdent_core.dart';
-import 'package:ampdent_messaging/ampdent_messaging.dart';
 import 'package:ampdent_mobile/core/app_strings.dart';
 import 'package:ampdent_mobile/core/formatting.dart';
 import 'package:ampdent_mobile/core/providers.dart';
+import 'package:ampdent_mobile/features/recall/patient_messenger.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'billing_actions.dart';
 import 'billing_providers.dart';
@@ -77,6 +76,9 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
       });
     }
     final payments = ref.watch(invoicePaymentsProvider(_ref)).value ?? const [];
+    // Watched here so the clinic stream is live when the send button is
+    // tapped (an unwatched stream provider stays loading).
+    final clinic = ref.watch(currentClinicProvider).value;
     final notation = ref.watch(notationProvider);
     final open =
         inv.status == InvoiceStatus.issued ||
@@ -201,7 +203,9 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
             children: [
               OutlinedButton.icon(
                 key: const ValueKey('invoice-send'),
-                onPressed: () => _sendLink(p, inv, payments),
+                onPressed: clinic == null
+                    ? null
+                    : () => _sendLink(clinic, p, inv, payments),
                 icon: const Icon(Icons.chat_outlined),
                 label: Text(BillingStrings.sendLink),
               ),
@@ -281,39 +285,42 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
     }
   }
 
-  /// Queues the INVOICE_LINK / RECEIPT_LINK message in the log and opens the
-  /// WhatsApp deep link. The body carries only the number, amount and link.
+  /// Sends the INVOICE_LINK / RECEIPT_LINK message through the shared
+  /// [PatientMessenger]: opt-in check ([documentSendDecision]), guardian
+  /// routing for minors, and the message-log row closed as `sent` or
+  /// `cancelled` depending on whether WhatsApp opened. The body carries only
+  /// the number, amount and link.
   Future<void> _sendLink(
+    Clinic clinic,
     Patient patient,
     Invoice invoice,
     List<Payment> payments,
   ) async {
-    final clinic = ref.read(currentClinicProvider).value;
-    if (clinic == null) return;
-    final now = ref.read(clockProvider)();
-    final request = documentLinkRequest(
-      clinic: clinic,
-      patient: patient,
-      invoice: invoice,
-      lastPayment: payments.where((p) => !p.isRefund).lastOrNull,
-      now: now,
-    );
     try {
-      final text = request.render();
-      final uri = whatsappDeepLink(request.e164Phone, text);
-      await ref.read(messagingProvider).send(request);
-      final ok = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      ).catchError((_) => false);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok ? BillingStrings.linkQueued : BillingStrings.couldNotOpenApp,
-          ),
-        ),
+      final now = ref.read(clockProvider)();
+      final request = documentLinkRequest(
+        clinic: clinic,
+        patient: patient,
+        invoice: invoice,
+        lastPayment: payments.where((p) => !p.isRefund).lastOrNull,
+        now: now,
       );
+      final result = await ref
+          .read(patientMessengerProvider)
+          .send(
+            patient: patient,
+            clinic: clinic,
+            template: request.template,
+            variables: request.variables,
+            decide: documentSendDecision,
+          );
+      if (!mounted) return;
+      final text = !result.decision.allowed
+          ? sendDenialText(result.decision.reason)
+          : result.launched
+          ? BillingStrings.linkSent
+          : BillingStrings.couldNotOpenApp;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

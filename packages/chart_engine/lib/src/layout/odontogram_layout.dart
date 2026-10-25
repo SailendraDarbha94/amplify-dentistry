@@ -293,16 +293,19 @@ class OdontogramLayout {
         _RowSpec.arch(Arch.lower, Dentition.permanent),
       ];
     }
+    // The patient's right comes first in each arch (UR, UL, then LR, LL),
+    // the order a clinician reads a chart in; primary rows sit on the
+    // occlusal side of their permanent row, i.e. towards the arch midline.
     final mixed = spec.mixedDentition;
     return [
       _RowSpec.quadrant(Quadrant.upperRight, Dentition.permanent),
       if (mixed) _RowSpec.quadrant(Quadrant.upperRight, Dentition.primary),
       _RowSpec.quadrant(Quadrant.upperLeft, Dentition.permanent),
       if (mixed) _RowSpec.quadrant(Quadrant.upperLeft, Dentition.primary),
-      if (mixed) _RowSpec.quadrant(Quadrant.lowerLeft, Dentition.primary),
-      _RowSpec.quadrant(Quadrant.lowerLeft, Dentition.permanent),
       if (mixed) _RowSpec.quadrant(Quadrant.lowerRight, Dentition.primary),
       _RowSpec.quadrant(Quadrant.lowerRight, Dentition.permanent),
+      if (mixed) _RowSpec.quadrant(Quadrant.lowerLeft, Dentition.primary),
+      _RowSpec.quadrant(Quadrant.lowerLeft, Dentition.permanent),
     ];
   }
 }

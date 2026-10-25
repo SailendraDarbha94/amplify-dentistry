@@ -61,9 +61,12 @@ void main() {
         ),
         patientId: testPatientId,
         prescriber: testDentist(),
+        patient: await env.repos.patients.getById(testPatientId),
         now: _now,
       );
       expect(rx.verificationCode, 'ABC234');
+      expect(rx.patientSnapshot?.displayName, 'Asha Rao');
+      expect(rx.patientSnapshot?.ageYears, 36);
       expect(rx.prescriberRegistrationNumber, 'A-12345');
       expect(rx.prescriberQualifications, ['BDS']);
       expect(rx.lines.single.genericName, 'AMOXICILLIN');

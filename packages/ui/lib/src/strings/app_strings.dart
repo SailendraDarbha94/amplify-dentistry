@@ -58,6 +58,9 @@ class AppStrings {
     required this.syncing,
     required this.synced,
     required this.pendingChanges,
+    required this.notSyncedYet,
+    required this.changeWaiting,
+    required this.changesWaiting,
     required this.syncFailed,
     required this.search,
     required this.searchHint,
@@ -263,6 +266,15 @@ class AppStrings {
   /// Suffix after a count: "3 changes waiting to sync".
   final String pendingChanges;
 
+  /// Banner lead while no sync backend exists: nothing has left the device.
+  final String notSyncedYet;
+
+  /// Singular suffix after a count: "1 change waiting".
+  final String changeWaiting;
+
+  /// Plural suffix after a count: "3 changes waiting".
+  final String changesWaiting;
+
   /// Sync failure.
   final String syncFailed;
 
@@ -419,4 +431,8 @@ class AppStrings {
 
   /// "3 changes waiting to sync" style sentence.
   String pendingChangesCount(int count) => '$count $pendingChanges';
+
+  /// "1 change waiting" / "3 changes waiting".
+  String changesWaitingCount(int count) =>
+      '$count ${count == 1 ? changeWaiting : changesWaiting}';
 }

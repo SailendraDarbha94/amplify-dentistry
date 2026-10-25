@@ -102,6 +102,16 @@ class _PlanBuilderPageState extends ConsumerState<PlanBuilderPage>
     );
     final frozen = e.isFrozen;
     final now = ref.watch(clockProvider)();
+    final latest = latestEstimate(estimates);
+    final String? integrityNote = e.plan.isAccepted
+        ? (snapshotIntact(e.plan, e.lines) == false
+              ? PlanStrings.snapshotMismatch
+              : null)
+        : (latest != null &&
+                  estimateMatchesPlan(latest, e.plan, e.lines) == false
+              ? 'Plan changed since estimate v${latest.version}. Issue a new '
+                    'estimate before accepting.'
+              : null);
     return Scaffold(
       appBar: AppBar(
         title: Text('${e.plan.title}  v${e.plan.version}'),
@@ -226,6 +236,28 @@ class _PlanBuilderPageState extends ConsumerState<PlanBuilderPage>
                     ),
                   ],
                 ),
+              ),
+            ),
+          if (integrityNote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Row(
+                key: const ValueKey('plan-estimate-changed'),
+                children: [
+                  Icon(
+                    Icons.warning_amber_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      integrityNote,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           if (e.plan.presentedAt != null && !e.plan.isAccepted)

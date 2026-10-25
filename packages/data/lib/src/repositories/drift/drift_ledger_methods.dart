@@ -2,7 +2,7 @@ import 'package:ampdent_core/ampdent_core.dart';
 import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
-import '../../db/settings_codec.dart';
+import '../../db/converters.dart';
 import '../actor_context.dart';
 import '../billing_repository.dart';
 import 'audited_writer.dart';
@@ -71,18 +71,16 @@ mixin DriftLedgerMethods
     );
   }
 
-  /// Mints the next local `DRAFT-INV-...` number.
-  Future<String> mintDraftNumber(ActorContext ctx, DateTime now) async {
-    final n = await nextCounter(ctx, SettingKeys.draftInvoiceCounter);
-    return draftNumber('INV', now, n);
-  }
-
   // ---------------------------------------------------------------------------
   // Payments and adjustments
   // ---------------------------------------------------------------------------
 
   @override
-  Future<Payment> recordPayment(ActorContext ctx, Payment payment) {
+  Future<Payment> recordPayment(
+    ActorContext ctx,
+    Payment payment, {
+    bool allowAdvance = false,
+  }) {
     checkTenant(ctx, payment.clinicId, 'payment.clinicId');
     if (payment.amount <= const Money.zero()) {
       throw ArgumentError.value(payment.amount, 'amount', 'must be positive');
@@ -95,6 +93,21 @@ mixin DriftLedgerMethods
         throw StateError('Payment ${payment.id} is append-only');
       }
       final now = payment.receivedAt.toUtc();
+      final invoiceId = payment.invoiceId;
+      final invoice = invoiceId == null ? null : await getInvoice(invoiceId);
+      if (invoiceId != null) {
+        if (invoice == null) throw StateError('Invoice $invoiceId not found');
+        _validateAgainstInvoice(payment, invoice, allowAdvance: allowAdvance);
+      } else if (payment.isRefund) {
+        final credit = -(await patientBalance(payment.patientId));
+        if (payment.amount > credit) {
+          throw ArgumentError.value(
+            payment.amount,
+            'amount',
+            'refund exceeds the credit on account (${credit.format()})',
+          );
+        }
+      }
       final saved = await audited<Payment>(
         ctx: ctx,
         table: _payments,
@@ -119,16 +132,7 @@ mixin DriftLedgerMethods
             '${payment.reference == null ? '' : ' ${payment.reference}'}',
         at: now,
       );
-      final invoiceId = payment.invoiceId;
-      if (invoiceId != null) {
-        final invoice = await getInvoice(invoiceId);
-        if (invoice == null) throw StateError('Invoice $invoiceId not found');
-        if (invoice.status == InvoiceStatus.draft ||
-            invoice.status == InvoiceStatus.voided) {
-          throw StateError(
-            'Cannot apply a payment to a ${invoice.status.name} invoice',
-          );
-        }
+      if (invoice != null) {
         final paid = payment.isRefund
             ? invoice.amountPaid - payment.amount
             : invoice.amountPaid + payment.amount;
@@ -148,10 +152,72 @@ mixin DriftLedgerMethods
     });
   }
 
+  /// Rejects a payment that does not fit [invoice]: another patient's
+  /// invoice, a draft or voided invoice, an overpayment without the advance
+  /// flag, or a refund larger than what was paid.
+  void _validateAgainstInvoice(
+    Payment payment,
+    Invoice invoice, {
+    required bool allowAdvance,
+  }) {
+    if (invoice.patientId != payment.patientId) {
+      throw ArgumentError.value(
+        payment.patientId,
+        'patientId',
+        'invoice ${invoice.number} belongs to another patient',
+      );
+    }
+    if (invoice.status == InvoiceStatus.draft ||
+        invoice.status == InvoiceStatus.voided) {
+      throw StateError(
+        'Cannot apply a payment to a ${invoice.status.name} invoice',
+      );
+    }
+    if (payment.isRefund) {
+      if (payment.amount > invoice.amountPaid) {
+        throw ArgumentError.value(
+          payment.amount,
+          'amount',
+          'refund exceeds the amount paid (${invoice.amountPaid.format()})',
+        );
+      }
+    } else if (!allowAdvance && payment.amount > invoice.balance) {
+      throw ArgumentError.value(
+        payment.amount,
+        'amount',
+        'exceeds the invoice balance (${invoice.balance.format()}); '
+            'record the excess as an advance',
+      );
+    }
+  }
+
   @override
   Future<List<Payment>> paymentsForPatient(String patientId) =>
       (select(_payments)
             ..where((t) => t.patientId.equals(patientId))
+            ..orderBy([(t) => OrderingTerm.desc(t.receivedAt)]))
+          .get();
+
+  @override
+  Future<List<Payment>> paymentsForClinic(
+    String clinicId, {
+    DateTime? from,
+    DateTime? to,
+  }) =>
+      (select(_payments)
+            ..where((t) {
+              var where = t.clinicId.equals(clinicId);
+              if (from != null) {
+                where =
+                    where &
+                    t.receivedAt.isBiggerOrEqualValue(encodeIsoUtc(from));
+              }
+              if (to != null) {
+                where =
+                    where & t.receivedAt.isSmallerThanValue(encodeIsoUtc(to));
+              }
+              return where;
+            })
             ..orderBy([(t) => OrderingTerm.desc(t.receivedAt)]))
           .get();
 

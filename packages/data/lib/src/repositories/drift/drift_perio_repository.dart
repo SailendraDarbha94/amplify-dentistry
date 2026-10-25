@@ -19,18 +19,36 @@ class DriftPerioRepository extends DatabaseAccessor<AppDatabase>
   @override
   Future<PerioExam> saveExam(ActorContext ctx, PerioExam exam) {
     checkTenant(ctx, exam.clinicId, 'exam.clinicId');
+    final seen = <String>{};
+    for (final s in exam.sites) {
+      if (!seen.add('${s.tooth.storageKey}/${s.site.name}')) {
+        throw ArgumentError.value(
+          '${s.tooth.fdi} ${s.site.name}',
+          'exam.sites',
+          'recorded twice in one exam',
+        );
+      }
+    }
     return writeTransaction(() async {
-      final before = await getExam(exam.id);
-      final saved = await audited(
+      // Exams are snapshots: a re-examination is a new exam id. Saving an
+      // existing id would rewrite history (and would have to replace the
+      // flattened readings), so it is refused outright.
+      if (await getExam(exam.id) != null) {
+        throw StateError(
+          'PerioExam ${exam.id} is append-only; record a new exam instead',
+        );
+      }
+      final saved = await audited<PerioExam>(
         ctx: ctx,
         table: _exams,
         entityType: 'PerioExam',
         entityId: exam.id,
-        before: before,
+        before: null,
         after: exam,
         insertable: exam.toInsertable(),
         toJson: (e) => e.toJson(),
       );
+      // Plain inserts: readings are never replaced or removed.
       await batch((b) {
         for (final s in exam.sites) {
           b.insert(
@@ -50,7 +68,6 @@ class DriftPerioRepository extends DatabaseAccessor<AppDatabase>
               calculus: s.calculus,
               mucogingivalJunction: Value(s.mucogingivalJunction),
             ),
-            mode: InsertMode.insertOrReplace,
           );
         }
       });

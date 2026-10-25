@@ -62,6 +62,7 @@ void main() {
       expect(classifyProcedure('BRG-PFM-UNIT'), ProcedureKind.crown);
       expect(classifyProcedure('EXT-SIMPLE'), ProcedureKind.extraction);
       expect(classifyProcedure('IMP-PLACE'), ProcedureKind.implant);
+      expect(classifyProcedure('IMP-REMOVE'), ProcedureKind.explant);
       expect(classifyProcedure('COMP-POST-2'), ProcedureKind.restoration);
       expect(classifyProcedure('GIC-1'), ProcedureKind.restoration);
       expect(classifyProcedure('PFS'), ProcedureKind.sealant);
@@ -84,6 +85,7 @@ void main() {
       expect(procedureNeedsPreOpRadiograph(ProcedureKind.rootCanal), isTrue);
       expect(procedureNeedsPreOpRadiograph(ProcedureKind.extraction), isTrue);
       expect(procedureNeedsPreOpRadiograph(ProcedureKind.implant), isTrue);
+      expect(procedureNeedsPreOpRadiograph(ProcedureKind.explant), isTrue);
       expect(procedureNeedsPreOpRadiograph(ProcedureKind.crown), isTrue);
       expect(procedureNeedsPreOpRadiograph(ProcedureKind.restoration), isFalse);
       expect(
@@ -162,6 +164,14 @@ void main() {
         ),
         isNull,
       );
+      // Removing an implant leaves a gap, like an extraction.
+      expect(
+        overlayForProcedure(
+          _procedure('IMP-REMOVE', status: ProcedureStatus.completed),
+          ProcedureKind.explant,
+        )!.kind,
+        OverlayKind.missing,
+      );
     });
 
     test('findings: caries carries surfaces, resolved draws nothing', () {
@@ -225,22 +235,30 @@ void main() {
   });
 
   group('checkPreOpRadiograph', () {
-    ImageRecord image(String id, ImageKind kind, List<String> teeth) =>
-        ImageRecord(
-          id: id,
-          clinicId: 'c',
-          patientId: 'pt',
-          kind: kind,
-          filePath: '/tmp/$id.jpg',
-          capturedAt: DateTime.utc(2026, 10, 1),
-          teeth: teeth.map(ToothId.parse).toList(),
-          createdAt: DateTime.utc(2026, 10, 1),
-        );
+    final at = DateTime.utc(2026, 10, 20, 10);
+    ImageRecord image(
+      String id,
+      ImageKind kind,
+      List<String> teeth, {
+      DateTime? capturedAt,
+      bool isPreOperative = false,
+    }) => ImageRecord(
+      id: id,
+      clinicId: 'c',
+      patientId: 'pt',
+      kind: kind,
+      filePath: '/tmp/$id.jpg',
+      capturedAt: capturedAt ?? DateTime.utc(2026, 10, 1),
+      teeth: teeth.map(ToothId.parse).toList(),
+      isPreOperative: isPreOperative,
+      createdAt: DateTime.utc(2026, 10, 1),
+    );
 
     test('blocks an endo start with nothing on record', () {
       final check = checkProcedurePreOp(
         _procedure('RCT-MOL'),
         kind: ProcedureKind.rootCanal,
+        at: at,
         images: [
           image('photo', ImageKind.photoIntraoral, ['16']),
         ],
@@ -250,10 +268,11 @@ void main() {
       expect(check.candidates, isEmpty);
     });
 
-    test('auto-attaches a periapical of the same tooth', () {
+    test('auto-attaches a recent periapical of the same tooth', () {
       final check = checkProcedurePreOp(
         _procedure('RCT-MOL'),
         kind: ProcedureKind.rootCanal,
+        at: at,
         images: [
           image('iopa', ImageKind.periapical, ['16']),
           image('other', ImageKind.periapical, ['36']),
@@ -264,11 +283,69 @@ void main() {
       expect(check.candidates.length, 2);
     });
 
+    test('an old film does not count unless it is marked pre-operative', () {
+      final old = image('old', ImageKind.periapical, [
+        '16',
+      ], capturedAt: at.subtract(const Duration(days: 91)));
+      final stale = checkProcedurePreOp(
+        _procedure('RCT-MOL'),
+        kind: ProcedureKind.rootCanal,
+        at: at,
+        images: [old],
+      );
+      expect(stale.outcome, PreOpOutcome.missing);
+      // Still offered for a manual attach.
+      expect(stale.candidates.map((i) => i.id), ['old']);
+
+      final edge = checkProcedurePreOp(
+        _procedure('RCT-MOL'),
+        kind: ProcedureKind.rootCanal,
+        at: at,
+        images: [
+          image('edge', ImageKind.periapical, [
+            '16',
+          ], capturedAt: at.subtract(const Duration(days: 90))),
+        ],
+      );
+      expect(edge.attachedImageIds, ['edge']);
+
+      final flagged = checkProcedurePreOp(
+        _procedure('RCT-MOL'),
+        kind: ProcedureKind.rootCanal,
+        at: at,
+        images: [
+          image(
+            'flagged',
+            ImageKind.periapical,
+            ['16'],
+            capturedAt: at.subtract(const Duration(days: 400)),
+            isPreOperative: true,
+          ),
+        ],
+      );
+      expect(flagged.outcome, PreOpOutcome.satisfied);
+      expect(flagged.attachedImageIds, ['flagged']);
+
+      // A film taken after the start is not a pre-op film.
+      final later = checkProcedurePreOp(
+        _procedure('RCT-MOL'),
+        kind: ProcedureKind.rootCanal,
+        at: at,
+        images: [
+          image('later', ImageKind.periapical, [
+            '16',
+          ], capturedAt: at.add(const Duration(days: 1))),
+        ],
+      );
+      expect(later.outcome, PreOpOutcome.missing);
+    });
+
     test('does not ask again once work is in progress or reasoned', () {
       expect(
         checkProcedurePreOp(
           _procedure('RCT-MOL', status: ProcedureStatus.inProgress),
           kind: ProcedureKind.rootCanal,
+          at: at,
         ).outcome,
         PreOpOutcome.notRequired,
       );
@@ -276,13 +353,18 @@ void main() {
         'RCT-MOL',
       ).copyWith(note: appendPreOpReason(null, 'Patient pregnant, deferred'));
       expect(
-        checkProcedurePreOp(reasoned, kind: ProcedureKind.rootCanal).outcome,
+        checkProcedurePreOp(
+          reasoned,
+          kind: ProcedureKind.rootCanal,
+          at: at,
+        ).outcome,
         PreOpOutcome.satisfied,
       );
       expect(
         checkProcedurePreOp(
           _procedure('COMP-POST-2'),
           kind: ProcedureKind.restoration,
+          at: at,
         ).outcome,
         PreOpOutcome.notRequired,
       );

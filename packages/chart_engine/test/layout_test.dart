@@ -90,11 +90,12 @@ void main() {
       expect(layout.rows.map((r) => r.quadrant), [
         Quadrant.upperRight,
         Quadrant.upperLeft,
-        Quadrant.lowerLeft,
         Quadrant.lowerRight,
+        Quadrant.lowerLeft,
       ]);
       expect(layout.midlineX, isNull);
       expect(layout.overflowsWidth, isFalse);
+      expect(layout.size.width, 360);
       expect(layout.shapes.length, 32);
       // 11 sits at the right end of its row, 21 at the left end of the next.
       expect(
@@ -106,6 +107,51 @@ void main() {
         layout.cells[_t('21')]!.top,
         greaterThan(layout.cells[_t('11')]!.bottom),
       );
+    });
+
+    test('compact rows keep the patient right first in both arches', () {
+      final layout = OdontogramLayout.compute(
+        OdontogramLayoutSpec(
+          availableWidth: 360,
+          visibleTeeth: adultVisible,
+          compact: true,
+        ),
+      );
+      double top(String fdi) => layout.cells[_t(fdi)]!.top;
+      // UR above UL above LR above LL.
+      expect(top('18'), lessThan(top('28')));
+      expect(top('28'), lessThan(top('48')));
+      expect(top('48'), lessThan(top('38')));
+      // Within each row the molar sits on the outside, as in the mouth.
+      expect(
+        layout.cells[_t('48')]!.left,
+        lessThan(layout.cells[_t('41')]!.left),
+      );
+      expect(
+        layout.cells[_t('31')]!.left,
+        lessThan(layout.cells[_t('38')]!.left),
+      );
+    });
+
+    test('compact mixed rows put primary rows towards the midline', () {
+      final layout = OdontogramLayout.compute(
+        OdontogramLayoutSpec(
+          availableWidth: 360,
+          visibleTeeth: visibleTeeth(defaultToothStates(ageYears: 8)),
+          compact: true,
+          mixedDentition: true,
+        ),
+      );
+      expect(layout.rows.map((r) => (r.quadrant, r.dentition)), [
+        (Quadrant.upperRight, Dentition.permanent),
+        (Quadrant.upperRight, Dentition.primary),
+        (Quadrant.upperLeft, Dentition.permanent),
+        (Quadrant.upperLeft, Dentition.primary),
+        (Quadrant.lowerRight, Dentition.primary),
+        (Quadrant.lowerRight, Dentition.permanent),
+        (Quadrant.lowerLeft, Dentition.primary),
+        (Quadrant.lowerLeft, Dentition.permanent),
+      ]);
     });
   });
 

@@ -2,7 +2,6 @@ import 'package:ampdent_core/ampdent_core.dart';
 import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
-import '../../db/settings_codec.dart';
 import '../actor_context.dart';
 import '../treatment_plan_repository.dart';
 import 'audited_writer.dart';
@@ -67,10 +66,7 @@ mixin DriftEstimateMethods
     return writeTransaction(() async {
       final before = await getEstimate(estimate.id);
       var number = estimate.number;
-      if (number.isEmpty) {
-        final n = await nextCounter(ctx, SettingKeys.draftEstimateCounter);
-        number = draftNumber('EST', nowUtc(), n);
-      }
+      if (number.isEmpty) number = await mintLocalDraftNumber(ctx, 'EST');
       final after = estimate.copyWith(number: number);
       if (after.planId != null) {
         final previous = await estimatesForPlan(after.planId!);
@@ -121,7 +117,8 @@ mixin DriftEstimateMethods
     var discountTotal = const Money.zero();
     var taxTotal = const Money.zero();
     var grandTotal = const Money.zero();
-    for (final l in await linesForPlan(planId)) {
+    final planLines = await linesForPlan(planId);
+    for (final l in planLines) {
       if (l.isAlternative) continue;
       final rate = table.rateFor(l.gstClass, at: now).ratePercent;
       final taxable = l.net;
@@ -165,6 +162,10 @@ mixin DriftEstimateMethods
         justification: justification,
         validUntil: validUntil,
         status: EstimateStatus.issued,
+        // Bound to the plan version and lines the patient saw, so acceptance
+        // can tell when the plan changed after the estimate was issued.
+        planVersion: plan.version,
+        planSnapshotHash: computePlanSnapshotHash(plan, planLines),
         createdAt: now,
       ),
     );

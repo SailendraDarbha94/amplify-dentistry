@@ -32,6 +32,7 @@ class InvoiceLine {
   const InvoiceLine({
     required this.id,
     this.procedureId,
+    this.stageIndex,
     this.catalogItemId,
     required this.description,
     this.tooth,
@@ -51,6 +52,10 @@ class InvoiceLine {
 
   /// Procedure billed, if any.
   final String? procedureId;
+
+  /// For multi-sitting work, the 0-based stage this line bills (one
+  /// instalment of the fee per stage). Null bills the whole procedure.
+  final int? stageIndex;
 
   /// Catalogue item, if any.
   final String? catalogItemId;
@@ -107,6 +112,7 @@ class InvoiceLine {
   }) => InvoiceLine(
     id: id,
     procedureId: procedureId,
+    stageIndex: stageIndex,
     catalogItemId: catalogItemId,
     description: description ?? this.description,
     tooth: tooth ?? this.tooth,
@@ -125,6 +131,7 @@ class InvoiceLine {
   Map<String, Object?> toJson() => {
     'id': id,
     'procedureId': procedureId,
+    'stageIndex': stageIndex,
     'catalogItemId': catalogItemId,
     'description': description,
     'tooth': toothToJson(tooth),
@@ -143,6 +150,7 @@ class InvoiceLine {
   factory InvoiceLine.fromJson(Map<String, Object?> json) => InvoiceLine(
     id: json['id'] as String,
     procedureId: json['procedureId'] as String?,
+    stageIndex: json['stageIndex'] as int?,
     catalogItemId: json['catalogItemId'] as String?,
     description: json['description'] as String,
     tooth: toothFromJsonOrNull(json['tooth']),

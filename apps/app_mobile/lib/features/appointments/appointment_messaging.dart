@@ -51,6 +51,9 @@ class AppointmentSendOutcome {
 
 /// Human-readable explanation for an [OptInPolicy] denial reason.
 String sendDenialMessage(String reason) => switch (reason) {
+  'age_unknown' =>
+    'Record the patient\'s date of birth or age first: a minor\'s messages '
+        'must go to the guardian',
   'transactional_consent_missing' =>
     'No appointment-reminder consent recorded for this patient',
   'minor_not_routed_to_guardian' =>
@@ -91,13 +94,19 @@ class AppointmentMessenger {
   final DateTime Function() clock;
 
   /// Opt-in decision for a utility message to [patient] given the full
-  /// consent ledger. Minors are only messaged through a guardian phone.
+  /// consent ledger. Minors are only messaged through a guardian phone, and
+  /// a patient whose age is unknown is not messaged at all (they may be a
+  /// minor), matching the care-plan reminder rule.
   static SendDecision decide({
     required Patient patient,
     required Iterable<DataConsent> consents,
     required DateTime now,
   }) {
-    final minor = patient.isMinor(now);
+    final age = patient.ageStatus(now);
+    if (age == AgeStatus.unknown) {
+      return const SendDecision.deny('age_unknown');
+    }
+    final minor = age == AgeStatus.minor;
     final guardianPhone = patient.guardianPhone ?? '';
     return OptInPolicy.canSend(
       category: MessageCategory.utility,

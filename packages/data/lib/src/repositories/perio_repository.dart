@@ -24,7 +24,10 @@ class PerioSitePoint {
 /// Periodontal exams. Exams are append-only snapshots; site readings are
 /// also flattened into a queryable table.
 abstract class PerioRepository {
-  /// Stores an exam (and its flattened site readings).
+  /// Stores a new exam (and its flattened site readings). Exams are
+  /// append-only: an id that already exists throws [StateError]; a
+  /// re-examination is saved under a new id. A site listed twice throws
+  /// [ArgumentError].
   Future<PerioExam> saveExam(ActorContext ctx, PerioExam exam);
 
   /// Exam by id.

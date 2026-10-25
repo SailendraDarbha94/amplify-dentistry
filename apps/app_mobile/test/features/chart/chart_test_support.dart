@@ -27,6 +27,9 @@ const ActorContext testCtx = ActorContext(
 /// chart tests compile independently of the billing feature.
 const String billingStubText = 'billing-stub';
 
+/// Route the consent guard's `Get consent` action lands on; stubbed too.
+const String consentStubText = 'consent-stub';
+
 /// In-memory database, repositories and a provider container wired like the
 /// app, with a router that mounts only the chart routes (plus stubs for the
 /// routes the chart navigates to). Independent of the other features so
@@ -100,6 +103,12 @@ class ChartTestEnv {
             body: Center(child: Text('$billingStubText ${state.uri.query}')),
           ),
         ),
+        GoRoute(
+          path: '/patients/:id/consent/new',
+          builder: (context, state) => Scaffold(
+            body: Center(child: Text('$consentStubText ${state.uri.query}')),
+          ),
+        ),
       ],
     );
     _router = router;
@@ -134,6 +143,59 @@ class ChartTestEnv {
     testCtx,
     patient.copyWith(
       patientNumber: await repos.clinics.nextPatientNumber(testCtx),
+    ),
+  );
+
+  /// Records a signed procedure consent on [templateCode] for the fixture
+  /// patient, covering [procedureIds].
+  Future<ConsentRecord> signConsent(
+    String templateCode, {
+    List<String> procedureIds = const [],
+    String patientId = testPatientId,
+  }) {
+    final t = DateTime.utc(2026, 10, 20, 9);
+    return repos.consents.recordConsent(
+      testCtx,
+      ConsentRecord(
+        id: 'consent-$templateCode-${procedureIds.join('-')}',
+        clinicId: testClinicId,
+        patientId: patientId,
+        templateCode: templateCode,
+        templateVersionHash: 'hash',
+        languageCode: 'en',
+        procedureIds: procedureIds,
+        renderedText: 'I consent.',
+        signerName: 'Asha Rao',
+        signerRelation: SignerRelation.self,
+        signedAt: t,
+        dentistId: testDentistId,
+        dentistRegistrationNumber: 'A-12345',
+        deviceId: testDeviceId,
+        documentHash: 'doc',
+        createdAt: t,
+      ),
+    );
+  }
+
+  /// Stores a radiograph of [teeth] captured at [capturedAt].
+  Future<ImageRecord> addRadiograph({
+    required String id,
+    required List<String> teeth,
+    required DateTime capturedAt,
+    bool isPreOperative = false,
+    String patientId = testPatientId,
+  }) => repos.clinical.addImage(
+    testCtx,
+    ImageRecord(
+      id: id,
+      clinicId: testClinicId,
+      patientId: patientId,
+      kind: ImageKind.periapical,
+      filePath: '/tmp/$id.jpg',
+      capturedAt: capturedAt,
+      teeth: teeth.map(ToothId.parse).toList(),
+      isPreOperative: isPreOperative,
+      createdAt: capturedAt,
     ),
   );
 

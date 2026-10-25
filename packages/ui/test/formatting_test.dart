@@ -130,7 +130,8 @@ void main() {
       await tester.pumpWidget(
         testApp(const OfflineBanner(isOffline: false, pendingCount: 2)),
       );
-      expect(find.textContaining('Syncing'), findsOneWidget);
+      expect(find.text('Not synced yet - 2 changes waiting'), findsOneWidget);
+      expect(find.textContaining('Syncing'), findsNothing);
     });
 
     testWidgets(
@@ -235,6 +236,9 @@ void main() {
         syncing: 's',
         synced: 's',
         pendingChanges: 'p',
+        notSyncedYet: 'n',
+        changeWaiting: 'cw',
+        changesWaiting: 'cws',
         syncFailed: 's',
         search: 's',
         searchHint: 's',

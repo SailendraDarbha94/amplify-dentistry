@@ -30,10 +30,23 @@ abstract class BillingRepository {
   /// the clinic's GST registration, freezes the treating dentist on the row
   /// (the billed procedures' provider, else the clinic's owner dentist;
   /// throws [NoRegisteredClinician] when neither has a registration number)
-  /// and posts the charge to the ledger.
+  /// and posts the charge to the ledger. Throws [StateError] when a line
+  /// bills a procedure stage that a non-void invoice already carries.
   Future<Invoice> issueInvoice(
     ActorContext ctx,
     String invoiceId, {
+    GstRateTable? rates,
+    DateTime? at,
+  });
+
+  /// Saves [draft] and issues it in one transaction: the invoice row, the
+  /// procedure stages it marks billed (its lines), the ledger charge and the
+  /// audit/outbox rows are all written or none are, so a failure can never
+  /// strand a `DRAFT-` invoice whose procedures vanish from billing. Same
+  /// rules and errors as [saveDraft] followed by [issueInvoice].
+  Future<Invoice> issueDraft(
+    ActorContext ctx,
+    Invoice draft, {
     GstRateTable? rates,
     DateTime? at,
   });
@@ -72,10 +85,37 @@ abstract class BillingRepository {
   /// Issued or partially paid invoices of the clinic.
   Future<List<Invoice>> outstandingInvoices(String clinicId);
 
+  /// Invoices of the whole clinic issued in `[from, to)` (both optional),
+  /// newest first; drafts included so a month report can skip them itself.
+  Future<List<Invoice>> invoicesForClinic(
+    String clinicId, {
+    DateTime? from,
+    DateTime? to,
+  });
+
+  /// Payments (and refunds) of the whole clinic received in `[from, to)`,
+  /// newest first.
+  Future<List<Payment>> paymentsForClinic(
+    String clinicId, {
+    DateTime? from,
+    DateTime? to,
+  });
+
   /// Records a payment (or refund when `isRefund`), posts it to the ledger
   /// and, when linked to an invoice, updates `amountPaid` and the status
   /// (`partiallyPaid` / `paid`).
-  Future<Payment> recordPayment(ActorContext ctx, Payment payment);
+  ///
+  /// Validation ([ArgumentError]): the amount must be positive; a payment
+  /// linked to an invoice must carry that invoice's patient and may not
+  /// exceed its balance unless [allowAdvance] is set (the excess then stays
+  /// as credit on the ledger); an unlinked payment is an advance and needs
+  /// no flag; a refund may not exceed the invoice's `amountPaid` (or, when
+  /// unlinked, the patient's credit on account).
+  Future<Payment> recordPayment(
+    ActorContext ctx,
+    Payment payment, {
+    bool allowAdvance = false,
+  });
 
   /// Payments for a patient, newest first.
   Future<List<Payment>> paymentsForPatient(String patientId);

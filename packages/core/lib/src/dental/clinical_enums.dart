@@ -131,19 +131,39 @@ enum PerioMeasurementType {
 
 /// UK BSP Basic Periodontal Examination codes per sextant. Code 3 unlocks a
 /// six-point chart for that sextant, 4 unlocks full-mouth charting.
+///
+/// The numeric codes 0-4 are the model. Furcation involvement is a separate
+/// per-sextant flag (`PerioExam.bpeFurcation`) so a sextant can carry a code
+/// *and* a `*`, as the BSP form does. Records written before the flag
+/// existed stored `*` as the code; [isFurcationMarker] recognises it and
+/// `PerioExam.fromJson` moves it into the flag.
 enum BpeCode {
   code0('0'),
   code1('1'),
   code2('2'),
   code3('3'),
-  code4('4'),
-  furcation('*');
+  code4('4');
 
   const BpeCode(this.label);
   final String label;
 
   bool get requiresSextantChart => this == code3;
   bool get requiresFullMouthChart => this == code4;
+
+  /// Whether a stored value is the legacy furcation marker (`*` or the old
+  /// enum name `furcation`), which is a flag, not a code.
+  static bool isFurcationMarker(Object? value) =>
+      value == '*' || value == 'furcation';
+
+  /// Parses a stored value: the enum name (`code3`) or the printed label
+  /// (`3`). Throws [FormatException] otherwise, including for the legacy
+  /// furcation marker (see [isFurcationMarker]).
+  static BpeCode parse(Object? value) {
+    for (final c in values) {
+      if (c.name == value || c.label == value) return c;
+    }
+    throw FormatException('Unknown BpeCode', value);
+  }
 }
 
 /// 2017 AAP/EFP periodontitis staging and grading (clinician-entered).
