@@ -141,7 +141,9 @@ class _PrescriptionDetailPageState
     if (!mounted) return;
     if (!result.decision.allowed) {
       _toast(sendDenialText(result.decision.reason));
-    } else if (!result.launched) {
+    } else if (result.queued) {
+      _toast(MobileStrings.queuedForDelivery);
+    } else if (result.launchFailed) {
       _toast('WhatsApp is not available on this phone');
     }
   });

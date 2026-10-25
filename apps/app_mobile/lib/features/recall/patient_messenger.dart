@@ -1,6 +1,7 @@
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_data/ampdent_data.dart';
 import 'package:ampdent_messaging/ampdent_messaging.dart';
+import 'package:ampdent_mobile/core/cloud_messaging.dart';
 import 'package:ampdent_mobile/core/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
@@ -125,6 +126,7 @@ class PatientMessageResult {
     required this.decision,
     this.log,
     this.launched = false,
+    this.queued = false,
   });
 
   /// The opt-in decision; when denied nothing was logged or launched.
@@ -136,8 +138,15 @@ class PatientMessageResult {
   /// Whether the OS opened the WhatsApp / SMS link.
   final bool launched;
 
-  /// Whether the message left the device.
-  bool get sent => launched && log != null;
+  /// Whether the row was queued for the Cloud API (the server sends it; no
+  /// link was opened and the status stays `queued` until the server reports).
+  final bool queued;
+
+  /// Whether the message left the device or is on its way via the server.
+  bool get sent => log != null && (launched || queued);
+
+  /// Whether a deep link was needed and could not be opened.
+  bool get launchFailed => log != null && !launched && !queued;
 }
 
 /// Sends one templated utility message to a patient: opt-in check, render
@@ -217,6 +226,15 @@ class PatientMessenger {
       return const PatientMessageResult(
         decision: SendDecision.deny('invalid_phone'),
       );
+    } on OptInRefusedException catch (e) {
+      return PatientMessageResult(decision: e.decision);
+    }
+    if (isCloudApiLog(log)) {
+      _log.info(
+        'queued ${template.code} to ${PhoneNumbers.mask(log.toPhone)} '
+        'for the Cloud API',
+      );
+      return PatientMessageResult(decision: decision, log: log, queued: true);
     }
     final uri = log.channel == MessageChannel.sms
         ? smsDeepLink(log.toPhone, log.renderedPreview)

@@ -32,6 +32,28 @@ abstract final class MobileStrings {
   static const String guardianRequiredForMinor =
       'Guardian name and phone are required for patients under 18';
 
+  /// Sign-in page title on a fresh install.
+  static const String signInOrContinueOffline = 'Sign in or continue offline';
+
+  /// Link that skips sign-in on a fresh install.
+  static const String continueOffline = 'Continue offline';
+
+  /// Shown wherever a cloud feature needs a project that is not set up.
+  static const String cloudNotConfigured = 'Cloud not configured';
+
+  /// How to set the cloud up (shown under [cloudNotConfigured]).
+  static const String cloudNotConfiguredHelp =
+      'Run the app with --dart-define-from-file=env.json carrying '
+      'SUPABASE_URL and SUPABASE_ANON_KEY. Until then everything stays on '
+      'this phone and WhatsApp messages open from it. See docs/SETUP-CLOUD.md.';
+
+  /// Snackbar when a message was queued for the Cloud API.
+  static const String queuedForDelivery =
+      'Queued; WhatsApp delivery is handled by the server';
+
+  /// Path of the founder's setup guide in the repository.
+  static const String setupGuidePath = 'docs/SETUP-CLOUD.md';
+
   /// Data-ownership statement shown on the About page.
   static const String dataOwnership =
       'Your clinic owns its data. A full export of every patient record, '

@@ -48,6 +48,23 @@ class MessageRequest {
   /// Renders the template; throws [ArgumentError] on missing variables.
   String render() => template.render(variables);
 
+  /// Returns a copy with the given fields replaced.
+  MessageRequest copyWith({
+    String? clinicId,
+    String? patientId,
+    String? toPhone,
+    MessageTemplate? template,
+    Map<String, String>? variables,
+    MessageCategory? category,
+  }) => MessageRequest(
+    clinicId: clinicId ?? this.clinicId,
+    patientId: patientId ?? this.patientId,
+    toPhone: toPhone ?? this.toPhone,
+    template: template ?? this.template,
+    variables: variables ?? this.variables,
+    category: category ?? _category,
+  );
+
   /// Builds the [MessageLog] row for this request.
   MessageLog toLog({
     required String id,

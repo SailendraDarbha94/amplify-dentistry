@@ -541,7 +541,7 @@ begin
   where schemaname = 'public' and cmd = 'DELETE'
     and tablename in ('procedures', 'findings', 'tooth_state_records', 'consent_records', 'data_consents',
                       'clinical_notes', 'perio_exams', 'prescriptions', 'invoices', 'payments',
-                      'ledger_entries', 'audit_events', 'message_logs');
+                      'ledger_entries', 'audit_events', 'message_logs', 'devices', 'clinic_whatsapp_configs');
   if offenders is not null then raise exception 'unexpected delete policies: %', offenders; end if;
 end
 $$;

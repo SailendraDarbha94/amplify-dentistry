@@ -5,6 +5,7 @@
 library;
 
 import 'package:ampdent_mobile/features/appointments/routes.dart';
+import 'package:ampdent_mobile/features/auth/routes.dart';
 import 'package:ampdent_mobile/features/billing/routes.dart';
 import 'package:ampdent_mobile/features/chart/routes.dart';
 import 'package:ampdent_mobile/features/compliance/routes.dart';
@@ -36,18 +37,33 @@ const String homeLocation = '/today';
 /// First-run flow location.
 const String onboardingLocation = '/onboarding';
 
+/// Sign-in page (step 0 of a fresh install when the cloud is configured;
+/// also reachable later from Settings > Account).
+const String signInLocation = '/sign-in';
+
 /// Decides where a navigation must be redirected given whether a clinic
-/// exists. Returns null to allow [location] unchanged.
-String? sessionRedirect({required bool hasClinic, required String location}) {
+/// exists and whether the sign-in gate is up (cloud configured, nobody
+/// signed in, no clinic, "continue offline" not chosen). Returns null to
+/// allow [location] unchanged. The sign-in page is always reachable.
+String? sessionRedirect({
+  required bool hasClinic,
+  required String location,
+  bool signInGate = false,
+}) {
+  if (location.startsWith(signInLocation)) return null;
   final onOnboarding = location.startsWith(onboardingLocation);
-  if (!hasClinic) return onOnboarding ? null : onboardingLocation;
+  if (!hasClinic) {
+    if (signInGate) return signInLocation;
+    return onOnboarding ? null : onboardingLocation;
+  }
   return onOnboarding ? homeLocation : null;
 }
 
 /// Builds the router. [initialLocation] defaults to [homeLocation]; the
-/// redirect sends a fresh install to onboarding regardless.
+/// redirect sends a fresh install to sign-in or onboarding regardless.
 GoRouter buildRouter({
   required bool Function() hasClinic,
+  bool Function()? signInGate,
   Listenable? refreshListenable,
   String initialLocation = homeLocation,
 }) {
@@ -58,10 +74,12 @@ GoRouter buildRouter({
     refreshListenable: refreshListenable,
     redirect: (context, state) => sessionRedirect(
       hasClinic: hasClinic(),
+      signInGate: signInGate?.call() ?? false,
       location: state.matchedLocation,
     ),
     routes: [
       ...onboardingRoutes,
+      ...authRoutes,
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
@@ -85,6 +103,7 @@ GoRouter buildRouter({
             routes: [
               ...moreRoutes,
               ...settingsRoutes,
+              ...accountRoutes,
               ...complianceRoutes,
               ...exportRoutes,
             ],
@@ -105,8 +124,10 @@ class _SessionRefresh extends ChangeNotifier {
 final Provider<GoRouter> routerProvider = Provider<GoRouter>((ref) {
   final refresh = _SessionRefresh();
   ref.listen(appSessionProvider, (previous, next) => refresh.bump());
+  ref.listen(signInGateProvider, (previous, next) => refresh.bump());
   final router = buildRouter(
     hasClinic: () => ref.read(appSessionProvider).hasClinic,
+    signInGate: () => ref.read(signInGateProvider),
     refreshListenable: refresh,
   );
   ref.onDispose(() {

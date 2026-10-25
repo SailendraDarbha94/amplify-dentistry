@@ -13,6 +13,7 @@ export 'src/db/app_database.dart'
         PerioSiteRow,
         SettingRow,
         SyncOutboxCompanion,
+        SyncStateRow,
         SettingsCompanion;
 export 'src/db/converters.dart';
 export 'src/db/settings_codec.dart';
@@ -60,4 +61,13 @@ export 'src/repositories/recall_repository.dart';
 export 'src/repositories/treatment_plan_repository.dart';
 export 'src/seed/seeder.dart';
 export 'src/sync/outbox_repository.dart';
+export 'src/sync/remote_clinic_linker.dart';
+export 'src/sync/row_codec.dart';
+export 'src/sync/supabase_sync_engine.dart';
 export 'src/sync/sync_engine.dart';
+export 'src/sync/sync_errors.dart';
+export 'src/sync/sync_puller.dart' show PullReport, TablePullReport;
+export 'src/sync/sync_pusher.dart' show PushReport;
+export 'src/sync/sync_scheduler.dart';
+export 'src/sync/sync_state_repository.dart';
+export 'src/sync/sync_tables.dart';

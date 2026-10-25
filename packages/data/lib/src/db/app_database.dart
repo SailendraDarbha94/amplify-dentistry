@@ -21,6 +21,7 @@ import 'tables_chart.dart';
 import 'tables_clinic.dart';
 import 'tables_misc.dart';
 import 'tables_patient.dart';
+import 'tables_sync.dart';
 
 part 'app_database.g.dart';
 
@@ -64,6 +65,7 @@ part 'app_database.g.dart';
     MessageLogs,
     SterilisationCycles,
     Licences,
+    SyncStates,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -125,7 +127,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -158,6 +160,11 @@ class AppDatabase extends _$AppDatabase {
           treatmentPlans.estimateDeclinedReason,
         );
         await migrateLegacyBpeFurcation();
+      }
+      if (from < 5) {
+        // v5: per-table pull watermarks, device id and clinic link for the
+        // Supabase sync engine.
+        await m.createTable(syncStates);
       }
     },
     beforeOpen: (details) async {

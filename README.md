@@ -36,13 +36,30 @@ What works now, all offline on the phone's SQLite store:
   clinic export with the audit trail, and a Today dashboard with the five
   KPIs.
 
-Not yet: sync to Supabase (the outbox fills, a no-op engine drains nothing),
-WhatsApp Cloud API or SMS sends (deep links only), server-minted invoice
-numbers (local numbers are `DRAFT-` prefixed and device-coded), encryption of
+Also in place, waiting for a project: **sync and WhatsApp.** `ampdent_data`
+ships `SupabaseSyncEngine` (outbox push in foreign-key order, keyset pull
+per table with last-writer-wins or append-only policies), a `SyncScheduler`
+and `RemoteClinicLinker`; the `supabase/` migrations add server-owned
+`updated_at`, a `devices` table, the WhatsApp config (token in Vault), the
+send queue and the `whatsapp-send` / `whatsapp-webhook` Edge Functions;
+`ampdent_messaging` has the Meta Cloud API payload and webhook shapes and the
+`CloudQueueMessagingProvider`; and the app signs in with Supabase Auth
+(email or phone OTP, or "continue offline"), links the device to its clinic
+(push, adopt or choose), shows real sync states in the shell banner, lets
+the owner enter the Meta credentials under Settings > WhatsApp and switches
+patient messaging to the Cloud API queue when it is enabled. All of it is
+tested against fakes; **no Supabase project exists yet.** Connecting one is
+the founder's next step: `docs/SETUP-CLOUD.md` walks through the project
+(Mumbai, `ap-south-1`), the extensions, the migrations, the Meta app and the
+`env.json` the app reads.
+
+Not yet: server-minted invoice numbers in the app (local numbers are `DRAFT-`
+prefixed and device-coded until the first sync renames them), encryption of
 the local SQLite file (planned: SQLCipher through drift's encrypted
 `NativeDatabase`, once PowerSync compatibility is confirmed; until then the
-store relies on the OS sandbox and device lock), Hindi and Telugu strings,
-ABDM, payments gateway, patient app, web front desk. See
+store relies on the OS sandbox and device lock), localisation (Hindi and
+Telugu strings are deferred; every string already goes through `AppStrings`),
+MSG91 SMS, ABDM, payments gateway, patient app, web front desk. See
 [docs/research/02-product-spec.md](docs/research/02-product-spec.md) for the
 build order.
 
@@ -55,6 +72,8 @@ dart run melos run gen          # Drift codegen (packages/data); required on a f
 dart run melos run analyze      # every package
 dart run melos run test         # every package
 cd apps/app_mobile && flutter run -d "iPhone 17"
+# with a Supabase project: cp env.example.json env.json, fill it in, then
+cd apps/app_mobile && flutter run -d "iPhone 17" --dart-define-from-file=env.json
 ```
 
 Per-app details (tests, codegen, where data lives) are in

@@ -1,5 +1,7 @@
 import 'package:ampdent_core/ampdent_core.dart';
+import 'package:ampdent_messaging/ampdent_messaging.dart' show PhoneNumbers;
 import 'package:ampdent_mobile/core/app_strings.dart';
+import 'package:ampdent_mobile/core/cloud_messaging.dart';
 import 'package:ampdent_mobile/core/formatting.dart';
 import 'package:ampdent_mobile/core/providers.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
@@ -10,7 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'patient_providers.dart';
 
 /// Kind of a timeline entry.
-enum TimelineKind { procedure, invoice, note }
+enum TimelineKind { procedure, invoice, note, message }
 
 /// One row of the patient timeline.
 @immutable
@@ -24,6 +26,7 @@ class TimelineEvent {
     this.tone = BadgeTone.neutral,
     this.badge,
     this.route,
+    this.id,
   });
 
   /// When it happened (sort key, newest first).
@@ -46,15 +49,20 @@ class TimelineEvent {
 
   /// Where tapping goes.
   final String? route;
+
+  /// Source row id (keys the badge for tests).
+  final String? id;
 }
 
-/// Merges procedures, invoices and notes into one chronological list.
+/// Merges procedures, invoices, notes and messages into one chronological
+/// list. Messages carry their delivery status as the badge.
 List<TimelineEvent> buildTimeline({
   required String patientId,
   required ToothNotation notation,
   Iterable<ProcedureRecord> procedures = const [],
   Iterable<Invoice> invoices = const [],
   Iterable<ClinicalNote> notes = const [],
+  Iterable<MessageLog> messages = const [],
 }) {
   final events = <TimelineEvent>[
     for (final p in procedures)
@@ -100,6 +108,21 @@ List<TimelineEvent> buildTimeline({
         tone: n.isSigned ? BadgeTone.completed : BadgeTone.neutral,
         route: '/patients/$patientId/notes',
       ),
+    for (final m in messages)
+      TimelineEvent(
+        occurredAt: m.deliveredAt ?? m.sentAt ?? m.createdAt,
+        kind: TimelineKind.message,
+        title: messageTemplateLabel(m.templateCode),
+        subtitle: [
+          messageChannelLabel(m.channel),
+          messageProviderLabel(m),
+          PhoneNumbers.mask(m.toPhone),
+          if (m.error != null && m.error!.isNotEmpty) m.error!,
+        ].join('  ·  '),
+        badge: messageStatusLabel(m.status),
+        tone: messageStatusTone(m.status),
+        id: m.id,
+      ),
   ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
   return events;
 }
@@ -128,6 +151,7 @@ IconData _iconFor(TimelineKind kind) => switch (kind) {
   TimelineKind.procedure => Icons.healing_outlined,
   TimelineKind.invoice => Icons.receipt_long_outlined,
   TimelineKind.note => Icons.notes_outlined,
+  TimelineKind.message => Icons.chat_outlined,
 };
 
 /// Chronological list of a patient's procedures, invoices and notes.
@@ -144,8 +168,12 @@ class PatientTimeline extends ConsumerWidget {
     final procedures = ref.watch(patientProceduresProvider(patientId));
     final invoices = ref.watch(patientInvoicesProvider(patientId));
     final notes = ref.watch(patientNotesProvider(patientId));
+    final messages = ref.watch(patientMessagesProvider(patientId));
     final notation = ref.watch(notationProvider);
-    if (procedures.isLoading || invoices.isLoading || notes.isLoading) {
+    if (procedures.isLoading ||
+        invoices.isLoading ||
+        notes.isLoading ||
+        messages.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     final events = buildTimeline(
@@ -154,12 +182,13 @@ class PatientTimeline extends ConsumerWidget {
       procedures: procedures.value ?? const [],
       invoices: invoices.value ?? const [],
       notes: notes.value ?? const [],
+      messages: messages.value ?? const [],
     );
     if (events.isEmpty) {
       return EmptyState(
         icon: Icons.timeline_outlined,
         title: s.nothingHere,
-        message: 'Procedures, invoices and notes will appear here.',
+        message: 'Procedures, invoices, notes and messages will appear here.',
       );
     }
     return ListView.separated(
@@ -179,7 +208,12 @@ class PatientTimeline extends ConsumerWidget {
           isThreeLine: e.subtitle.isNotEmpty,
           trailing: e.badge == null
               ? null
-              : StatusBadge(label: e.badge!, tone: e.tone, dense: true),
+              : StatusBadge(
+                  key: e.id == null ? null : ValueKey('timeline-badge-${e.id}'),
+                  label: e.badge!,
+                  tone: e.tone,
+                  dense: true,
+                ),
           onTap: e.route == null ? null : () => context.push(e.route!),
         );
       },

@@ -1,6 +1,7 @@
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_data/ampdent_data.dart';
 import 'package:ampdent_messaging/ampdent_messaging.dart';
+import 'package:ampdent_mobile/core/cloud_messaging.dart';
 import 'package:ampdent_mobile/core/formatting.dart';
 
 /// Which appointment message to send.
@@ -31,22 +32,27 @@ class AppointmentSendOutcome {
     this.log,
     this.launchedUri,
     this.appointment,
+    this.queued = false,
   });
 
   /// The opt-in decision; when denied nothing else is set.
   final SendDecision decision;
 
-  /// The persisted message log row (status `sent` or `cancelled`).
+  /// The persisted message log row (`sent`, `cancelled`, or `queued` for
+  /// the Cloud API).
   final MessageLog? log;
 
   /// The wa.me URI handed to the OS, when the launch succeeded.
   final Uri? launchedUri;
 
-  /// The appointment after stamping, when the launch succeeded.
+  /// The appointment after stamping, when the send went ahead.
   final Appointment? appointment;
 
-  /// Whether the message left the phone.
-  bool get sent => launchedUri != null;
+  /// Whether the row was queued for the Cloud API (the server sends it).
+  final bool queued;
+
+  /// Whether the message left the phone or is on its way via the server.
+  bool get sent => launchedUri != null || queued;
 }
 
 /// Human-readable explanation for an [OptInPolicy] denial reason.
@@ -179,7 +185,21 @@ class AppointmentMessenger {
       provider: provider,
       now: now,
     );
-    final queued = await messaging.send(request);
+    final MessageLog queued;
+    try {
+      queued = await messaging.send(request);
+    } on OptInRefusedException catch (e) {
+      return AppointmentSendOutcome(decision: e.decision);
+    }
+    if (isCloudApiLog(queued)) {
+      final stamped = await _stamp(kind, appointment, now.toUtc());
+      return AppointmentSendOutcome(
+        decision: decision,
+        log: queued,
+        appointment: stamped,
+        queued: true,
+      );
+    }
     final uri = whatsappDeepLink(queued.toPhone, queued.renderedPreview);
 
     var launched = false;

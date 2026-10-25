@@ -18,6 +18,8 @@ import 'recall_providers.dart';
 void showMessageResult(BuildContext context, PatientMessageResult result) {
   final text = !result.decision.allowed
       ? sendDenialText(result.decision.reason)
+      : result.queued
+      ? MobileStrings.queuedForDelivery
       : result.launched
       ? 'Opened WhatsApp with the message'
       : 'Message saved to the outbox; WhatsApp could not be opened';

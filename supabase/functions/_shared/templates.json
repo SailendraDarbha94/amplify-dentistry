@@ -1,0 +1,382 @@
+{
+  "generatedAt": "2026-10-25T05:45:58.774572Z",
+  "templates": [
+    {
+      "code": "APPT_CONFIRM",
+      "metaName": "appt_confirm",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "appointment_date",
+        "appointment_time",
+        "doctor_name",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your appointment at {clinic_name} is booked for {appointment_date} at {appointment_time} with Dr. {doctor_name}. Call {clinic_phone} if you need to change it.",
+      "metaBody": "Hi {{1}}, your appointment at {{2}} is booked for {{3}} at {{4}} with Dr. {{5}}. Call {{6}} if you need to change it."
+    },
+    {
+      "code": "APPT_REMINDER_24H",
+      "metaName": "appt_reminder_24h",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "appointment_date",
+        "appointment_time",
+        "doctor_name",
+        "clinic_phone"
+      ],
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "1"
+        }
+      ],
+      "body": "Reminder: {patient_name} has an appointment at {clinic_name} tomorrow, {appointment_date} at {appointment_time} with Dr. {doctor_name}. Reply 1 to confirm, or call {clinic_phone} to reschedule.",
+      "metaBody": "Reminder: {{1}} has an appointment at {{2}} tomorrow, {{3}} at {{4}} with Dr. {{5}}. Reply 1 to confirm, or call {{6}} to reschedule."
+    },
+    {
+      "code": "APPT_REMINDER_MORNING",
+      "metaName": "appt_reminder_morning",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "appointment_time",
+        "clinic_name",
+        "doctor_name",
+        "clinic_phone"
+      ],
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "1"
+        }
+      ],
+      "body": "Good morning {patient_name}, this is a reminder of your appointment today at {appointment_time} at {clinic_name} with Dr. {doctor_name}. Reply 1 to confirm. Running late? Call {clinic_phone}.",
+      "metaBody": "Good morning {{1}}, this is a reminder of your appointment today at {{2}} at {{3}} with Dr. {{4}}. Reply 1 to confirm. Running late? Call {{5}}."
+    },
+    {
+      "code": "APPT_RESCHEDULED",
+      "metaName": "appt_rescheduled",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "appointment_date",
+        "appointment_time",
+        "doctor_name",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your appointment at {clinic_name} has been moved to {appointment_date} at {appointment_time} with Dr. {doctor_name}. Call {clinic_phone} if this does not suit you.",
+      "metaBody": "Hi {{1}}, your appointment at {{2}} has been moved to {{3}} at {{4}} with Dr. {{5}}. Call {{6}} if this does not suit you."
+    },
+    {
+      "code": "APPT_CANCELLED",
+      "metaName": "appt_cancelled",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "appointment_date",
+        "appointment_time",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your appointment at {clinic_name} on {appointment_date} at {appointment_time} has been cancelled. To book again, call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, your appointment at {{2}} on {{3}} at {{4}} has been cancelled. To book again, call {{5}}."
+    },
+    {
+      "code": "POST_OP_INSTRUCTIONS",
+      "metaName": "post_op_instructions",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "procedure_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, thank you for visiting {clinic_name} today. Your after-care instructions for {procedure_name} are here: {link}. If anything worries you, call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, thank you for visiting {{2}} today. Your after-care instructions for {{3}} are here: {{4}}. If anything worries you, call {{5}}."
+    },
+    {
+      "code": "POST_OP_EXTRACTION",
+      "metaName": "post_op_extraction",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, thank you for visiting {clinic_name} today. Your after-care instructions for your tooth extraction are here: {link}. If anything worries you, call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, thank you for visiting {{2}} today. Your after-care instructions for your tooth extraction are here: {{3}}. If anything worries you, call {{4}}."
+    },
+    {
+      "code": "POST_OP_RCT",
+      "metaName": "post_op_rct",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, thank you for visiting {clinic_name} today. Your after-care instructions for your root canal treatment are here: {link}. If anything worries you, call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, thank you for visiting {{2}} today. Your after-care instructions for your root canal treatment are here: {{3}}. If anything worries you, call {{4}}."
+    },
+    {
+      "code": "POST_OP_SCALING",
+      "metaName": "post_op_scaling",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, thank you for visiting {clinic_name} today. Your after-care instructions for your scaling and polishing are here: {link}. If anything worries you, call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, thank you for visiting {{2}} today. Your after-care instructions for your scaling and polishing are here: {{3}}. If anything worries you, call {{4}}."
+    },
+    {
+      "code": "POST_OP_IMPLANT",
+      "metaName": "post_op_implant",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, thank you for visiting {clinic_name} today. Your after-care instructions for your implant placement are here: {link}. If anything worries you, call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, thank you for visiting {{2}} today. Your after-care instructions for your implant placement are here: {{3}}. If anything worries you, call {{4}}."
+    },
+    {
+      "code": "POST_OP_WHITENING",
+      "metaName": "post_op_whitening",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, thank you for visiting {clinic_name} today. Your after-care instructions for your teeth whitening are here: {link}. If anything worries you, call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, thank you for visiting {{2}} today. Your after-care instructions for your teeth whitening are here: {{3}}. If anything worries you, call {{4}}."
+    },
+    {
+      "code": "INVOICE_LINK",
+      "metaName": "invoice_link",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "document_number",
+        "clinic_name",
+        "amount",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your invoice {document_number} from {clinic_name} for {amount} is ready: {link}. You can pay by UPI from the link or at the clinic. Questions? Call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, your invoice {{2}} from {{3}} for {{4}} is ready: {{5}}. You can pay by UPI from the link or at the clinic. Questions? Call {{6}}."
+    },
+    {
+      "code": "RECEIPT_LINK",
+      "metaName": "receipt_link",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "amount",
+        "payment_date",
+        "document_number",
+        "link"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, {clinic_name} has received your payment of {amount} on {payment_date}. Your receipt {document_number} is here: {link}. Thank you.",
+      "metaBody": "Hi {{1}}, {{2}} has received your payment of {{3}} on {{4}}. Your receipt {{5}} is here: {{6}}. Thank you."
+    },
+    {
+      "code": "PRESCRIPTION_LINK",
+      "metaName": "prescription_link",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "doctor_name",
+        "clinic_name",
+        "link"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, Dr. {doctor_name} at {clinic_name} has issued your prescription. View it securely here: {link}.",
+      "metaBody": "Hi {{1}}, Dr. {{2}} at {{3}} has issued your prescription. View it securely here: {{4}}."
+    },
+    {
+      "code": "ESTIMATE_LINK",
+      "metaName": "estimate_link",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "document_number",
+        "clinic_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your treatment estimate {document_number} from {clinic_name} is ready to review: {link}. Call {clinic_phone} to discuss it.",
+      "metaBody": "Hi {{1}}, your treatment estimate {{2}} from {{3}} is ready to review: {{4}}. Call {{5}} to discuss it."
+    },
+    {
+      "code": "CONSENT_LINK",
+      "metaName": "consent_link",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "procedure_name",
+        "link"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, {clinic_name} needs your consent for {procedure_name} before treatment. Please read and sign securely here: {link}.",
+      "metaBody": "Hi {{1}}, {{2}} needs your consent for {{3}} before treatment. Please read and sign securely here: {{4}}."
+    },
+    {
+      "code": "RECALL_DUE",
+      "metaName": "recall_due",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "recall_type",
+        "clinic_name",
+        "due_date",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your {recall_type} visit at {clinic_name} is due on {due_date}. Book a slot here: {link} or call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, your {{2}} visit at {{3}} is due on {{4}}. Book a slot here: {{5}} or call {{6}}."
+    },
+    {
+      "code": "RECALL_OVERDUE",
+      "metaName": "recall_overdue",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "recall_type",
+        "clinic_name",
+        "due_date",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your {recall_type} visit at {clinic_name} was due on {due_date} and is still open. Book a slot here: {link} or call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, your {{2}} visit at {{3}} was due on {{4}} and is still open. Book a slot here: {{5}} or call {{6}}."
+    },
+    {
+      "code": "TREATMENT_INCOMPLETE",
+      "metaName": "treatment_incomplete",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "procedure_name",
+        "clinic_name",
+        "started_date",
+        "next_step",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your {procedure_name} at {clinic_name} started on {started_date} is not yet complete. The next step is {next_step}. Book here: {link} or call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, your {{2}} at {{3}} started on {{4}} is not yet complete. The next step is {{5}}. Book here: {{6}} or call {{7}}."
+    },
+    {
+      "code": "LAB_READY_SEAT_APPT",
+      "metaName": "lab_ready_seat_appt",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "lab_item",
+        "clinic_name",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, your {lab_item} has arrived at {clinic_name} and is ready to fit. Book your appointment here: {link} or call {clinic_phone}.",
+      "metaBody": "Hi {{1}}, your {{2}} has arrived at {{3}} and is ready to fit. Book your appointment here: {{4}} or call {{5}}."
+    },
+    {
+      "code": "REVIEW_REQUEST",
+      "metaName": "review_request",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "patient_name",
+        "clinic_name",
+        "visit_date",
+        "link"
+      ],
+      "buttons": [],
+      "body": "Hi {patient_name}, thank you for visiting {clinic_name} on {visit_date}. We would value a minute of your feedback: {link}.",
+      "metaBody": "Hi {{1}}, thank you for visiting {{2}} on {{3}}. We would value a minute of your feedback: {{4}}."
+    },
+    {
+      "code": "OTP_AUTH",
+      "metaName": "otp_auth",
+      "language": "en",
+      "category": "AUTHENTICATION",
+      "bodyParams": [
+        "otp",
+        "clinic_name",
+        "expiry_minutes"
+      ],
+      "buttons": [],
+      "body": "{otp} is your {clinic_name} verification code. It expires in {expiry_minutes} minutes. Do not share it with anyone.",
+      "metaBody": "{{1}} is your {{2}} verification code. It expires in {{3}} minutes. Do not share it with anyone."
+    },
+    {
+      "code": "WELCOME_NEW_PATIENT",
+      "metaName": "welcome_new_patient",
+      "language": "en",
+      "category": "UTILITY",
+      "bodyParams": [
+        "clinic_name",
+        "patient_name",
+        "patient_number",
+        "link",
+        "clinic_phone"
+      ],
+      "buttons": [],
+      "body": "Welcome to {clinic_name}, {patient_name}. Your patient number is {patient_number}. Save this number for appointment updates. Our privacy notice is here: {link}. Call {clinic_phone} anytime.",
+      "metaBody": "Welcome to {{1}}, {{2}}. Your patient number is {{3}}. Save this number for appointment updates. Our privacy notice is here: {{4}}. Call {{5}} anytime."
+    }
+  ]
+}

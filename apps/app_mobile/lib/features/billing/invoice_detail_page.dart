@@ -317,6 +317,8 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
       if (!mounted) return;
       final text = !result.decision.allowed
           ? sendDenialText(result.decision.reason)
+          : result.queued
+          ? MobileStrings.queuedForDelivery
           : result.launched
           ? BillingStrings.linkSent
           : BillingStrings.couldNotOpenApp;

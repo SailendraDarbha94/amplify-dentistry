@@ -6,11 +6,35 @@ library;
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_data/ampdent_data.dart';
 import 'package:ampdent_documents/ampdent_documents.dart';
-import 'package:ampdent_messaging/ampdent_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'session.dart';
 
+export 'cloud_auth.dart'
+    show
+        AuthUser,
+        CloudAuthState,
+        accessTokenProvider,
+        cloudAuthProvider,
+        continueOfflineProvider,
+        signInGateProvider;
+export 'cloud_config.dart'
+    show
+        CloudConfig,
+        cloudActiveProvider,
+        cloudClientProvider,
+        cloudConfigProvider,
+        schedulerEnabledProvider;
+export 'cloud_messaging.dart' show MessagingMode;
+export 'cloud_providers.dart'
+    show
+        LoggedMessagingProvider,
+        messagingModeProvider,
+        messagingProvider,
+        syncEngineProvider,
+        syncNowProvider,
+        syncSchedulerProvider,
+        syncStateProvider;
 export 'session.dart' show AppSession, AppSessionNotifier, appSessionProvider;
 
 /// The open local database. Overridden in `main` and in tests.
@@ -178,65 +202,6 @@ final Provider<ExportRepository> exportRepositoryProvider =
 /// Sync outbox repository.
 final Provider<OutboxRepository> outboxRepositoryProvider =
     Provider<OutboxRepository>((ref) => ref.watch(repositoriesProvider).outbox);
-
-/// Sync engine; a no-op mirror of the outbox count until a backend exists.
-final Provider<SyncEngine> syncEngineProvider = Provider<SyncEngine>((ref) {
-  final clinicId = ref.watch(currentClinicIdProvider);
-  final engine = NoopSyncEngine(
-    pendingCount: clinicId == null
-        ? null
-        : ref.watch(outboxRepositoryProvider).watchPendingCount(clinicId),
-  );
-  ref.onDispose(engine.dispose);
-  return engine;
-});
-
-/// Live sync state for banners.
-final StreamProvider<SyncState> syncStateProvider = StreamProvider<SyncState>(
-  (ref) => ref.watch(syncEngineProvider).state,
-);
-
-/// Outbound messaging: WhatsApp/SMS deep links, every send logged to the
-/// message log so the audit trail is complete even without a provider.
-final Provider<MessagingProvider> messagingProvider =
-    Provider<MessagingProvider>((ref) {
-      final inner = DeepLinkMessagingProvider();
-      final logs = ref.watch(messageLogRepositoryProvider);
-      return LoggedMessagingProvider(
-        inner,
-        logs: logs,
-        actor: () => ref.read(actorContextProvider),
-      );
-    });
-
-/// Wraps a [MessagingProvider] so every queued message is persisted through
-/// the [MessageLogRepository] under the current actor.
-class LoggedMessagingProvider implements MessagingProvider {
-  /// Creates the wrapper.
-  const LoggedMessagingProvider(
-    this._inner, {
-    required this.logs,
-    required this.actor,
-  });
-
-  final MessagingProvider _inner;
-
-  /// Where queued messages are persisted.
-  final MessageLogRepository logs;
-
-  /// Supplies the actor at send time.
-  final ActorContext Function() actor;
-
-  @override
-  Future<MessageLog> send(MessageRequest request) async {
-    final log = await _inner.send(request);
-    return logs.enqueue(actor(), log);
-  }
-
-  @override
-  Future<MessageStatus> status(String providerMessageId) =>
-      _inner.status(providerMessageId);
-}
 
 /// Embedded PDF fonts, loaded once.
 final FutureProvider<DocumentFonts> documentFontsProvider =

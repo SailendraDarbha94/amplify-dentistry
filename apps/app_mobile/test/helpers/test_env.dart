@@ -6,9 +6,11 @@ import 'package:ampdent_mobile/core/session.dart';
 import 'package:ampdent_mobile/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 /// Fixed ids used by the fixtures.
 const String testClinicId = 'clinic-test';
@@ -26,14 +28,33 @@ const ActorContext testCtx = ActorContext(
 /// In-memory database, repositories and a provider container wired like the
 /// real app. Call [open] in each test and [close] in `tearDown`.
 class AppTestEnv {
-  AppTestEnv._(this.db, this.session)
-    : repos = DriftRepositories(db),
-      container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-          initialSessionProvider.overrideWithValue(session),
-        ],
-      );
+  AppTestEnv._(
+    this.db,
+    this.session, {
+    this.cloudClient,
+    List<Override> overrides = const [],
+  }) : repos = DriftRepositories(db),
+       container = ProviderContainer(
+         overrides: [
+           databaseProvider.overrideWithValue(db),
+           initialSessionProvider.overrideWithValue(session),
+           // Never start the sync scheduler's timers under the test binding.
+           schedulerEnabledProvider.overrideWithValue(false),
+           if (cloudClient != null) ...[
+             cloudConfigProvider.overrideWithValue(
+               const CloudConfig(
+                 url: 'http://localhost:54321',
+                 anonKey: 'test-anon-key',
+               ),
+             ),
+             cloudClientProvider.overrideWithValue(cloudClient),
+           ],
+           ...overrides,
+         ],
+       );
+
+  /// The fake Supabase client, when the test runs with the cloud configured.
+  final SupabaseClient? cloudClient;
 
   /// The open database.
   final AppDatabase db;
@@ -48,10 +69,14 @@ class AppTestEnv {
   final ProviderContainer container;
 
   /// Opens a fresh environment. With [withClinic] a clinic, owner dentist and
-  /// one chair exist; with [withPatient] an adult patient as well.
+  /// one chair exist; with [withPatient] an adult patient as well. With
+  /// [cloudClient] the cloud counts as configured (sign-in gate, Supabase
+  /// engine once linked); [overrides] are appended to the container's.
   static Future<AppTestEnv> open({
     bool withClinic = true,
     bool withPatient = false,
+    SupabaseClient? cloudClient,
+    List<Override> overrides = const [],
   }) async {
     await initializeDateFormatting('en_IN');
     final db = AppDatabase.inMemory(seedOnOpen: false);
@@ -79,7 +104,12 @@ class AppTestEnv {
             memberId: testDentistId,
           )
         : const AppSession(deviceId: testDeviceId);
-    return AppTestEnv._(db, session);
+    return AppTestEnv._(
+      db,
+      session,
+      cloudClient: cloudClient,
+      overrides: overrides,
+    );
   }
 
   /// The app router from the container.
@@ -121,9 +151,10 @@ class AppTestEnv {
     await settle(tester);
   }
 
-  /// Releases the container and database.
+  /// Releases the container, the fake client and the database.
   Future<void> close() async {
     container.dispose();
+    await cloudClient?.dispose();
     await db.close();
   }
 }

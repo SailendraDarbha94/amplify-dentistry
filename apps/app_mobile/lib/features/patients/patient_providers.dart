@@ -72,3 +72,8 @@ final patientInvoicesProvider = StreamProvider.family<List<Invoice>, String>(
 final patientNotesProvider = StreamProvider.family<List<ClinicalNote>, String>(
   (ref, id) => ref.watch(clinicalRepositoryProvider).watchNotesForPatient(id),
 );
+
+/// Outbound messages about a patient (live), newest first.
+final patientMessagesProvider = StreamProvider.family<List<MessageLog>, String>(
+  (ref, id) => ref.watch(messageLogRepositoryProvider).watchForPatient(id),
+);

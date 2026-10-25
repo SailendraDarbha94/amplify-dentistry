@@ -1,0 +1,35 @@
+# Supabase CLI configuration for AmpDent (https://supabase.com/docs/guides/local-development/cli/config).
+# Only the settings that differ from the CLI defaults or that the Edge Functions depend on are listed;
+# `supabase link` adds nothing here, and project secrets never belong in this file.
+project_id = "amplify-dentistry"
+
+[db]
+# Must match the hosted project (`show server_version;`). New projects are created on Postgres 17.
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+deno_version = 2
+
+# Called every minute by pg_cron (0009) with the service-role key as bearer; also the gateway checks
+# the JWT. The function itself re-checks the bearer (see _shared/supabase.ts isServiceRequest).
+[functions.whatsapp-send]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deno.json"
+entrypoint = "./functions/whatsapp-send/index.ts"
+
+# Meta sends no Supabase JWT; the X-Hub-Signature-256 HMAC (WHATSAPP_APP_SECRET) is the authentication.
+[functions.whatsapp-webhook]
+enabled = true
+verify_jwt = false
+import_map = "./functions/deno.json"
+entrypoint = "./functions/whatsapp-webhook/index.ts"

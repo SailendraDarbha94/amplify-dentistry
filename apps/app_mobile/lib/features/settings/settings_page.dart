@@ -16,7 +16,26 @@ class SettingsPage extends ConsumerWidget {
     final clinic = ref.watch(currentClinicProvider).value;
     final member = ref.watch(currentMemberProvider).value;
     final notation = ref.watch(notationProvider);
+    final cloud = ref.watch(cloudActiveProvider);
+    final auth = ref.watch(cloudAuthProvider);
+    final messagingMode = ref.watch(messagingModeProvider);
+    final accountSubtitle = !cloud
+        ? MobileStrings.cloudNotConfigured
+        : auth.isSignedIn
+        ? 'Signed in as ${auth.user!.label}'
+        : 'Not signed in; records stay on this phone';
+    final whatsappSubtitle = switch (messagingMode) {
+      MessagingMode.cloudApi => 'Cloud API: sent by the server',
+      MessagingMode.deepLink => 'Opens WhatsApp on this phone',
+    };
     final entries = <(IconData, String, String, String)>[
+      (
+        Icons.cloud_outlined,
+        'Account & sync',
+        accountSubtitle,
+        '/settings/account',
+      ),
+      (Icons.chat_outlined, 'WhatsApp', whatsappSubtitle, '/settings/whatsapp'),
       (
         Icons.local_hospital_outlined,
         'Clinic profile',

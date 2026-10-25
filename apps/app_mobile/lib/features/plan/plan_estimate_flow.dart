@@ -133,7 +133,11 @@ class _EstimateSendBar extends ConsumerWidget {
         messenger.showSnackBar(
           SnackBar(content: Text(sendDenialText(result.decision.reason))),
         );
-      } else if (!result.launched) {
+      } else if (result.queued) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text(MobileStrings.queuedForDelivery)),
+        );
+      } else if (result.launchFailed) {
         messenger.showSnackBar(
           const SnackBar(content: Text('WhatsApp could not be opened')),
         );

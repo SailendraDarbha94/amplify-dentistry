@@ -49,10 +49,21 @@ class DriftPerioRepository extends DatabaseAccessor<AppDatabase>
         toJson: (e) => e.toJson(),
       );
       // Plain inserts: readings are never replaced or removed.
-      await batch((b) {
+      await indexPerioSites(attachedDatabase, exam);
+      return saved;
+    });
+  }
+
+  /// Flattens [exam]'s sites into `perio_site_readings`, the query index
+  /// derived from the `sites` JSON column. Called on every local save and by
+  /// the sync puller for every exam pulled from the server (`sites` is the
+  /// source of truth; the index never syncs). Idempotent: readings already
+  /// present for the exam are left alone.
+  static Future<void> indexPerioSites(AppDatabase db, PerioExam exam) =>
+      db.batch((b) {
         for (final s in exam.sites) {
           b.insert(
-            _sites,
+            db.perioSiteReadings,
             PerioSiteReadingsCompanion.insert(
               examId: exam.id,
               clinicId: exam.clinicId,
@@ -68,12 +79,10 @@ class DriftPerioRepository extends DatabaseAccessor<AppDatabase>
               calculus: s.calculus,
               mucogingivalJunction: Value(s.mucogingivalJunction),
             ),
+            mode: InsertMode.insertOrIgnore,
           );
         }
       });
-      return saved;
-    });
-  }
 
   @override
   Future<PerioExam?> getExam(String id) =>

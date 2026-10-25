@@ -5,6 +5,8 @@ import 'package:ampdent_data/ampdent_data.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers.dart' show databaseProvider;
+
 /// App-level setting keys stored in the per-clinic `settings` table.
 abstract final class AppSettingKeys {
   /// Stable id of this device, generated on first run and never changed.
@@ -63,25 +65,38 @@ Future<List<Clinic>> listLocalClinics(AppDatabase db) =>
     db.select(db.clinics).get();
 
 /// Resolves the session for this device from the local database: the first
-/// clinic, its persisted device id (minted and stored when missing) and the
-/// active member (persisted choice, else the owner dentist, else the first
-/// active member).
+/// clinic, this device's id and the active member (persisted choice, else
+/// the owner dentist, else the first active member).
+///
+/// The device id lives in the device-local `sync_state` table
+/// (`SyncStateKeys.deviceId`); the clinic-scoped `device.id` setting is read
+/// as a fallback for installs that predate `sync_state`, because that
+/// setting syncs between devices and would otherwise swap ids once a second
+/// device joins the clinic.
 Future<AppSession> bootstrapSession(AppDatabase db) async {
   const log = Logger('session');
+  final syncState = DriftSyncStateRepository(db);
   final clinics = await listLocalClinics(db);
   if (clinics.isEmpty) {
     log.info('no clinic yet; first run');
-    return AppSession(deviceId: newId());
+    return AppSession(deviceId: await syncState.ensureDeviceId());
   }
   final clinic = clinics.first;
   final repo = DriftClinicRepository(db);
   final members = await repo.members(clinic.id);
   final memberId = await _resolveMemberId(repo, clinic.id, members);
-  var deviceId = decodeStringSetting(
+  var deviceId = await syncState.read(SyncStateKeys.deviceId);
+  if (deviceId == null || deviceId.isEmpty) {
+    deviceId = decodeStringSetting(
+      await repo.getSetting(clinic.id, AppSettingKeys.deviceId),
+    );
+    if (deviceId == null || deviceId.isEmpty) deviceId = newId();
+    await syncState.write(SyncStateKeys.deviceId, deviceId);
+  }
+  final setting = decodeStringSetting(
     await repo.getSetting(clinic.id, AppSettingKeys.deviceId),
   );
-  if (deviceId == null || deviceId.isEmpty) {
-    deviceId = newId();
+  if (setting == null || setting.isEmpty) {
     await repo.setSetting(
       ActorContext(
         clinicId: clinic.id,
@@ -167,8 +182,16 @@ class AppSessionNotifier extends Notifier<AppSession> {
       AppSettingKeys.activeMemberId,
       encodeStringSetting(memberId),
     );
+    final syncState = DriftSyncStateRepository(ref.read(databaseProvider));
+    if (await syncState.read(SyncStateKeys.deviceId) == null) {
+      await syncState.write(SyncStateKeys.deviceId, state.deviceId);
+    }
     state = state.copyWith(clinicId: clinicId, memberId: memberId);
   }
+
+  /// Forgets the clinic and member (the local store was wiped); the device
+  /// id is kept.
+  void reset() => state = AppSession(deviceId: state.deviceId);
 
   /// Switches the member the device acts as and persists the choice.
   Future<void> switchMember({

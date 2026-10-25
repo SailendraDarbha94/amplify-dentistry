@@ -20,6 +20,14 @@ abstract class OutboxRepository {
   /// Records a failed upload attempt (increments `attempts`, stores the
   /// error).
   Future<void> recordFailure(String id, String error);
+
+  /// Records one failed attempt on every row in [ids] (same bookkeeping as
+  /// [recordFailure], one statement). [error] is an error class, never a
+  /// payload.
+  Future<void> recordFailures(Iterable<String> ids, String error);
+
+  /// Whether [rowId] of [targetTable] still has an unacknowledged entry.
+  Future<bool> hasPending(String targetTable, String rowId);
 }
 
 /// Drift implementation of [OutboxRepository].
@@ -78,5 +86,32 @@ class DriftOutboxRepository extends DatabaseAccessor<AppDatabase>
         lastError: Value(error),
       ),
     );
+  }
+
+  @override
+  Future<void> recordFailures(Iterable<String> ids, String error) async {
+    final list = ids.toList();
+    if (list.isEmpty) return;
+    final marks = List.filled(list.length, '?').join(', ');
+    await customUpdate(
+      'UPDATE sync_outbox SET attempts = attempts + 1, last_error = ? '
+      'WHERE id IN ($marks)',
+      variables: [
+        Variable.withString(error),
+        for (final id in list) Variable.withString(id),
+      ],
+      updates: {_t},
+    );
+  }
+
+  @override
+  Future<bool> hasPending(String targetTable, String rowId) async {
+    final rows = await customSelect(
+      'SELECT 1 FROM sync_outbox WHERE target_table = ? AND row_id = ? '
+      'AND acked_at IS NULL LIMIT 1',
+      variables: [Variable.withString(targetTable), Variable.withString(rowId)],
+      readsFrom: {_t},
+    ).get();
+    return rows.isNotEmpty;
   }
 }

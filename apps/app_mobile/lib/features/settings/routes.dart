@@ -8,6 +8,7 @@ import 'labs_page.dart';
 import 'members_page.dart';
 import 'notation_page.dart';
 import 'settings_page.dart';
+import 'whatsapp_page.dart';
 
 /// Settings root and every configuration page.
 final List<RouteBase> settingsRoutes = [
@@ -39,5 +40,9 @@ final List<RouteBase> settingsRoutes = [
   GoRoute(
     path: '/settings/about',
     builder: (context, state) => const AboutPage(),
+  ),
+  GoRoute(
+    path: '/settings/whatsapp',
+    builder: (context, state) => const WhatsAppSettingsPage(),
   ),
 ];

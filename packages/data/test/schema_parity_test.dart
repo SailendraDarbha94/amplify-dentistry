@@ -13,6 +13,8 @@ const Set<String> localOnlyTables = {
   // Query index flattened from perio_exams.sites (the JSON column is the
   // source of truth); rebuilt locally, never written to the outbox.
   'perio_site_readings',
+  // Per-device pull watermarks, device id and clinic link.
+  'sync_state',
 };
 const Set<String> serverOnlyTables = {
   // One row per auth user (display data), not a tenant table.
@@ -20,6 +22,11 @@ const Set<String> serverOnlyTables = {
   // Server-side GST rate history for reporting; the device keeps the same
   // rows in the `gst.rates` setting and the server mirrors it on sync.
   'gst_rates',
+  // Device registry (0008): one row per install, written by the app through
+  // its own RPC, not replicated into the local store.
+  'devices',
+  // Per-clinic WhatsApp credentials (0008): server-side only, token in Vault.
+  'clinic_whatsapp_configs',
 };
 
 void main() {

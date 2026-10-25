@@ -73,6 +73,9 @@ class _AppointmentActionsCardState
           );
       final text = !outcome.decision.allowed
           ? sendDenialMessage(outcome.decision.reason)
+          : outcome.queued
+          ? 'Queued for ${AppFormat.phone(outcome.log!.toPhone)}; the '
+                'server sends it'
           : outcome.sent
           ? 'WhatsApp opened for ${AppFormat.phone(outcome.log!.toPhone)}'
           : 'Could not open WhatsApp; logged as not sent';

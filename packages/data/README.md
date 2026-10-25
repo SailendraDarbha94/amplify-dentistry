@@ -2,7 +2,9 @@
 
 Offline-first local store for AmpDent: Drift/SQLite tables for every
 `ampdent_core` entity, abstract repositories with Drift implementations, an
-append-only audit log, a sync outbox and first-open seeding. No network code.
+append-only audit log, a sync outbox and first-open seeding, plus the
+Supabase sync engine that drains the outbox and pulls server changes
+(see "Sync"). The only network code is PostgREST through `package:supabase`.
 
 ```dart
 final db = AppDatabase.open('ampdent');          // device
@@ -127,8 +129,8 @@ Identifiers minted offline must survive the server's unique indexes
 The SQLite file is **not encrypted yet**; it relies on the OS app sandbox and
 the device lock. Decision: SQLCipher through drift's encrypted
 `NativeDatabase` (`sqlcipher_flutter_libs`, `PRAGMA key` in the `setup`
-callback, key in the platform keystore), enabled once PowerSync confirms it
-can attach to a SQLCipher database. The `TODO(security)` sits on
+callback, key in the platform keystore); the sync engine works on Drift rows
+and is unaffected by the storage layer. The `TODO(security)` sits on
 `AppDatabase.open`.
 
 ## Seeding
@@ -141,10 +143,195 @@ numbering counters into `settings`. No demo data.
 
 ## Sync
 
-`SyncEngine` is the contract (`state`, `pushPending`, `pullSince`);
-`NoopSyncEngine` is the local-only implementation. `OutboxRepository` reads
-pending rows and stamps `ackedAt`; acknowledged rows are kept (compaction is
-left to the sync stage).
+`SyncEngine` is the contract (`state`, `pushPending`, `pullSince`).
+`NoopSyncEngine` serves tests and local-only installs; `SupabaseSyncEngine`
+replicates one clinic with a Supabase project over PostgREST. Realtime is not
+used. Everything lives in `lib/src/sync/`:
+
+| File | Role |
+|---|---|
+| `supabase_sync_engine.dart` | `SyncEngine` over a `SupabaseClient`: state stream, mutex, token/link checks |
+| `sync_pusher.dart` | `OutboxPusher`: drains `sync_outbox` as PostgREST upserts in FK order |
+| `sync_puller.dart` | `TablePuller`: keyset-paged pull per table, conflict policy |
+| `sync_tables.dart` | the ordered table list, per-table policy, push plan with fix-up steps |
+| `row_codec.dart` | `SyncRowCodec`: Drift row <-> server JSON from table metadata |
+| `sync_state_repository.dart` | `sync_state` table: watermarks, device id, clinic link, last sync |
+| `sync_scheduler.dart` | `SyncScheduler`: on demand, debounced after writes, interval, app hooks |
+| `remote_clinic_linker.dart` | `RemoteClinicLinker`: first-device push / second-device adopt |
+| `sync_errors.dart` | `SyncFailure`, `classifySyncError`, `BackoffPolicy` |
+
+### Wiring (the app owns sign-in)
+
+```dart
+final client = SupabaseClient(
+  supabaseUrl, supabaseAnonKey,
+  accessToken: () async => session?.accessToken, // or let supabase_flutter manage auth
+);
+final engine = SupabaseSyncEngine(
+  client: client,
+  db: db,
+  clinicId: clinicId,
+  accessTokenProvider: () async => session?.accessToken,
+);
+await engine.restoreLastSyncTimes();
+final scheduler = SyncScheduler(
+  engine: engine,
+  pendingCount: repos.outbox.watchPendingCount(clinicId),
+  accessTokenProvider: () async => session?.accessToken,
+)..start();
+// app hooks: scheduler.onConnectivityChanged(online: ...), scheduler.onAppResumed(),
+// scheduler.syncNow(), scheduler.pause() / resume()
+```
+
+The engine only calls `client.from(...)`; it never signs in or touches
+`client.auth`. While `accessTokenProvider` returns null the engine reports
+`SyncStatus.offline` with error `signed out` and does nothing; the scheduler
+skips its automatic runs too.
+
+### Push
+
+1. Pending outbox rows (`acked_at IS NULL`) are grouped by table and row id;
+   repeated writes of one row collapse into a single upsert of the row's
+   **current** local state (read from the table, not from the outbox payload).
+2. Tables are visited in `syncTables` order, which follows the server foreign
+   keys: `clinics`, `clinic_members`, `chairs`, `settings`, `catalog_items`,
+   `drugs`, `labs`, `patients`, `appointments`, `visits`, ... children last,
+   `audit_events` at the end. Two FK cycles (`treatment_plan_lines.procedure_id`
+   -> `procedures`, `procedures.lab_case_id` -> `lab_cases`) are broken by
+   leaving the referencing column out of the main upsert and writing it in a
+   fix-up step (`id` + that column) once both sides exist.
+3. Each table is sent in batches of 200 as `POST /rest/v1/<table>` with
+   `on_conflict=id` (`clinic_id,setting_key` for `settings`),
+   `Prefer: resolution=merge-duplicates,missing=default`. Tables the server
+   has no UPDATE policy for (`payments`, `ledger_entries`, `consent_records`,
+   `prescriptions`, `medical_histories`, `tooth_state_records`) use
+   `resolution=ignore-duplicates`, so a replayed row is a no-op instead of a
+   policy violation.
+4. `updated_at` is never sent: the server assigns it (default on insert,
+   `app.touch_updated_at()` on update), so a write that was offline for a
+   week still lands above every other device's watermark.
+5. Outbox rows are acknowledged only after a 2xx for every step touching
+   their table. A 5xx, 408, 429 or network error is retried with exponential
+   backoff (`BackoffPolicy`: 1 s, 2 s, 4 s, ... capped, four attempts by
+   default) and each attempt increments the rows' `attempts` counter and
+   stores the error class in `last_error`; the push then stops with
+   `SyncStatus.offline`. A 4xx or Postgres error code (constraint, RLS) is not
+   retried: the push stops with `SyncStatus.error` and nothing after the
+   failing table is attempted, because children would violate foreign keys.
+   Platform-wide `catalog_items`/`drugs` rows (`clinic_id` null) are
+   acknowledged without being sent; they ship in the app.
+
+### Pull
+
+Per table, in the same order, `GET /rest/v1/<table>?clinic_id=eq.<id>`
+(`id=eq.<id>` for `clinics`) with `order=updated_at.asc,id.asc&limit=1000`
+and a keyset filter above the stored watermark
+(`or=(updated_at.gt."W",and(updated_at.eq."W",id.gt."K"))`). The watermark is
+the server's `updated_at` text verbatim (microseconds) plus the last row's
+key, advanced after every page, so an interrupted pull resumes where it
+stopped and a row updated mid-pull is simply fetched again (0008 gives every
+table, `audit_events` included, a server-assigned `updated_at` and an index on
+`(clinic_id, updated_at)`). A table with no watermark is pulled in full; `SyncStateKeys.lastFullSyncAt` records the end
+of a pull that started with none. `pullSince(DateTime)` lowers every
+watermark to that instant first; `resetWatermarks()` forces a full re-pull.
+
+Pulled rows are written straight into the tables (no audit event, no outbox
+row) inside one transaction per page, under the per-table policy:
+
+| Tables | Policy | On pull when the row exists locally |
+|---|---|---|
+| `tooth_state_records`, `medical_histories`, `perio_exams`, `prescriptions`, `consent_records`, `payments`, `ledger_entries`, `sterilisation_cycles`, `audit_events` | **append-only** | kept; the server row is inserted only when absent. These are the tables the server itself refuses to UPDATE (0006), plus perio exams (snapshots; the puller rebuilds `perio_site_readings` for every inserted exam) |
+| `procedures`, `findings`, `clinical_notes`, `data_consents`, `image_records`, `implant_records`, `adjustments`, `patients`, `appointments`, `visits`, `treatment_plans`, `treatment_plan_lines`, `estimates`, `invoices`, `recalls`, `lab_cases`, `licences`, `clinics`, `clinic_members`, `chairs`, `settings`, `catalog_items`, `drugs`, `labs`, `message_logs` | **last writer wins** | kept while the row has a pending outbox entry (local pending wins until pushed); otherwise overwritten when the server `updated_at` is later than the local one (always, for tables without a local `updated_at` such as `chairs`) |
+
+"Append-only" in the domain rules means rows are never deleted, not that
+they never change: procedures, findings, notes, DPDP consents, images,
+implants and adjustments carry status transitions (completed, deleted with a
+reason, withdrawn, signed) that must reach every other phone, so they are LWW
+here while the server still refuses row deletes. `message_logs` is LWW rather than append-only because the server owns
+WhatsApp delivery state (0008): `sent`/`delivered`/`failed` must reach every
+phone, a local cancel still wins until pushed, and the server never regresses
+a sent row when a phone replays it. The same path brings back an appointment
+confirmed from a WhatsApp reply.
+
+Server-minted values flow back through the LWW path: an invoice pushed with
+a `DRAFT-` number and a non-draft status comes back with its `INV/2026-27/0001`
+number (the server keeps that number on every later replay), and a patient
+number the server renumbers replaces the local one.
+
+### Concurrency and idempotence
+
+`pushPending`, `pullSince` and `syncNow` (push then pull) share one FIFO
+mutex, so concurrent calls run one after another and never interleave on the
+database or the watermarks. Every step is idempotent: a second push sends
+nothing, a re-pull of already-applied rows changes nothing.
+
+### Linking a device
+
+The server pins clinic bootstrap to the creating user (`clinics.created_by`,
+first `ownerDentist` member only by the creator), so the first push needs a
+link step. `RemoteClinicLinker` records the link in `sync_state`
+(`linked_clinic_id`, `linked_member_id`, `link_mode`, `linked_at`); the
+engine refuses to run (`SyncStatus.error`, "clinic not linked") until the link
+names its `clinicId`.
+
+1. **Sign in** (app, Supabase Auth). `listMemberships(userId)` reads the
+   user's active `clinic_members` rows.
+2. **First device** (no membership, a local clinic exists):
+   `pushLocalClinic(localClinicId:, ownerMemberId:, userId:)` upserts the
+   clinic (the server fills `created_by`) and the owner member with
+   `user_id = userId`, the one insert the bootstrap policy allows, then
+   records the link. The outbox then drains normally; its replay of the same
+   two rows is harmless.
+3. **Second device** (a membership exists, the device holds no clinic and no
+   pending writes): `adoptRemoteClinic(membership)` records the remote
+   clinic and member ids. The app builds its `ActorContext(clinicId:
+   membership.clinicId, actorId: membership.memberId, deviceId: ...)` and
+   runs `pullSince(null)` for the full first pull. Adopting with local data
+   present throws `StateError`.
+4. **Mismatch** (the user belongs to another clinic than the device holds):
+   `pushLocalClinic` throws `StateError`; the app must ask the user to keep
+   the local clinic and sign in with its account, or wipe and adopt.
+
+### Logging
+
+Logs name tables, row counts, attempt numbers and error classes
+(`PostgrestException 500 on patients`), never row contents. `SyncState.error`
+carries the same text and is safe to show.
+
+### Pointing the app at a project
+
+Configuration comes from `--dart-define-from-file=env.json` in
+`apps/app_mobile` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`; `env.example.json`
+is committed, `env.json` is gitignored). Create the project in Mumbai
+(`ap-south-1`), copy the project URL and anon key into `env.json`, then run
+`flutter run --dart-define-from-file=env.json`. Nothing in this package reads
+the environment; the app constructs the `SupabaseClient` and passes it in.
+
+The server must have:
+
+* every migration in `supabase/migrations` applied in order
+  (`supabase db push`, or `psql -f` each file) so the tables, the
+  `app.touch_updated_at()` / `app.audit_row()` / `app.invoices_assign_number()`
+  triggers and the number-minting functions exist;
+* RLS enabled with the policies from `0002_rls.sql` and `0006_...sql`
+  (membership through `clinic_members.user_id`, append-only tables without
+  an UPDATE policy, clinic bootstrap pinned to `created_by`);
+* Supabase Auth with the sign-in method the app uses (phone OTP via the
+  Send-SMS hook, see `docs/research/03-architecture-and-data.md`);
+* no Realtime, no Edge Functions and no Storage are needed for sync.
+
+### Tests
+
+`test/sync/` fakes PostgREST with `package:http`'s `MockClient`
+(`fake_postgrest.dart`: filters, keyset `or`, order, limit, upsert
+resolution, server-assigned `updated_at`, invoice minting, no-UPDATE
+tables). Covered: push order and batching, ack only on 2xx, backoff and the
+attempt counter, 4xx stop, fix-up steps, row mapping (`_paise`, jsonb,
+booleans, dates), pull paging and watermarks, append-only, LWW,
+local-pending-wins, DRAFT number replacement, full first pull,
+`pullSince`/`resetWatermarks`, concurrency, state stream, scheduler debounce
+and interval (`fake_async`), linker rules, and a column-level parity check of
+every synced Drift column against the SQL migrations.
 
 ## Server parity
 
@@ -152,10 +339,11 @@ left to the sync stage).
 parses the migrations and fails when a Drift table has no `create table
 public.<name>` (outbox rows would have no target) or a server tenant table has
 no Drift table. Deliberate exceptions, each with its reason in the test:
-local-only `sync_outbox` and `perio_site_readings`; server-only `profiles` and
-`gst_rates`. Column names follow drift's snake_case of the Dart field
-(`reminder24hSentAt` -> `reminder24h_sent_at`); money columns are suffixed
-`_paise` server-side.
+local-only `sync_outbox`, `perio_site_readings` and `sync_state`; server-only
+`profiles`, `gst_rates`, `devices` and `clinic_whatsapp_configs`. Column names
+follow drift's snake_case of the Dart field (`reminder24hSentAt` ->
+`reminder24h_sent_at`); money columns are suffixed `_paise` server-side.
+`test/sync/sync_plan_codec_test.dart` checks every synced column by name.
 
 ## Tests
 
