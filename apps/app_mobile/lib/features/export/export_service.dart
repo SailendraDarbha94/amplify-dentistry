@@ -49,6 +49,7 @@ class ExportOutcome {
     required this.files,
     required this.directory,
     required this.summary,
+    this.missingImages = const [],
   });
 
   /// Files shared, in order (PDF, JSON, then images).
@@ -57,9 +58,30 @@ class ExportOutcome {
   /// Folder the generated files were written to.
   final String directory;
 
-  /// One-line human summary, e.g. `Record PDF, JSON and 3 images`.
+  /// One-line human summary, e.g. `Record PDF, JSON and 3 images`; names
+  /// how many referenced images were not on this device.
   final String summary;
+
+  /// Ids of image records whose file was not found on this device.
+  final List<String> missingImages;
 }
+
+/// Summary line for a patient export.
+String patientExportSummary({
+  required int imageCount,
+  required int missingCount,
+}) {
+  final base = imageCount == 0
+      ? 'Record PDF and JSON'
+      : 'Record PDF, JSON and $imageCount image${imageCount == 1 ? '' : 's'}';
+  if (missingCount == 0) return base;
+  return '$base ($missingCount image${missingCount == 1 ? '' : 's'} missing '
+      'on this device)';
+}
+
+/// Absolute file for a stored image path (store-relative paths are rooted
+/// at the photo store).
+typedef ImageResolver = Future<File> Function(String filePath);
 
 /// Shares through `share_plus`.
 Future<void> shareWithSharePlus(
@@ -119,6 +141,7 @@ class ExportService {
     required this.loadFonts,
     required this.outputDirectory,
     required this.share,
+    required this.resolveImage,
     this.clock = DateTime.now,
   });
 
@@ -127,6 +150,9 @@ class ExportService {
 
   /// Clinic and member lookup for the letterhead.
   final ClinicRepository clinics;
+
+  /// Resolves `ImageRecord.filePath` (store-relative) to a file on disk.
+  final ImageResolver resolveImage;
 
   /// Loads the embedded PDF fonts.
   final Future<DocumentFonts> Function() loadFonts;
@@ -196,10 +222,12 @@ class ExportService {
       ),
     ];
     var imageCount = 0;
+    final missing = <String>[];
     for (final image in bundle.images) {
-      final file = File(image.filePath);
+      final file = await resolveImage(image.filePath);
       if (!file.existsSync()) {
-        _log.warning('image missing on disk: ${image.filePath}');
+        _log.warning('image ${image.id} missing on disk');
+        missing.add(image.id);
         continue;
       }
       imageCount++;
@@ -211,9 +239,10 @@ class ExportService {
         ),
       );
     }
-    final summary = imageCount == 0
-        ? 'Record PDF and JSON'
-        : 'Record PDF, JSON and $imageCount image${imageCount == 1 ? '' : 's'}';
+    final summary = patientExportSummary(
+      imageCount: imageCount,
+      missingCount: missing.length,
+    );
     await share(
       files,
       subject: 'Patient record ${bundle.patient.patientNumber}',
@@ -225,6 +254,7 @@ class ExportService {
       files: files,
       directory: folder.path,
       summary: summary,
+      missingImages: missing,
     );
   }
 

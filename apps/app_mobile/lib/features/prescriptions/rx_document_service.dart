@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_documents/ampdent_documents.dart';
-import 'package:ampdent_messaging/ampdent_messaging.dart';
 
 /// Template code of the WhatsApp message carrying the prescription link.
 const String prescriptionLinkTemplateCode = 'PRESCRIPTION_LINK';
@@ -36,36 +35,18 @@ Future<Uint8List> buildPrescriptionPdf({
   ).build();
 }
 
-/// Builds the PRESCRIPTION_LINK message for a patient: no drug names in the
-/// body, routed to the guardian for minors.
-MessageRequest prescriptionLinkRequest({
-  required Clinic clinic,
+/// Variables for the `PRESCRIPTION_LINK` template: who issued it and the
+/// authenticated link, never a drug name. Sent through `PatientMessenger`,
+/// which applies the opt-in policy, routes minors to the guardian and marks
+/// the message log row sent or cancelled.
+Map<String, String> prescriptionLinkVariables({
   required ClinicMember dentist,
+  required Clinic clinic,
   required Patient patient,
   required Prescription prescription,
-  required DateTime now,
-}) {
-  final template = templateByCode(prescriptionLinkTemplateCode)!;
-  return MessageRequest(
-    clinicId: clinic.id,
-    patientId: patient.id,
-    toPhone: patient.messagingPhone(now),
-    template: template,
-    variables: {
-      'patient_name': patient.firstName,
-      'doctor_name': dentist.displayName,
-      'clinic_name': clinic.name,
-      'link': prescriptionLink(prescription),
-    },
-  );
-}
-
-/// Queues the link message through [messaging] (logged to the message log)
-/// and returns the WhatsApp deep link to open.
-Future<Uri> sendPrescriptionLink({
-  required MessagingProvider messaging,
-  required MessageRequest request,
-}) async {
-  await messaging.send(request);
-  return whatsappDeepLink(request.e164Phone, request.render());
-}
+}) => {
+  'patient_name': patient.firstName,
+  'doctor_name': dentist.displayName,
+  'clinic_name': clinic.name,
+  'link': prescriptionLink(prescription),
+};

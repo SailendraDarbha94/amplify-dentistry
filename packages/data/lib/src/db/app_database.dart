@@ -85,12 +85,22 @@ class AppDatabase extends _$AppDatabase {
   static const Logger _log = Logger('AppDatabase');
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        // v2: the treating dentist is frozen on every issued invoice.
+        await m.addColumn(invoices, invoices.dentistId);
+        await m.addColumn(invoices, invoices.dentistName);
+        await m.addColumn(invoices, invoices.dentistQualifications);
+        await m.addColumn(invoices, invoices.dentistRegistrationNumber);
+        await m.addColumn(invoices, invoices.dentistRegistrationCouncil);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

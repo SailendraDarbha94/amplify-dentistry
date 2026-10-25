@@ -48,8 +48,9 @@ void main() {
   group('Dentition defaults', () {
     test('adult chart has 28 present teeth and unerupted third molars', () {
       final states = defaultToothStates(ageYears: 30);
-      final present = states.entries
-          .where((e) => e.key.isPermanent && e.value == ToothState.present);
+      final present = states.entries.where(
+        (e) => e.key.isPermanent && e.value == ToothState.present,
+      );
       expect(present.length, 32, reason: 'third molars present at 30');
       final states20 = defaultToothStates(ageYears: 20);
       expect(states20[ToothId.parse('18')], ToothState.unerupted);
@@ -84,7 +85,10 @@ void main() {
       expect(const Money.rupees(999).format(showPaise: false), '₹999');
       expect(const Money.rupees(1000).format(), '₹1,000.00');
       expect(const Money.rupees(-1500).format(), '-₹1,500.00');
-      expect(const Money.rupees(10000000).format(symbol: false), '1,00,00,000.00');
+      expect(
+        const Money.rupees(10000000).format(symbol: false),
+        '1,00,00,000.00',
+      );
     });
 
     test('percent and split are exact', () {
@@ -123,11 +127,15 @@ void main() {
         ),
       ]);
       expect(
-        custom.rateFor(GstClass.cosmeticTaxable, at: DateTime.utc(2025, 1, 1)).ratePercent,
+        custom
+            .rateFor(GstClass.cosmeticTaxable, at: DateTime.utc(2025, 1, 1))
+            .ratePercent,
         18,
       );
       expect(
-        custom.rateFor(GstClass.cosmeticTaxable, at: DateTime.utc(2026, 1, 1)).ratePercent,
+        custom
+            .rateFor(GstClass.cosmeticTaxable, at: DateTime.utc(2026, 1, 1))
+            .ratePercent,
         5,
       );
     });
@@ -137,7 +145,11 @@ void main() {
     test('CAL and BPE derivation', () {
       final t = ToothId.parse('16');
       const r = PerioSiteReading(
-        tooth: ToothId(dentition: Dentition.permanent, quadrant: Quadrant.upperRight, position: 6),
+        tooth: ToothId(
+          dentition: Dentition.permanent,
+          quadrant: Quadrant.upperRight,
+          position: 6,
+        ),
         site: PerioSite.mesioBuccal,
         probingDepth: 5,
         gingivalMargin: -2,

@@ -1,11 +1,15 @@
 import 'dart:io';
 
 import 'package:ampdent_core/ampdent_core.dart';
+import 'package:ampdent_mobile/core/stored_file_path.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Captures or picks a photo of a licence document and copies it into the
-/// app's documents directory (`licences/<licenceId>-<timestamp>.<ext>`).
+/// app's documents directory. The licence row stores the store-relative
+/// path (`licences/<licenceId>-<timestamp>.<ext>`), resolved against the
+/// documents directory at read time so the scan survives an app-container
+/// move; absolute paths from earlier builds are re-rooted by [resolve].
 class LicenceDocumentStore {
   /// Creates the store. [picker] and [baseDirectory] are injectable for
   /// tests.
@@ -45,16 +49,24 @@ class LicenceDocumentStore {
     return store(picked, licenceId: licenceId);
   }
 
-  /// Copies [file] into the licences folder and returns the new path.
+  /// Store-relative path for a licence document.
+  static String relativePath(String licenceId, int stamp, String ext) =>
+      'licences/$licenceId-$stamp$ext';
+
+  /// Absolute file for a stored path (relative or legacy absolute).
+  Future<File> resolve(String path) =>
+      resolveStoredFile(path, root: _baseDirectory, folder: 'licences');
+
+  /// Copies [file] into the licences folder and returns the store-relative
+  /// path.
   Future<String> store(XFile file, {required String licenceId}) async {
-    final base = await _baseDirectory();
-    final dir = Directory('${base.path}${Platform.pathSeparator}licences');
-    await dir.create(recursive: true);
     final ext = _extensionOf(file.name.isEmpty ? file.path : file.name);
     final stamp = clock().toUtc().millisecondsSinceEpoch;
-    final target = '${dir.path}${Platform.pathSeparator}$licenceId-$stamp$ext';
-    await file.saveTo(target);
-    return target;
+    final rel = relativePath(licenceId, stamp, ext);
+    final target = await resolve(rel);
+    await target.parent.create(recursive: true);
+    await file.saveTo(target.path);
+    return rel;
   }
 
   static String _extensionOf(String name) {

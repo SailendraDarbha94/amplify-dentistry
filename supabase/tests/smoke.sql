@@ -95,27 +95,56 @@ end
 $$;
 
 -- Invoice numbering: DRAFT- numbers are replaced when the invoice leaves draft, per clinic per FY.
+-- Issued invoices must name a registered dentist (frozen at issue, DCI Code 3.4.1).
 insert into public.invoices (id, clinic_id, patient_id, number, document_type, status, issued_at, issued_by)
 values ('aaaaaaaa-0000-0000-0000-0000000000e1', 'aaaaaaaa-0000-0000-0000-000000000001',
         'aaaaaaaa-0000-0000-0000-0000000000f1', 'DRAFT-0001', 'receipt', 'draft',
         '2026-10-18 10:00+05:30', 'aaaaaaaa-0000-0000-0000-00000000000a');
 
-update public.invoices set status = 'issued' where id = 'aaaaaaaa-0000-0000-0000-0000000000e1';
+do $$
+begin
+  update public.invoices set status = 'issued' where id = 'aaaaaaaa-0000-0000-0000-0000000000e1';
+  raise exception 'issuing without a registered dentist should have been rejected';
+exception when check_violation then null;
+end
+$$;
 
-insert into public.invoices (id, clinic_id, patient_id, number, document_type, status, issued_at, issued_by)
+update public.invoices
+   set status = 'issued',
+       dentist_id = 'aaaaaaaa-0000-0000-0000-00000000000a',
+       dentist_name = 'Dr. Owner',
+       dentist_registration_number = 'A-12345'
+ where id = 'aaaaaaaa-0000-0000-0000-0000000000e1';
+
+insert into public.invoices (id, clinic_id, patient_id, number, document_type, status, issued_at, issued_by,
+                             dentist_id, dentist_name, dentist_registration_number)
 values ('aaaaaaaa-0000-0000-0000-0000000000e2', 'aaaaaaaa-0000-0000-0000-000000000001',
         'aaaaaaaa-0000-0000-0000-0000000000f1', 'DRAFT-0002', 'receipt', 'issued',
-        '2027-03-31 23:00+05:30', 'aaaaaaaa-0000-0000-0000-00000000000a');
+        '2027-03-31 23:00+05:30', 'aaaaaaaa-0000-0000-0000-00000000000a',
+        'aaaaaaaa-0000-0000-0000-00000000000a', 'Dr. Owner', 'A-12345');
 
-insert into public.invoices (id, clinic_id, patient_id, number, document_type, status, issued_at, issued_by)
+insert into public.invoices (id, clinic_id, patient_id, number, document_type, status, issued_at, issued_by,
+                             dentist_id, dentist_name, dentist_registration_number)
 values ('aaaaaaaa-0000-0000-0000-0000000000e3', 'aaaaaaaa-0000-0000-0000-000000000001',
         'aaaaaaaa-0000-0000-0000-0000000000f1', 'DRAFT-0003', 'receipt', 'issued',
-        '2027-04-01 00:30+05:30', 'aaaaaaaa-0000-0000-0000-00000000000a');
+        '2027-04-01 00:30+05:30', 'aaaaaaaa-0000-0000-0000-00000000000a',
+        'aaaaaaaa-0000-0000-0000-00000000000a', 'Dr. Owner', 'A-12345');
+
+-- The phone never learns the minted number until it is written back, so a payment replays the
+-- full row with the DRAFT- number: the minted number must survive and the counter must not advance.
+update public.invoices
+   set status = 'paid', number = 'DRAFT-0001', amount_paid_paise = 50000
+ where id = 'aaaaaaaa-0000-0000-0000-0000000000e1';
 
 do $$
 declare
-  n1 text; n2 text; n3 text;
+  n1 text; n2 text; n3 text; st text;
 begin
+  select number, status into n1, st from public.invoices where id = 'aaaaaaaa-0000-0000-0000-0000000000e1';
+  if st <> 'paid' then raise exception 'replayed payment should have moved the status to paid, got %', st; end if;
+  if n1 <> 'INV/2026-27/0001' then
+    raise exception 'a replayed DRAFT- number must not renumber a minted invoice, got %', n1;
+  end if;
   select number into n1 from public.invoices where id = 'aaaaaaaa-0000-0000-0000-0000000000e1';
   select number into n2 from public.invoices where id = 'aaaaaaaa-0000-0000-0000-0000000000e2';
   select number into n3 from public.invoices where id = 'aaaaaaaa-0000-0000-0000-0000000000e3';
@@ -130,9 +159,11 @@ $$;
 
 do $$
 begin
-  insert into public.invoices (id, clinic_id, patient_id, number, document_type, status, issued_at, issued_by)
+  insert into public.invoices (id, clinic_id, patient_id, number, document_type, status, issued_at, issued_by,
+                               dentist_id, dentist_name, dentist_registration_number)
   values (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-0000000000f1',
-          'DRAFT-0009', 'receipt', 'voided', now(), 'aaaaaaaa-0000-0000-0000-00000000000a');
+          'DRAFT-0009', 'receipt', 'voided', now(), 'aaaaaaaa-0000-0000-0000-00000000000a',
+          'aaaaaaaa-0000-0000-0000-00000000000a', 'Dr. Owner', 'A-12345');
   raise exception 'voided invoice without void_reason should have been rejected';
 exception when check_violation then null;
 end

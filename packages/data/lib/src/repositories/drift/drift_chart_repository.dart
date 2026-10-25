@@ -273,6 +273,9 @@ class DriftChartRepository extends DatabaseAccessor<AppDatabase>
   }) => writeTransaction(() async {
     final before = await getProcedure(id);
     if (before == null) throw StateError('Procedure $id not found');
+    if (before.status == status) {
+      throw StateError('Procedure $id is already ${status.name}');
+    }
     if (status == ProcedureStatus.deleted && (reason ?? '').isEmpty) {
       throw ArgumentError.value(reason, 'reason', 'required to delete');
     }

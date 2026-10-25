@@ -13,6 +13,10 @@ abstract class RecallRepository {
   /// A patient's recalls, soonest due first.
   Future<List<Recall>> forPatient(String patientId);
 
+  /// The recall a procedure triggered (any status), or null. A procedure
+  /// completes once and triggers at most one recall.
+  Future<Recall?> forProcedure(String procedureId);
+
   /// Open recalls (`due` or `notified`) due on or before [until] (default:
   /// now), overdue first (ascending `dueAt`).
   Future<List<Recall>> due(String clinicId, {DateTime? until, int? limit});
@@ -40,7 +44,9 @@ abstract class RecallRepository {
   Future<Recall> dismiss(ActorContext ctx, String id, String reason);
 
   /// Creates the recall implied by a completed procedure's code via the
-  /// default recall rules; null when no rule matches.
+  /// default recall rules; null when no rule matches. Idempotent: when the
+  /// procedure already triggered a recall, that recall is returned and no
+  /// second one is written.
   Future<Recall?> createFromProcedure(
     ActorContext ctx,
     ProcedureRecord procedure, {

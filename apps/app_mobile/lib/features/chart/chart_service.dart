@@ -259,8 +259,12 @@ class ChartService {
   }
 
   /// Creates the recall a completed procedure implies: the terminology rule
-  /// first, then the catalogue item's own interval as a fallback.
+  /// first, then the catalogue item's own interval as a fallback. A
+  /// procedure triggers at most one recall: when one already exists for
+  /// [p] it is returned unchanged.
   Future<Recall?> createRecall(ProcedureRecord p, CatalogItem? item) async {
+    final existing = await recalls.forProcedure(p.id);
+    if (existing != null) return existing;
     final completedOn = p.completedAt ?? clock().toUtc();
     final fromRule = await recalls.createFromProcedure(
       ctx,

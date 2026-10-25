@@ -36,14 +36,12 @@ void main() {
     test('entity hash is stable across re-renders', () {
       final a = InvoicePdf(
         clinic: clinic,
-        dentist: dentist,
         patient: patient,
         invoice: sampleInvoice(),
         theme: testTheme(),
       );
       final b = InvoicePdf(
         clinic: clinic,
-        dentist: dentist,
         patient: patient,
         invoice: sampleInvoice(),
         theme: testTheme(),

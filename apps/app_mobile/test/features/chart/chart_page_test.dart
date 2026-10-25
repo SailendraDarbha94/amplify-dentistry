@@ -204,6 +204,76 @@ void main() {
     expect(find.textContaining('procedureIds=${scaling.id}'), findsOneWidget);
   });
 
+  testWidgets('a double tap on Mark done records one completion and one '
+      'recall', (tester) async {
+    final scaling = await plan('SCALING-ADULT');
+    await env.pumpAt(tester, chartPath);
+    await dismissSnackBars(tester);
+    final button = find.byKey(ValueKey('proc-done-${scaling.id}'));
+    await tester.ensureVisible(button);
+    await tester.pump();
+    // Two taps in the same frame: the second must hit the busy guard.
+    await tester.tap(button);
+    await tester.tap(button, warnIfMissed: false);
+    await settle(tester, frames: 15);
+
+    final p = (await env.repos.chart.getProcedure(scaling.id))!;
+    expect(p.status, ProcedureStatus.completed);
+    final events = await env.repos.audit.forEntity(
+      testClinicId,
+      'ProcedureRecord',
+      scaling.id,
+    );
+    expect(events.where((e) => e.action == AuditAction.statusChange).length, 1);
+    expect(await env.repos.recalls.forPatient(testPatientId), hasLength(1));
+  });
+
+  testWidgets('a double tap on Next stage advances a single stage', (
+    tester,
+  ) async {
+    final inlay = await plan('INLAY-CER', tooth: ToothId.parse('16'));
+    expect(inlay.totalStages, 2);
+    await env.pumpAt(tester, chartPath);
+    await dismissSnackBars(tester);
+    final button = find.byKey(ValueKey('proc-done-${inlay.id}'));
+    await tester.ensureVisible(button);
+    await tester.pump();
+    await tester.tap(button);
+    await tester.tap(button, warnIfMissed: false);
+    await settle(tester, frames: 15);
+
+    final p = (await env.repos.chart.getProcedure(inlay.id))!;
+    expect(p.status, ProcedureStatus.inProgress);
+    expect(p.stageIndex, 0);
+    // While the first transition runs the button is disabled.
+    expect(find.text('Next stage'), findsOneWidget);
+  });
+
+  testWidgets('a double tap on Save adds the procedure once', (tester) async {
+    await env.pumpAt(tester, '$chartPath?tooth=36');
+    await tapKey(tester, 'chart-action-procedure');
+    await tester.enterText(
+      find.byKey(const ValueKey('procedure-search')),
+      'SCALING-ADULT',
+    );
+    await settle(tester);
+    await tapKey(tester, 'procedure-item-SCALING-ADULT');
+    await tapKey(tester, 'procedure-status-done');
+    final save = find.byKey(const ValueKey('procedure-save'));
+    await tester.ensureVisible(save);
+    await tester.pump();
+    await tester.tap(save);
+    await tester.tap(save, warnIfMissed: false);
+    await settle(tester, frames: 15);
+
+    final procedures = await env.repos.chart.proceduresForPatient(
+      testPatientId,
+    );
+    expect(procedures, hasLength(1));
+    expect(procedures.single.status, ProcedureStatus.completed);
+    expect(await env.repos.recalls.forPatient(testPatientId), hasLength(1));
+  });
+
   testWidgets('adding a procedure from the sheet prefills the fee and plans '
       'it on the selected tooth and surfaces', (tester) async {
     await env.pumpAt(tester, '$chartPath?tooth=36');

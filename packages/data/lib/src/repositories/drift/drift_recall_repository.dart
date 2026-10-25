@@ -77,6 +77,14 @@ class DriftRecallRepository extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.asc(t.dueAt)]))
           .get();
 
+  @override
+  Future<Recall?> forProcedure(String procedureId) =>
+      (select(_t)
+            ..where((t) => t.triggeredByProcedureId.equals(procedureId))
+            ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+            ..limit(1))
+          .getSingleOrNull();
+
   SimpleSelectStatement<$RecallsTable, Recall> _dueQuery(
     String clinicId,
     DateTime? until,
@@ -160,6 +168,8 @@ class DriftRecallRepository extends DatabaseAccessor<AppDatabase>
     if (seed == null) return null;
     final rule = recallRuleFor(seed);
     if (rule == null) return null;
+    final existing = await forProcedure(procedure.id);
+    if (existing != null) return existing;
     final from = nowUtc(completedOn ?? procedure.completedAt);
     final now = nowUtc();
     final recall = Recall(

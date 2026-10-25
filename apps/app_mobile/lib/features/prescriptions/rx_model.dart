@@ -139,18 +139,15 @@ String generateVerificationCode([Random? random]) {
   ).join();
 }
 
-/// Whether [drug] belongs to an allergy group recorded in [history].
+/// Whether [drug] matches an allergy recorded in [history]: by group, by
+/// the group inferred from the substance text, or by substance name (see
+/// `allergyMatches` in `ampdent_data`).
 bool allergyConflicts(MedicalHistory? history, Drug drug) =>
-    history != null && conflictingDrugs(history, [drug]).isNotEmpty;
+    history != null && matchingAllergies(history, drug).isNotEmpty;
 
-/// Allergy entries that match the drug's group.
-List<AllergyEntry> matchingAllergies(MedicalHistory? history, Drug drug) {
-  final group = drug.allergyGroup?.toLowerCase();
-  if (history == null || group == null || group.isEmpty) return const [];
-  return history.allergies
-      .where((a) => a.allergyGroup?.toLowerCase() == group)
-      .toList();
-}
+/// Allergy entries that block [drug].
+List<AllergyEntry> matchingAllergies(MedicalHistory? history, Drug drug) =>
+    history == null ? const [] : allergyMatches(history, drug);
 
 /// Caution chip labels for a drug given the patient's history and age.
 List<String> cautionLabels({

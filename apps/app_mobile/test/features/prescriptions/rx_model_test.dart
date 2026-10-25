@@ -154,6 +154,50 @@ void main() {
       );
     });
 
+    test('a free-typed substance without a group still conflicts', () {
+      final typed = history.copyWith(
+        allergies: const [
+          AllergyEntry(substance: 'amoxicillin', reaction: 'anaphylaxis'),
+        ],
+      );
+      expect(allergyConflicts(typed, amox), isTrue);
+      expect(matchingAllergies(typed, amox).single.reaction, 'anaphylaxis');
+      // Brand of a related penicillin maps to the group.
+      final brand = history.copyWith(
+        allergies: const [AllergyEntry(substance: 'Augmentin')],
+      );
+      expect(allergyConflicts(brand, amox), isTrue);
+      // Unrelated substance: nothing to block.
+      final other = history.copyWith(
+        allergies: const [AllergyEntry(substance: 'Latex')],
+      );
+      expect(allergyConflicts(other, amox), isFalse);
+      // A drug with no group of its own is still matched by name.
+      final para = amox.copyWith(allergyGroup: null);
+      final paraDrug = Drug(
+        id: 'd2',
+        genericName: 'Paracetamol',
+        brandNames: const ['Dolo 650', 'Crocin'],
+        strength: '650 mg',
+        form: DrugForm.tablet,
+        category: 'analgesic',
+        defaultDose: '1 tablet',
+        defaultFrequency: 'TDS',
+        defaultDurationDays: 3,
+        route: 'oral',
+      );
+      expect(para.allergyGroup, isNotNull, reason: 'copyWith keeps the group');
+      expect(
+        allergyConflicts(
+          history.copyWith(
+            allergies: const [AllergyEntry(substance: 'Crocin')],
+          ),
+          paraDrug,
+        ),
+        isTrue,
+      );
+    });
+
     test('caution labels depend on age and pregnancy', () {
       expect(cautionLabels(drug: amox, history: history, isMinor: true), [
         'Paediatric caution',

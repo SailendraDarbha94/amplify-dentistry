@@ -246,6 +246,33 @@ void main() {
       );
     });
 
+    testWidgets('a free-typed allergy with no group chip still blocks', (
+      tester,
+    ) async {
+      await env.repos.clinical.recordMedicalHistory(
+        testCtx,
+        MedicalHistory(
+          id: 'mh-typed',
+          clinicId: testClinicId,
+          patientId: testPatientId,
+          recordedAt: _now,
+          recordedBy: testDentistId,
+          allergies: const [
+            AllergyEntry(substance: 'Amoxicillin', reaction: 'anaphylaxis'),
+          ],
+          createdAt: _now,
+        ),
+      );
+      await openEditor(tester);
+      await pickAmoxicillin(tester);
+      expect(
+        find.byKey(const ValueKey('allergy-block-dialog')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('anaphylaxis'), findsOneWidget);
+      expect(find.byKey(const ValueKey('rx-line-save')), findsNothing);
+    });
+
     testWidgets('no allergy: drug goes straight to the line sheet', (
       tester,
     ) async {

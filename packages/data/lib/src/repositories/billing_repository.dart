@@ -2,6 +2,20 @@ import 'package:ampdent_core/ampdent_core.dart';
 
 import 'actor_context.dart';
 
+/// Thrown by [BillingRepository.issueInvoice] when no registered clinician
+/// can be named on the document: neither the billed procedures' providers
+/// nor the clinic's owner dentist is a clinician with a council registration
+/// number (DCI Code 3.4.1 requires it on every receipt).
+class NoRegisteredClinician implements Exception {
+  /// Creates the error.
+  const NoRegisteredClinician();
+
+  @override
+  String toString() =>
+      'No registered dentist to name on the invoice. Record the registration '
+      'number of the treating dentist in Settings > Members first.';
+}
+
 /// Invoices, payments, adjustments and the patient ledger. Ledger postings
 /// are written in the same transaction as the invoice issue, payment or
 /// adjustment they mirror.
@@ -13,11 +27,27 @@ abstract class BillingRepository {
 
   /// Issues a draft: resolves tax rates per line from the clinic's GST rate
   /// table (or [rates]), recomputes totals, picks the document type from
-  /// the clinic's GST registration, posts the charge to the ledger.
+  /// the clinic's GST registration, freezes the treating dentist on the row
+  /// (the billed procedures' provider, else the clinic's owner dentist;
+  /// throws [NoRegisteredClinician] when neither has a registration number)
+  /// and posts the charge to the ledger.
   Future<Invoice> issueInvoice(
     ActorContext ctx,
     String invoiceId, {
     GstRateTable? rates,
+    DateTime? at,
+  });
+
+  /// Writes the server-minted [number] over a `DRAFT-` number once the
+  /// first sync has assigned it, audited as a status change, so later local
+  /// writes replay the real number and the printed receipt matches the
+  /// server. Throws [ArgumentError] for a `DRAFT-` [number], [StateError]
+  /// for a draft invoice or when a different number is already minted; a
+  /// repeat of the same number is a no-op.
+  Future<Invoice> applyServerNumber(
+    ActorContext ctx,
+    String invoiceId,
+    String number, {
     DateTime? at,
   });
 

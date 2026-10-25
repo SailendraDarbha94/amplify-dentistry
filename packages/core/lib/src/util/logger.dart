@@ -3,8 +3,13 @@
 /// Never log patient identifiers or clinical text.
 enum LogLevel { debug, info, warning, error }
 
-typedef LogSink = void Function(LogLevel level, String tag, String message,
-    {Object? error, StackTrace? stackTrace});
+typedef LogSink = void Function(
+  LogLevel level,
+  String tag,
+  String message, {
+  Object? error,
+  StackTrace? stackTrace,
+});
 
 class Logger {
   const Logger(this.tag);
@@ -16,8 +21,13 @@ class Logger {
 
   static void install(LogSink sink) => _sink = sink;
 
-  static void _noop(LogLevel level, String tag, String message,
-      {Object? error, StackTrace? stackTrace}) {}
+  static void _noop(
+    LogLevel level,
+    String tag,
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {}
 
   void debug(String message) => _log(LogLevel.debug, message);
   void info(String message) => _log(LogLevel.info, message);
@@ -26,8 +36,12 @@ class Logger {
   void error(String message, {Object? error, StackTrace? stackTrace}) =>
       _log(LogLevel.error, message, error: error, stackTrace: stackTrace);
 
-  void _log(LogLevel level, String message,
-      {Object? error, StackTrace? stackTrace}) {
+  void _log(
+    LogLevel level,
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
     if (level.index < minimumLevel.index) return;
     _sink(level, tag, message, error: error, stackTrace: stackTrace);
   }

@@ -101,32 +101,35 @@ class _ChartPageState extends ConsumerState<ChartPage> {
   void _addToBill(ProcedureRecord p) =>
       context.push(billingRouteFor(widget.patientId, p.id));
 
+  /// Advances or completes [p]. The busy flag is raised synchronously, before
+  /// the first await, so a gloved double tap cannot run two transitions (and
+  /// record two stages or two recalls) while the pre-op check is loading.
   Future<void> _markDone(ProcedureRecord p) async {
     if (_busy) return;
-    final item = ref.read(catalogByIdProvider)[p.catalogItemId];
-    final kind = classifyProcedure(p.code, category: item?.category);
-    final images = await ref
-        .read(clinicalRepositoryProvider)
-        .imagesForPatient(widget.patientId);
-    final check = checkProcedurePreOp(
-      p,
-      kind: kind,
-      catalogFlag: item?.requiresPreOpRadiograph ?? false,
-      images: images,
-    );
-    PreOpResolution? resolution;
-    if (check.blocks) {
-      if (!mounted) return;
-      resolution = await PreOpGuardDialog.show(
-        context,
-        procedureName: p.name,
-        candidates: check.candidates,
-      );
-      if (resolution == null) return;
-    }
-    if (!mounted) return;
     setState(() => _busy = true);
     try {
+      final item = ref.read(catalogByIdProvider)[p.catalogItemId];
+      final kind = classifyProcedure(p.code, category: item?.category);
+      final images = await ref
+          .read(clinicalRepositoryProvider)
+          .imagesForPatient(widget.patientId);
+      final check = checkProcedurePreOp(
+        p,
+        kind: kind,
+        catalogFlag: item?.requiresPreOpRadiograph ?? false,
+        images: images,
+      );
+      PreOpResolution? resolution;
+      if (check.blocks) {
+        if (!mounted) return;
+        resolution = await PreOpGuardDialog.show(
+          context,
+          procedureName: p.name,
+          candidates: check.candidates,
+        );
+        if (resolution == null) return;
+      }
+      if (!mounted) return;
       final result = await ref
           .read(chartServiceProvider)
           .markDone(
@@ -270,6 +273,7 @@ class _ChartPageState extends ConsumerState<ChartPage> {
                 ChartProcedureList(
                   procedures: procedures,
                   notation: notation,
+                  busy: _busy,
                   onMarkDone: _markDone,
                   onAddToBill: _addToBill,
                 ),

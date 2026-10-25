@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../hash/document_hash.dart';
 import '../text/formatters.dart';
 import '../text/indian_number_words.dart';
+import '../theme/document_theme.dart';
 import '../theme/document_widgets.dart';
 import 'document_builder.dart';
 import 'invoice_gst_summary.dart';
@@ -14,12 +15,16 @@ import 'invoice_gst_summary.dart';
 /// rate with the CGST/SGST split and the exempt total, the amount in words,
 /// payments received and the balance. Draft-numbered invoices get a `DRAFT`
 /// watermark; an invoice-cum-bill of supply carries the Rule 46A notice.
+///
+/// The dentist in the letterhead and signature box is the one frozen on the
+/// invoice at issue (`Invoice.dentistName` and friends), never the member
+/// operating the device, so a receptionist reprinting a receipt still prints
+/// the treating dentist's registration number (DCI Code 3.4.1).
 class InvoicePdf extends DocumentBuilder {
   /// Creates the builder. [payments] are the payments applied to this
   /// invoice; when omitted only `invoice.amountPaid` is shown.
   InvoicePdf({
     required super.clinic,
-    required ClinicMember super.dentist,
     required this.patient,
     required this.invoice,
     this.payments = const [],
@@ -37,6 +42,11 @@ class InvoicePdf extends DocumentBuilder {
 
   /// GST summary derived from the invoice lines.
   late final GstSummary gstSummary = summariseInvoiceGst(invoice);
+
+  /// The treating dentist frozen on the invoice; null for a draft that was
+  /// never issued.
+  @override
+  Signatory? get signatory => Signatory.invoiceDentist(invoice);
 
   @override
   String get title => invoiceTitle(invoice.documentType);
@@ -56,9 +66,10 @@ class InvoicePdf extends DocumentBuilder {
       : null;
 
   @override
-  String? get footerNote =>
-      'Registration number printed under DCI Code of Ethics 3.4.1. '
-      'Computer-generated document.';
+  String? get footerNote => (signatory?.hasRegistration ?? false)
+      ? 'Registration number printed under DCI Code of Ethics 3.4.1. '
+            'Computer-generated document.'
+      : 'Computer-generated document.';
 
   @override
   String get suggestedFileName =>
@@ -101,8 +112,10 @@ class InvoicePdf extends DocumentBuilder {
             theme,
             caption: 'For ${clinic.name}',
             lines: [
-              theme.dentistNameLine(dentist!),
-              theme.registrationLine(dentist!),
+              if (signatory != null) ...[
+                theme.signatoryNameLine(signatory!),
+                theme.signatoryRegistrationLine(signatory!),
+              ],
             ],
           ),
         ],

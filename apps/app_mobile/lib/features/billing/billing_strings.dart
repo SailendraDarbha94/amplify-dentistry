@@ -49,6 +49,9 @@ abstract final class BillingStrings {
       'Differs from the catalogue. Check before issuing.';
   static const String discountTooLarge = 'Discount exceeds the line amount';
   static const String selectAtLeastOneLine = 'Select at least one line';
+  static const String noRegisteredClinician =
+      'No registered dentist to name on the invoice. Record the treating '
+      'dentist\'s registration number in Settings > Members first.';
 
   /// Payment sheet.
   static const String method = 'Method';

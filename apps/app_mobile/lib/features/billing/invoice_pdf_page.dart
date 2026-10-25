@@ -11,8 +11,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'billing_providers.dart';
 
 /// Renders the invoice with [InvoicePdf] and shows it in [PdfPreviewPage]
-/// (print and share built in). Fonts, clinic, dentist and payments come from
-/// the providers; the render happens once per invoice version.
+/// (print and share built in). Fonts, clinic and payments come from the
+/// providers; the dentist is the one frozen on the invoice at issue, so the
+/// member operating the device never changes the printed registration
+/// number. The render happens once per invoice version.
 class InvoicePdfPage extends ConsumerWidget {
   /// Creates the page.
   const InvoicePdfPage({
@@ -32,11 +34,10 @@ class InvoicePdfPage extends ConsumerWidget {
     final s = context.strings;
     final fonts = ref.watch(documentFontsProvider);
     final clinic = ref.watch(currentClinicProvider);
-    final dentist = ref.watch(currentMemberProvider);
     final payments = ref.watch(
       invoicePaymentsProvider((patientId: patient.id, invoiceId: invoice.id)),
     );
-    final error = [fonts, clinic, dentist, payments].where((a) => a.hasError);
+    final error = [fonts, clinic, payments].where((a) => a.hasError);
     if (error.isNotEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(invoice.number)),
@@ -46,10 +47,7 @@ class InvoicePdfPage extends ConsumerWidget {
         ),
       );
     }
-    if (!fonts.hasValue ||
-        !clinic.hasValue ||
-        !dentist.hasValue ||
-        !payments.hasValue) {
+    if (!fonts.hasValue || !clinic.hasValue || !payments.hasValue) {
       return LoadingScaffold(message: s.loading);
     }
     return PdfPreviewPage(
@@ -58,7 +56,6 @@ class InvoicePdfPage extends ConsumerWidget {
       builder: (_) => renderInvoicePdf(
         fonts: fonts.requireValue,
         clinic: clinic.requireValue,
-        dentist: dentist.requireValue,
         patient: patient,
         invoice: invoice,
         payments: payments.requireValue,
@@ -67,17 +64,15 @@ class InvoicePdfPage extends ConsumerWidget {
   }
 }
 
-/// Builds the invoice PDF bytes.
+/// Builds the invoice PDF bytes from the invoice's frozen dentist fields.
 Future<Uint8List> renderInvoicePdf({
   required DocumentFonts fonts,
   required Clinic clinic,
-  required ClinicMember dentist,
   required Patient patient,
   required Invoice invoice,
   List<Payment> payments = const [],
 }) => InvoicePdf(
   clinic: clinic,
-  dentist: dentist,
   patient: patient,
   invoice: invoice,
   payments: payments,

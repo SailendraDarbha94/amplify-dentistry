@@ -29,10 +29,38 @@ void main() {
   group('Universal conversion', () {
     test('matches the ADA table for all 32 permanent teeth', () {
       const expected = {
-        '18': 1, '17': 2, '16': 3, '15': 4, '14': 5, '13': 6, '12': 7, '11': 8,
-        '21': 9, '22': 10, '23': 11, '24': 12, '25': 13, '26': 14, '27': 15, '28': 16,
-        '38': 17, '37': 18, '36': 19, '35': 20, '34': 21, '33': 22, '32': 23, '31': 24,
-        '41': 25, '42': 26, '43': 27, '44': 28, '45': 29, '46': 30, '47': 31, '48': 32,
+        '18': 1,
+        '17': 2,
+        '16': 3,
+        '15': 4,
+        '14': 5,
+        '13': 6,
+        '12': 7,
+        '11': 8,
+        '21': 9,
+        '22': 10,
+        '23': 11,
+        '24': 12,
+        '25': 13,
+        '26': 14,
+        '27': 15,
+        '28': 16,
+        '38': 17,
+        '37': 18,
+        '36': 19,
+        '35': 20,
+        '34': 21,
+        '33': 22,
+        '32': 23,
+        '31': 24,
+        '41': 25,
+        '42': 26,
+        '43': 27,
+        '44': 28,
+        '45': 29,
+        '46': 30,
+        '47': 31,
+        '48': 32,
       };
       for (final e in expected.entries) {
         expect(ToothId.parse(e.key).universalNumber, e.value, reason: e.key);
@@ -42,10 +70,26 @@ void main() {
 
     test('matches the ADA letters for all 20 primary teeth', () {
       const expected = {
-        '55': 'A', '54': 'B', '53': 'C', '52': 'D', '51': 'E',
-        '61': 'F', '62': 'G', '63': 'H', '64': 'I', '65': 'J',
-        '75': 'K', '74': 'L', '73': 'M', '72': 'N', '71': 'O',
-        '81': 'P', '82': 'Q', '83': 'R', '84': 'S', '85': 'T',
+        '55': 'A',
+        '54': 'B',
+        '53': 'C',
+        '52': 'D',
+        '51': 'E',
+        '61': 'F',
+        '62': 'G',
+        '63': 'H',
+        '64': 'I',
+        '65': 'J',
+        '75': 'K',
+        '74': 'L',
+        '73': 'M',
+        '72': 'N',
+        '71': 'O',
+        '81': 'P',
+        '82': 'Q',
+        '83': 'R',
+        '84': 'S',
+        '85': 'T',
       };
       for (final e in expected.entries) {
         expect(ToothId.parse(e.key).universalLetter, e.value, reason: e.key);
@@ -108,8 +152,10 @@ void main() {
       expect(teeth.map((t) => t.fdi), ['16', '17', '26']);
       expect(parseToothList('UR6 UL6').map((t) => t.fdi), ['16', '26']);
       expect(
-        parseToothList('3, 14', preferred: ToothNotation.universal)
-            .map((t) => t.fdi),
+        parseToothList(
+          '3, 14',
+          preferred: ToothNotation.universal,
+        ).map((t) => t.fdi),
         ['16', '26'],
       );
     });

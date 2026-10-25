@@ -1,15 +1,51 @@
 import 'package:ampdent_core/ampdent_core.dart';
+import 'package:ampdent_terminology/ampdent_terminology.dart';
 
 import 'actor_context.dart';
 
-/// Drugs whose allergy group matches an allergy recorded in [history].
+/// Shortest substance text that may match a drug name by containment; below
+/// this an entry such as `Pan` would hit unrelated names.
+const int minAllergySubstanceLength = 4;
+
+/// Allergy entries in [history] that [drug] must not be prescribed against.
+///
+/// An entry matches when
+/// * its recorded group, or the group inferred from its substance text
+///   ([inferAllergyGroup]), equals the drug's allergy group; or
+/// * its substance text (case-insensitive, trimmed) is contained in the
+///   drug's generic name, one of its combination components or a brand
+///   name, or contains one of those names.
+///
+/// So `Amoxicillin` typed with no group chip still blocks `AMOX-500` and
+/// `Augmentin` blocks every penicillin.
+List<AllergyEntry> allergyMatches(MedicalHistory history, Drug drug) {
+  final group = drug.allergyGroup?.trim().toLowerCase();
+  final names = [
+    ...drug.genericName.split('+'),
+    drug.genericName,
+    ...drug.brandNames,
+  ].map(normaliseAllergySubstance).where((n) => n.isNotEmpty).toList();
+  return history.allergies.where((a) {
+    final recorded = a.allergyGroup?.trim().toLowerCase();
+    final inferred = inferAllergyGroup(a.substance)?.toLowerCase();
+    if (group != null &&
+        group.isNotEmpty &&
+        (recorded == group || inferred == group)) {
+      return true;
+    }
+    final substance = normaliseAllergySubstance(a.substance);
+    if (substance.length < minAllergySubstanceLength) return false;
+    return names.any(
+      (n) =>
+          n.contains(substance) ||
+          (n.length >= minAllergySubstanceLength && substance.contains(n)),
+    );
+  }).toList();
+}
+
+/// Drugs that match an allergy recorded in [history] (see [allergyMatches]).
 List<Drug> conflictingDrugs(MedicalHistory history, Iterable<Drug> drugs) =>
-    drugs.where((d) {
-      final group = d.allergyGroup;
-      return group != null &&
-          group.isNotEmpty &&
-          history.hasAllergyGroup(group);
-    }).toList();
+    drugs.where((d) => allergyMatches(history, d).isNotEmpty).toList();
 
 /// Drugs flagged for caution given the patient's history: pregnancy caution
 /// when pregnant; the caller adds paediatric caution from the patient's age.

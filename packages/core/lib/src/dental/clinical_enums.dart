@@ -31,11 +31,14 @@ enum ProcedureStatus {
   /// Soft-deleted; kept for audit.
   deleted;
 
-  bool get isPlanned => this == planned || this == plannedInactive || this == accepted;
-  bool get isExisting => this == existingCurrentProvider || this == existingOtherProvider;
+  bool get isPlanned =>
+      this == planned || this == plannedInactive || this == accepted;
+  bool get isExisting =>
+      this == existingCurrentProvider || this == existingOtherProvider;
   bool get isDone => this == completed || isExisting;
   bool get isBillable => this == completed || this == inProgress;
-  bool get showsOnChart => this != plannedInactive && this != deleted && this != referred;
+  bool get showsOnChart =>
+      this != plannedInactive && this != deleted && this != referred;
 }
 
 /// Status of a finding (condition) on a tooth or surface.
@@ -82,11 +85,11 @@ enum FurcationGrade {
   final int value;
 
   String get glickmanLabel => switch (this) {
-        FurcationGrade.none => '-',
-        FurcationGrade.grade1 => 'I',
-        FurcationGrade.grade2 => 'II',
-        FurcationGrade.grade3 => 'III/IV',
-      };
+    FurcationGrade.none => '-',
+    FurcationGrade.grade1 => 'I',
+    FurcationGrade.grade2 => 'II',
+    FurcationGrade.grade3 => 'III/IV',
+  };
 }
 
 /// The six periodontal probing sites per tooth.
@@ -119,7 +122,11 @@ enum PerioMeasurementType {
   mobility;
 
   bool get isPerSite => this != furcation && this != mobility;
-  bool get isBoolean => this == bleedingOnProbing || this == suppuration || this == plaque || this == calculus;
+  bool get isBoolean =>
+      this == bleedingOnProbing ||
+      this == suppuration ||
+      this == plaque ||
+      this == calculus;
 }
 
 /// UK BSP Basic Periodontal Examination codes per sextant. Code 3 unlocks a
@@ -192,7 +199,9 @@ enum ClinicRole {
   lab;
 
   bool get isClinician =>
-      this == ownerDentist || this == associateDentist || this == visitingSpecialist;
+      this == ownerDentist ||
+      this == associateDentist ||
+      this == visitingSpecialist;
   bool get canSeeLedger =>
       this == ownerDentist || this == receptionist || this == accountant;
 }
@@ -209,7 +218,10 @@ enum AppointmentStatus {
   rescheduled;
 
   bool get occupiesChair =>
-      this == scheduled || this == confirmed || this == arrived || this == inChair;
+      this == scheduled ||
+      this == confirmed ||
+      this == arrived ||
+      this == inChair;
 }
 
 /// Lab case workflow.

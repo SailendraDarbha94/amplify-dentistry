@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_documents/ampdent_documents.dart';
 import 'package:ampdent_mobile/features/export/export_service.dart';
+import 'package:ampdent_mobile/features/notes/photos/photo_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'feature_harness.dart';
@@ -19,6 +20,11 @@ void main() {
     required String text,
   }) async => shared.add((files, subject, text));
 
+  /// Photo store rooted at the test directory, as on a device where the
+  /// documents directory holds `clinics/<clinic>/patients/<patient>/images`.
+  LocalPhotoStore photoStore() =>
+      LocalPhotoStore(root: () async => out, compressor: copyUncompressed);
+
   ExportService service() => ExportService(
     export: env.repos.export,
     clinics: env.repos.clinics,
@@ -27,6 +33,7 @@ void main() {
     ),
     outputDirectory: () async => out,
     share: fakeShare,
+    resolveImage: photoStore().resolve,
     clock: () => DateTime(2026, 10, 25, 10, 30),
   );
 
@@ -56,6 +63,28 @@ void main() {
         createdAt: t,
       ),
     );
+    // Store-relative path, as PhotoSaver writes it: resolved through the
+    // photo store, never against the process working directory.
+    final rel = LocalPhotoStore.relativePath(
+      testClinicId,
+      testPatientId,
+      'img-rel',
+    );
+    final relFile = File('${out.path}/$rel');
+    await relFile.create(recursive: true);
+    await relFile.writeAsBytes(List<int>.generate(48, (i) => 255 - i));
+    await env.repos.clinical.addImage(
+      testCtx,
+      ImageRecord(
+        id: 'img-rel',
+        clinicId: testClinicId,
+        patientId: testPatientId,
+        kind: ImageKind.photoIntraoral,
+        filePath: rel,
+        capturedAt: t,
+        createdAt: t,
+      ),
+    );
     await env.repos.clinical.addImage(
       testCtx,
       ImageRecord(
@@ -71,11 +100,18 @@ void main() {
 
     final outcome = await service().exportPatient(testCtx, testPatientId);
 
-    expect(outcome.files.length, 3);
+    expect(outcome.files.length, 4);
     expect(outcome.files[0].mimeType, 'application/pdf');
     expect(outcome.files[1].mimeType, 'application/json');
     expect(outcome.files[2].mimeType, 'image/png');
-    expect(outcome.summary, 'Record PDF, JSON and 1 image');
+    expect(outcome.files[3].path, relFile.path);
+    expect(outcome.files[3].mimeType, 'image/jpeg');
+    expect(outcome.missingImages, ['img-missing']);
+    expect(
+      outcome.summary,
+      'Record PDF, JSON and 2 images (1 image missing on this device)',
+    );
+    expect(shared.single.$3, contains('1 image missing'));
     final pdf = File(outcome.files[0].path);
     expect(pdf.existsSync(), isTrue);
     expect(pdf.lengthSync(), greaterThan(1000));
@@ -84,11 +120,11 @@ void main() {
       await File(outcome.files[1].path).readAsString(),
     ) as Map<String, Object?>;
     expect((json['patient'] as Map)['id'], testPatientId);
-    expect((json['images'] as List).length, 2);
+    expect((json['images'] as List).length, 3);
 
     expect(shared.length, 1);
     expect(shared.single.$2, contains('Patient record'));
-    expect(shared.single.$1.length, 3);
+    expect(shared.single.$1.length, 4);
 
     final events = await env.repos.audit.forEntity(
       testClinicId,
@@ -117,6 +153,21 @@ void main() {
       testClinicId,
     );
     expect(events.any((e) => e.action == AuditAction.export), isTrue);
+  });
+
+  test('patientExportSummary names what is shared and what is missing', () {
+    expect(
+      patientExportSummary(imageCount: 0, missingCount: 0),
+      'Record PDF and JSON',
+    );
+    expect(
+      patientExportSummary(imageCount: 1, missingCount: 0),
+      'Record PDF, JSON and 1 image',
+    );
+    expect(
+      patientExportSummary(imageCount: 0, missingCount: 2),
+      'Record PDF and JSON (2 images missing on this device)',
+    );
   });
 
   test('mimeTypeForPath and encodeBundleJson helpers', () {

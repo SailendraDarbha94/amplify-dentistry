@@ -95,7 +95,11 @@ class _ProcedureTabState extends ConsumerState<ProcedureTab> {
         : ProcedureStatus.inProgress;
   }
 
+  /// Validates and saves. `_saving` is raised synchronously, before the
+  /// first await, so a double tap on Save cannot create two procedure rows
+  /// while the pre-op radiograph check is loading.
   Future<void> _save() async {
+    if (_saving) return;
     final item = _item!;
     final fee = Money.tryParse(_fee.text);
     if (fee == null || fee.isNegative) {
@@ -106,40 +110,40 @@ class _ProcedureTabState extends ConsumerState<ProcedureTab> {
       setState(() => _error = ChartStrings.surfacesRequired);
       return;
     }
-    final status = _status;
-    final kind = classifyProcedure(item.code, category: item.category);
-    var note = _note.text.trim();
-    var imageIds = const <String>[];
-    if (status != ProcedureStatus.planned) {
-      final images = await ref
-          .read(clinicalRepositoryProvider)
-          .imagesForPatient(widget.patientId);
-      final check = checkPreOpRadiograph(
-        kind: kind,
-        catalogFlag: item.requiresPreOpRadiograph,
-        teeth: [widget.tooth],
-        images: images,
-      );
-      imageIds = check.attachedImageIds;
-      if (check.blocks) {
-        if (!mounted) return;
-        final resolution = await PreOpGuardDialog.show(
-          context,
-          procedureName: item.name,
-          candidates: check.candidates,
-        );
-        if (resolution == null) return;
-        imageIds = [...imageIds, ...resolution.imageIds];
-        final reason = resolution.reason?.trim() ?? '';
-        if (reason.isNotEmpty) note = appendPreOpReason(note, reason);
-      }
-    }
-    if (!mounted) return;
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
+      final status = _status;
+      final kind = classifyProcedure(item.code, category: item.category);
+      var note = _note.text.trim();
+      var imageIds = const <String>[];
+      if (status != ProcedureStatus.planned) {
+        final images = await ref
+            .read(clinicalRepositoryProvider)
+            .imagesForPatient(widget.patientId);
+        final check = checkPreOpRadiograph(
+          kind: kind,
+          catalogFlag: item.requiresPreOpRadiograph,
+          teeth: [widget.tooth],
+          images: images,
+        );
+        imageIds = check.attachedImageIds;
+        if (check.blocks) {
+          if (!mounted) return;
+          final resolution = await PreOpGuardDialog.show(
+            context,
+            procedureName: item.name,
+            candidates: check.candidates,
+          );
+          if (resolution == null) return;
+          imageIds = [...imageIds, ...resolution.imageIds];
+          final reason = resolution.reason?.trim() ?? '';
+          if (reason.isNotEmpty) note = appendPreOpReason(note, reason);
+        }
+      }
+      if (!mounted) return;
       final result = await ref
           .read(chartServiceProvider)
           .addProcedure(
@@ -159,10 +163,9 @@ class _ProcedureTabState extends ConsumerState<ProcedureTab> {
       Navigator.of(context).pop(ToothSheetResult.forProcedure(result));
     } on Object catch (e) {
       if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = e.toString();
-      });
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 

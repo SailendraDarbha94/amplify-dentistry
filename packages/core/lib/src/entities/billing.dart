@@ -3,6 +3,7 @@ import 'package:meta/meta.dart';
 import '../dental/tooth_id.dart';
 import '../money/money.dart';
 import '../util/ids.dart' as ids;
+import 'clinic.dart';
 import 'json_support.dart';
 
 /// Which GST document an invoice prints as.
@@ -160,6 +161,12 @@ class InvoiceLine {
 
 /// An invoice / receipt. Numbers are `DRAFT-` locally until the server mints
 /// the sequential number on first sync.
+///
+/// The treating dentist is frozen on the row at issue time (`dentistId`,
+/// `dentistName`, `dentistQualifications`, `dentistRegistrationNumber`,
+/// `dentistRegistrationCouncil`) so the printed registration number (DCI
+/// Code 3.4.1) never depends on who is operating the device when the
+/// receipt is reprinted; `issuedBy` is the member who raised the bill.
 @immutable
 class Invoice {
   /// Creates an invoice.
@@ -180,6 +187,11 @@ class Invoice {
     this.amountPaid = const Money.zero(),
     this.notes,
     required this.issuedBy,
+    this.dentistId,
+    this.dentistName,
+    this.dentistQualifications = const [],
+    this.dentistRegistrationNumber,
+    this.dentistRegistrationCouncil,
     this.voidReason,
     required this.createdAt,
     required this.updatedAt,
@@ -230,8 +242,23 @@ class Invoice {
   /// Printed notes.
   final String? notes;
 
-  /// Issuing member.
+  /// Issuing member (whoever raised the bill; may be front desk).
   final String issuedBy;
+
+  /// Treating dentist named on the document; frozen at issue.
+  final String? dentistId;
+
+  /// Dentist's name as printed.
+  final String? dentistName;
+
+  /// Dentist's qualifications as printed.
+  final List<String> dentistQualifications;
+
+  /// Dentist's council registration number (DCI Code 3.4.1).
+  final String? dentistRegistrationNumber;
+
+  /// Issuing council of the registration, when recorded.
+  final String? dentistRegistrationCouncil;
 
   /// Reason when voided.
   final String? voidReason;
@@ -248,6 +275,11 @@ class Invoice {
   /// Whether the number is still a local draft number.
   bool get isDraftNumber => ids.isDraftNumber(number);
 
+  /// Whether a registered dentist is frozen on the row (required for every
+  /// non-draft invoice).
+  bool get hasRegisteredDentist =>
+      dentistId != null && (dentistRegistrationNumber ?? '').trim().isNotEmpty;
+
   /// Returns a copy with the given fields replaced.
   Invoice copyWith({
     String? number,
@@ -262,6 +294,11 @@ class Invoice {
     Money? grandTotal,
     Money? amountPaid,
     String? notes,
+    String? dentistId,
+    String? dentistName,
+    List<String>? dentistQualifications,
+    String? dentistRegistrationNumber,
+    String? dentistRegistrationCouncil,
     String? voidReason,
     DateTime? updatedAt,
   }) => Invoice(
@@ -281,9 +318,25 @@ class Invoice {
     amountPaid: amountPaid ?? this.amountPaid,
     notes: notes ?? this.notes,
     issuedBy: issuedBy,
+    dentistId: dentistId ?? this.dentistId,
+    dentistName: dentistName ?? this.dentistName,
+    dentistQualifications: dentistQualifications ?? this.dentistQualifications,
+    dentistRegistrationNumber:
+        dentistRegistrationNumber ?? this.dentistRegistrationNumber,
+    dentistRegistrationCouncil:
+        dentistRegistrationCouncil ?? this.dentistRegistrationCouncil,
     voidReason: voidReason ?? this.voidReason,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+  );
+
+  /// Returns a copy naming [dentist] as the treating clinician.
+  Invoice withDentist(ClinicMember dentist) => copyWith(
+    dentistId: dentist.id,
+    dentistName: dentist.displayName,
+    dentistQualifications: dentist.qualifications,
+    dentistRegistrationNumber: dentist.registrationNumber,
+    dentistRegistrationCouncil: dentist.registrationCouncil,
   );
 
   /// JSON form.
@@ -304,6 +357,11 @@ class Invoice {
     'amountPaid': amountPaid.toJson(),
     'notes': notes,
     'issuedBy': issuedBy,
+    'dentistId': dentistId,
+    'dentistName': dentistName,
+    'dentistQualifications': dentistQualifications,
+    'dentistRegistrationNumber': dentistRegistrationNumber,
+    'dentistRegistrationCouncil': dentistRegistrationCouncil,
     'voidReason': voidReason,
     'createdAt': dateToJson(createdAt),
     'updatedAt': dateToJson(updatedAt),
@@ -336,6 +394,11 @@ class Invoice {
     amountPaid: moneyFromJson(json['amountPaid']),
     notes: json['notes'] as String?,
     issuedBy: json['issuedBy'] as String,
+    dentistId: json['dentistId'] as String?,
+    dentistName: json['dentistName'] as String?,
+    dentistQualifications: stringListFromJson(json['dentistQualifications']),
+    dentistRegistrationNumber: json['dentistRegistrationNumber'] as String?,
+    dentistRegistrationCouncil: json['dentistRegistrationCouncil'] as String?,
     voidReason: json['voidReason'] as String?,
     createdAt: dateFromJson(json['createdAt']),
     updatedAt: dateFromJson(json['updatedAt']),

@@ -29,22 +29,22 @@ enum ToothSurface {
   /// Clinical label for a given tooth: incisal for anterior teeth, buccal for
   /// posterior teeth, palatal for upper-arch lingual surfaces.
   String labelFor(ToothId tooth) => switch (this) {
-        ToothSurface.occlusal => tooth.isAnterior ? 'I' : 'O',
-        ToothSurface.facial => tooth.isAnterior ? 'F' : 'B',
-        ToothSurface.lingual => tooth.arch == Arch.upper ? 'P' : 'L',
-        _ => code,
-      };
+    ToothSurface.occlusal => tooth.isAnterior ? 'I' : 'O',
+    ToothSurface.facial => tooth.isAnterior ? 'F' : 'B',
+    ToothSurface.lingual => tooth.arch == Arch.upper ? 'P' : 'L',
+    _ => code,
+  };
 
   String get longName => switch (this) {
-        ToothSurface.mesial => 'Mesial',
-        ToothSurface.occlusal => 'Occlusal / Incisal',
-        ToothSurface.distal => 'Distal',
-        ToothSurface.facial => 'Facial / Buccal',
-        ToothSurface.lingual => 'Lingual / Palatal',
-        ToothSurface.classV => 'Class V (cervical)',
-        ToothSurface.root => 'Root',
-        ToothSurface.whole => 'Whole tooth',
-      };
+    ToothSurface.mesial => 'Mesial',
+    ToothSurface.occlusal => 'Occlusal / Incisal',
+    ToothSurface.distal => 'Distal',
+    ToothSurface.facial => 'Facial / Buccal',
+    ToothSurface.lingual => 'Lingual / Palatal',
+    ToothSurface.classV => 'Class V (cervical)',
+    ToothSurface.root => 'Root',
+    ToothSurface.whole => 'Whole tooth',
+  };
 
   /// Whether this surface is one of the five crown faces that an odontogram
   /// renders as a tappable region.
@@ -81,21 +81,21 @@ enum ToothSurface {
 @immutable
 class SurfaceSet {
   SurfaceSet(Iterable<ToothSurface> surfaces)
-      : _surfaces = List.unmodifiable(
-          surfaces.toSet().toList()..sort((a, b) => a.order.compareTo(b.order)),
-        );
+    : _surfaces = List.unmodifiable(
+        surfaces.toSet().toList()..sort((a, b) => a.order.compareTo(b.order)),
+      );
 
   const SurfaceSet.empty() : _surfaces = const [];
 
   /// Parses a surface string such as `MOD`, `MIFL`, `B`, `mo d`. Unknown
   /// letters are ignored; use [tryParse] to reject them instead.
   factory SurfaceSet.parse(String code) => SurfaceSet(
-        code
-            .toUpperCase()
-            .split('')
-            .map(ToothSurface.fromLetter)
-            .whereType<ToothSurface>(),
-      );
+    code
+        .toUpperCase()
+        .split('')
+        .map(ToothSurface.fromLetter)
+        .whereType<ToothSurface>(),
+  );
 
   static SurfaceSet? tryParse(String code) {
     final letters = code.replaceAll(RegExp(r'\s'), '').toUpperCase().split('');
@@ -140,7 +140,8 @@ class SurfaceSet {
       ? SurfaceSet(_surfaces.where((x) => x != s))
       : SurfaceSet([..._surfaces, s]);
 
-  SurfaceSet union(SurfaceSet other) => SurfaceSet([..._surfaces, ...other._surfaces]);
+  SurfaceSet union(SurfaceSet other) =>
+      SurfaceSet([..._surfaces, ...other._surfaces]);
 
   @override
   bool operator ==(Object other) => other is SurfaceSet && other.code == code;

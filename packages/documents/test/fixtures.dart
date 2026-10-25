@@ -132,13 +132,14 @@ Invoice sampleInvoice({
       ),
     ],
     amountPaid: amountPaid,
-    issuedBy: dentist.id,
+    issuedBy: 'receptionist-1',
     createdAt: now,
     updatedAt: now,
-  ),
+  ).withDentist(dentist),
 );
 
-/// Exempt-only receipt for an unregistered clinic.
+/// Exempt-only receipt for an unregistered clinic (a draft: no dentist is
+/// frozen on it yet).
 Invoice sampleReceipt() => computeInvoiceTotals(
   Invoice(
     id: 'invoice-2',

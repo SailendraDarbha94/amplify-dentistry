@@ -67,18 +67,17 @@ class PerioSiteReading {
     bool? plaque,
     bool? calculus,
     int? mucogingivalJunction,
-  }) =>
-      PerioSiteReading(
-        tooth: tooth,
-        site: site,
-        probingDepth: probingDepth ?? this.probingDepth,
-        gingivalMargin: gingivalMargin ?? this.gingivalMargin,
-        bleeding: bleeding ?? this.bleeding,
-        suppuration: suppuration ?? this.suppuration,
-        plaque: plaque ?? this.plaque,
-        calculus: calculus ?? this.calculus,
-        mucogingivalJunction: mucogingivalJunction ?? this.mucogingivalJunction,
-      );
+  }) => PerioSiteReading(
+    tooth: tooth,
+    site: site,
+    probingDepth: probingDepth ?? this.probingDepth,
+    gingivalMargin: gingivalMargin ?? this.gingivalMargin,
+    bleeding: bleeding ?? this.bleeding,
+    suppuration: suppuration ?? this.suppuration,
+    plaque: plaque ?? this.plaque,
+    calculus: calculus ?? this.calculus,
+    mucogingivalJunction: mucogingivalJunction ?? this.mucogingivalJunction,
+  );
 }
 
 /// Per-tooth values that are not site-specific.

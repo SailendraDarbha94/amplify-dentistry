@@ -40,6 +40,61 @@ abstract final class DocumentColors {
   static const PdfColor accent = PdfColor.fromInt(0xFF0B6E99);
 }
 
+/// The clinician named on a document: name, qualifications and council
+/// registration (DCI Code 3.4.1). Built from a live [ClinicMember] for
+/// documents signed now, or from the fields frozen on an issued row
+/// (invoice, prescription) so reprints never pick up whoever is operating
+/// the device.
+class Signatory {
+  /// Creates a signatory.
+  const Signatory({
+    required this.displayName,
+    this.qualifications = const [],
+    this.registrationNumber,
+    this.registrationCouncil,
+    this.phone,
+  });
+
+  /// From a clinic member.
+  Signatory.member(ClinicMember member)
+    : displayName = member.displayName,
+      qualifications = member.qualifications,
+      registrationNumber = member.registrationNumber,
+      registrationCouncil = member.registrationCouncil,
+      phone = member.phone;
+
+  /// From the dentist frozen on an invoice; null when none was recorded
+  /// (a draft that never reached issue).
+  static Signatory? invoiceDentist(Invoice invoice) {
+    final name = invoice.dentistName;
+    if (invoice.dentistId == null || name == null || name.isEmpty) return null;
+    return Signatory(
+      displayName: name,
+      qualifications: invoice.dentistQualifications,
+      registrationNumber: invoice.dentistRegistrationNumber,
+      registrationCouncil: invoice.dentistRegistrationCouncil,
+    );
+  }
+
+  /// Name as printed (`Dr. A. Rao`).
+  final String displayName;
+
+  /// Degrees.
+  final List<String> qualifications;
+
+  /// Council registration number.
+  final String? registrationNumber;
+
+  /// Issuing council.
+  final String? registrationCouncil;
+
+  /// Contact phone for the letterhead, when known.
+  final String? phone;
+
+  /// Whether a registration number is recorded.
+  bool get hasRegistration => (registrationNumber ?? '').trim().isNotEmpty;
+}
+
 /// Page chrome every document shares: fonts, paper, margins, the clinic
 /// letterhead with the dentist's registration line (DCI Code 3.4.1) and the
 /// footer with page numbers, generated-at timestamp and content hash.
@@ -150,20 +205,28 @@ class DocumentTheme {
   // ---------------------------------------------------------------------------
 
   /// `Dr. Name, BDS, MDS` for the letterhead.
-  String dentistNameLine(ClinicMember dentist) {
-    final name = dentist.displayName.startsWith('Dr')
-        ? dentist.displayName
-        : 'Dr. ${dentist.displayName}';
-    if (dentist.qualifications.isEmpty) return name;
-    return '$name, ${dentist.qualifications.join(', ')}';
-  }
+  String dentistNameLine(ClinicMember dentist) =>
+      signatoryNameLine(Signatory.member(dentist));
 
   /// `Reg. No. <council> <number>` (DCI Code 3.4.1); the council is omitted
   /// when not recorded.
-  String registrationLine(ClinicMember dentist) {
-    final number = dentist.registrationNumber;
+  String registrationLine(ClinicMember dentist) =>
+      signatoryRegistrationLine(Signatory.member(dentist));
+
+  /// `Dr. Name, BDS, MDS` for a [Signatory].
+  String signatoryNameLine(Signatory who) {
+    final name = who.displayName.startsWith('Dr')
+        ? who.displayName
+        : 'Dr. ${who.displayName}';
+    if (who.qualifications.isEmpty) return name;
+    return '$name, ${who.qualifications.join(', ')}';
+  }
+
+  /// `Reg. No. <council> <number>` for a [Signatory].
+  String signatoryRegistrationLine(Signatory who) {
+    final number = who.registrationNumber;
     if (number == null || number.isEmpty) return 'Reg. No. not recorded';
-    final council = dentist.registrationCouncil;
+    final council = who.registrationCouncil;
     return council == null || council.isEmpty
         ? 'Reg. No. $number'
         : 'Reg. No. $council $number';
@@ -175,7 +238,7 @@ class DocumentTheme {
   pw.Widget header(
     pw.Context context, {
     required Clinic clinic,
-    ClinicMember? dentist,
+    Signatory? dentist,
     required String title,
     String? subtitle,
   }) {
@@ -217,9 +280,9 @@ class DocumentTheme {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Text(dentistNameLine(dentist), style: boldStyle),
-                    pw.Text(registrationLine(dentist)),
-                    if (showFull && dentist.phone.isNotEmpty)
+                    pw.Text(signatoryNameLine(dentist), style: boldStyle),
+                    pw.Text(signatoryRegistrationLine(dentist)),
+                    if (showFull && (dentist.phone ?? '').isNotEmpty)
                       pw.Text('Ph: ${dentist.phone}', style: mutedStyle),
                   ],
                 ),

@@ -30,6 +30,13 @@ class Invoices extends PatientScopedTable {
   IntColumn get amountPaid => integer().map(const MoneyConverter())();
   TextColumn get notes => text().nullable()();
   TextColumn get issuedBy => text()();
+  TextColumn get dentistId => text().nullable()();
+  TextColumn get dentistName => text().nullable()();
+  TextColumn get dentistQualifications => text()
+      .map(const StringListConverter())
+      .withDefault(const Constant('[]'))();
+  TextColumn get dentistRegistrationNumber => text().nullable()();
+  TextColumn get dentistRegistrationCouncil => text().nullable()();
   TextColumn get voidReason => text().nullable()();
   TextColumn get createdAt => text().map(const IsoUtcDateTimeConverter())();
   TextColumn get updatedAt => text().map(const IsoUtcDateTimeConverter())();

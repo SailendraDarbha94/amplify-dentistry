@@ -103,6 +103,12 @@ void main() {
       expect(s3.completedAt, isNotNull);
 
       expect(() => chart.advanceStage(ctx, p.id), throwsStateError);
+      // Completing a completed procedure is a no-op transition: rejected, so
+      // a double tap cannot write a second status change.
+      expect(
+        () => chart.setProcedureStatus(ctx, p.id, ProcedureStatus.completed),
+        throwsStateError,
+      );
       expect(
         () => chart.setProcedureStatus(ctx, p.id, ProcedureStatus.deleted),
         throwsArgumentError,
@@ -239,6 +245,63 @@ void main() {
       expect(conflicts, isNotEmpty);
       expect(conflicts.every((d) => d.allergyGroup == 'penicillin'), isTrue);
       expect(cautionDrugs(medicalHistory(), drugs), isEmpty);
+    });
+
+    test('free-typed substances block without a group chip', () async {
+      final drugs = await env.repos.prescriptions.drugs();
+      Set<String> blocked(String substance) {
+        final history = medicalHistory().copyWith(
+          allergies: [AllergyEntry(substance: substance)],
+        );
+        return conflictingDrugs(
+          history,
+          drugs,
+        ).map((d) => d.genericName).toSet();
+      }
+
+      // The generic name itself, a combination containing it, and brands.
+      expect(blocked('Amoxicillin'), {
+        'Amoxicillin',
+        'Amoxicillin + Clavulanic acid',
+      });
+      expect(blocked('augmentin'), {
+        'Amoxicillin',
+        'Amoxicillin + Clavulanic acid',
+      });
+      expect(blocked('Brufen'), containsAll(['Ibuprofen']));
+      expect(blocked('Brufen'), contains('Ibuprofen + Paracetamol'));
+      expect(blocked('lignocaine'), contains('Lignocaine + Adrenaline'));
+      expect(blocked('Paracetamol'), contains('Paracetamol'));
+      expect(blocked('Paracetamol'), contains('Aceclofenac + Paracetamol'));
+      // Clavulanate is only ever co-formulated with amoxicillin, so the
+      // whole penicillin group is blocked, not just the combination.
+      expect(blocked('Clavulanic acid'), {
+        'Amoxicillin',
+        'Amoxicillin + Clavulanic acid',
+      });
+      // A combination component with no group of its own blocks the
+      // combination drug.
+      expect(blocked('Adrenaline'), {
+        'Lignocaine + Adrenaline',
+        'Articaine + Adrenaline',
+      });
+      // Nothing to match: too short or not a drug.
+      expect(blocked('Pan'), isEmpty);
+      expect(blocked('Latex'), isEmpty);
+      expect(blocked('dust mites'), isEmpty);
+
+      final amox = drugs.firstWhere((d) => d.genericName == 'Amoxicillin');
+      final matches = allergyMatches(
+        medicalHistory().copyWith(
+          allergies: const [
+            AllergyEntry(substance: 'Augmentin', allergyGroup: 'other'),
+            AllergyEntry(substance: 'Latex', allergyGroup: 'latex'),
+          ],
+        ),
+        amox,
+      );
+      // A wrongly chosen group does not hide a recognisable substance.
+      expect(matches.map((a) => a.substance), ['Augmentin']);
     });
   });
 }

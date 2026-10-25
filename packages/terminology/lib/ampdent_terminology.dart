@@ -6,6 +6,7 @@
 /// tables on first launch. Nothing in this package is a core entity.
 library;
 
+export 'src/allergy_substances.dart';
 export 'src/case_sheet.dart';
 export 'src/consent_templates.dart';
 export 'src/drug_master.dart';

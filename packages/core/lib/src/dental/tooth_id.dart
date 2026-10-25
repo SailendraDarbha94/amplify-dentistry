@@ -37,11 +37,11 @@ enum Quadrant {
 
   /// Two-letter label used in Palmer notation and UI (`UR`, `UL`, `LL`, `LR`).
   String get label => switch (this) {
-        Quadrant.upperRight => 'UR',
-        Quadrant.upperLeft => 'UL',
-        Quadrant.lowerLeft => 'LL',
-        Quadrant.lowerRight => 'LR',
-      };
+    Quadrant.upperRight => 'UR',
+    Quadrant.upperLeft => 'UL',
+    Quadrant.lowerLeft => 'LL',
+    Quadrant.lowerRight => 'LR',
+  };
 
   static Quadrant? fromFdiDigit(int digit) {
     for (final q in Quadrant.values) {
@@ -68,8 +68,8 @@ class ToothId implements Comparable<ToothId> {
     required this.quadrant,
     required this.position,
     this.supernumeraryIndex = 0,
-  })  : assert(position >= 1, 'position starts at 1 (central incisor)'),
-        assert(supernumeraryIndex >= 0, 'supernumeraryIndex must be >= 0');
+  }) : assert(position >= 1, 'position starts at 1 (central incisor)'),
+       assert(supernumeraryIndex >= 0, 'supernumeraryIndex must be >= 0');
 
   final Dentition dentition;
   final Quadrant quadrant;
@@ -96,21 +96,20 @@ class ToothId implements Comparable<ToothId> {
   }
 
   ToothType get type => switch (dentition) {
-        Dentition.permanent => switch (position) {
-            1 || 2 => ToothType.incisor,
-            3 => ToothType.canine,
-            4 || 5 => ToothType.premolar,
-            _ => ToothType.molar,
-          },
-        Dentition.primary => switch (position) {
-            1 || 2 => ToothType.incisor,
-            3 => ToothType.canine,
-            _ => ToothType.molar,
-          },
-      };
+    Dentition.permanent => switch (position) {
+      1 || 2 => ToothType.incisor,
+      3 => ToothType.canine,
+      4 || 5 => ToothType.premolar,
+      _ => ToothType.molar,
+    },
+    Dentition.primary => switch (position) {
+      1 || 2 => ToothType.incisor,
+      3 => ToothType.canine,
+      _ => ToothType.molar,
+    },
+  };
 
-  bool get isAnterior =>
-      type == ToothType.incisor || type == ToothType.canine;
+  bool get isAnterior => type == ToothType.incisor || type == ToothType.canine;
   bool get isPosterior => !isAnterior;
 
   /// Typical number of roots, used for endo defaults and chart drawing.
@@ -133,8 +132,7 @@ class ToothId implements Comparable<ToothId> {
   String get fdi => '${quadrant.digitFor(dentition)}$position';
 
   /// FDI code plus a supernumerary suffix when relevant, e.g. `11+1`.
-  String get storageKey =>
-      isSupernumerary ? '$fdi+$supernumeraryIndex' : fdi;
+  String get storageKey => isSupernumerary ? '$fdi+$supernumeraryIndex' : fdi;
 
   /// Parses `11`..`48`, `51`..`85`, optionally with a `+n` supernumerary
   /// suffix. Returns null for anything else.
@@ -144,8 +142,9 @@ class ToothId implements Comparable<ToothId> {
     if (match == null) return null;
     final qDigit = int.parse(match.group(1)!);
     final position = int.parse(match.group(2)!);
-    final supernumerary =
-        match.group(3) == null ? 0 : int.parse(match.group(3)!);
+    final supernumerary = match.group(3) == null
+        ? 0
+        : int.parse(match.group(3)!);
     final dentition = qDigit <= 4 ? Dentition.permanent : Dentition.primary;
     final quadrant = Quadrant.fromFdiDigit(qDigit);
     if (quadrant == null) return null;
@@ -255,11 +254,11 @@ class ToothId implements Comparable<ToothId> {
   /// Palmer notation rendered with box-drawing glyphs standing in for the
   /// quadrant bracket, e.g. `1┘` (UR1), `└1` (UL1), `1┐` (LR1), `┌1` (LL1).
   String get palmer => switch (quadrant) {
-        Quadrant.upperRight => '$palmerSymbol┘',
-        Quadrant.upperLeft => '└$palmerSymbol',
-        Quadrant.lowerRight => '$palmerSymbol┐',
-        Quadrant.lowerLeft => '┌$palmerSymbol',
-      };
+    Quadrant.upperRight => '$palmerSymbol┘',
+    Quadrant.upperLeft => '└$palmerSymbol',
+    Quadrant.lowerRight => '$palmerSymbol┐',
+    Quadrant.lowerLeft => '┌$palmerSymbol',
+  };
 
   /// Palmer notation as plain text, e.g. `UR1`, `LL E`.
   String get palmerText => '${quadrant.label}$palmerSymbol';
@@ -303,7 +302,9 @@ class ToothId implements Comparable<ToothId> {
   /// patient's right on the left of the list.
   static List<ToothId> archRow(Arch arch, Dentition dentition) {
     final n = dentition.positionsPerQuadrant;
-    final right = arch == Arch.upper ? Quadrant.upperRight : Quadrant.lowerRight;
+    final right = arch == Arch.upper
+        ? Quadrant.upperRight
+        : Quadrant.lowerRight;
     final left = arch == Arch.upper ? Quadrant.upperLeft : Quadrant.lowerLeft;
     return [
       for (var p = n; p >= 1; p--)
@@ -339,13 +340,12 @@ class ToothId implements Comparable<ToothId> {
     Quadrant? quadrant,
     int? position,
     int? supernumeraryIndex,
-  }) =>
-      ToothId(
-        dentition: dentition ?? this.dentition,
-        quadrant: quadrant ?? this.quadrant,
-        position: position ?? this.position,
-        supernumeraryIndex: supernumeraryIndex ?? this.supernumeraryIndex,
-      );
+  }) => ToothId(
+    dentition: dentition ?? this.dentition,
+    quadrant: quadrant ?? this.quadrant,
+    position: position ?? this.position,
+    supernumeraryIndex: supernumeraryIndex ?? this.supernumeraryIndex,
+  );
 
   @override
   int compareTo(ToothId other) {

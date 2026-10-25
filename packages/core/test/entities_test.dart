@@ -578,6 +578,11 @@ void main() {
           lines: [
             _line('a', const Money.rupees(1000), GstClass.cosmeticTaxable, 18),
           ],
+          dentistId: _provider,
+          dentistName: 'Dr. Rao',
+          dentistQualifications: const ['BDS', 'MDS'],
+          dentistRegistrationNumber: 'A-1234',
+          dentistRegistrationCouncil: 'TSDC',
         ),
       ),
       (i) => i.toJson(),
@@ -789,6 +794,57 @@ void main() {
     expect(states[ToothId.parse('16')], ToothState.extracted);
     expect(states[ToothId.parse('26')], ToothState.present);
     expect(states.length, 2);
+  });
+
+  group('Invoice dentist', () {
+    test('withDentist freezes the member; drafts have no dentist', () {
+      final draft = _invoice(
+        'inv-d',
+        _t0,
+        const Money.zero(),
+        const Money.zero(),
+        status: InvoiceStatus.draft,
+      );
+      expect(draft.hasRegisteredDentist, isFalse);
+      final member = ClinicMember(
+        id: 'member-9',
+        clinicId: _clinic,
+        displayName: 'Dr. Rao',
+        role: ClinicRole.associateDentist,
+        registrationNumber: 'B-77',
+        registrationCouncil: 'KSDC',
+        qualifications: const ['BDS'],
+        phone: '9000000000',
+        createdAt: _t0,
+        updatedAt: _t0,
+      );
+      final issued = draft.withDentist(member);
+      expect(issued.dentistId, 'member-9');
+      expect(issued.dentistName, 'Dr. Rao');
+      expect(issued.dentistQualifications, ['BDS']);
+      expect(issued.dentistRegistrationNumber, 'B-77');
+      expect(issued.dentistRegistrationCouncil, 'KSDC');
+      expect(issued.hasRegisteredDentist, isTrue);
+      // The issuer is unchanged: who raised the bill is a separate fact.
+      expect(issued.issuedBy, _provider);
+      expect(
+        issued
+            .withDentist(member.copyWith(registrationNumber: ''))
+            .hasRegisteredDentist,
+        isFalse,
+      );
+      // Legacy JSON without the dentist fields still parses.
+      final json = issued.toJson()
+        ..remove('dentistId')
+        ..remove('dentistName')
+        ..remove('dentistQualifications')
+        ..remove('dentistRegistrationNumber')
+        ..remove('dentistRegistrationCouncil');
+      final legacy = Invoice.fromJson(json);
+      expect(legacy.dentistId, isNull);
+      expect(legacy.dentistQualifications, isEmpty);
+      expect(legacy.hasRegisteredDentist, isFalse);
+    });
   });
 
   group('Invoice maths', () {

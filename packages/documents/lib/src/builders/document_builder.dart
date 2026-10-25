@@ -22,6 +22,12 @@ abstract class DocumentBuilder {
   /// documents that are not signed by one clinician (record copies).
   final ClinicMember? dentist;
 
+  /// Who is printed in the letterhead and the signature box: [dentist] by
+  /// default. Builders whose row freezes the clinician (invoices) override
+  /// this so a reprint never depends on the device's current member.
+  Signatory? get signatory =>
+      dentist == null ? null : Signatory.member(dentist!);
+
   /// Page chrome and fonts.
   final DocumentTheme theme;
 
@@ -59,7 +65,7 @@ abstract class DocumentBuilder {
       header: (context) => theme.header(
         context,
         clinic: clinic,
-        dentist: dentist,
+        dentist: signatory,
         title: title,
         subtitle: subtitle,
       ),
@@ -74,11 +80,12 @@ abstract class DocumentBuilder {
   pw.Document get document {
     final existing = _document;
     if (existing != null) return existing;
+    final who = signatory;
     final doc = pw.Document(
       title: title,
-      author: dentist == null
+      author: who == null
           ? clinic.name
-          : '${theme.dentistNameLine(dentist!)}, ${clinic.name}',
+          : '${theme.signatoryNameLine(who)}, ${clinic.name}',
       creator: theme.appName,
       producer: theme.appName,
       subject: subject,

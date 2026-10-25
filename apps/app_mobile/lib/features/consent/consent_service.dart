@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_data/ampdent_data.dart';
+import 'package:ampdent_mobile/core/stored_file_path.dart';
 import 'package:ampdent_terminology/ampdent_terminology.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,13 +11,28 @@ import 'package:path_provider/path_provider.dart';
 import 'consent_model.dart';
 
 /// Where captured signature PNGs live. The consent row stores the path; the
-/// bytes never enter the database.
+/// bytes never enter the database. Paths are relative to the store root
+/// (`clinics/<clinicId>/patients/<patientId>/signatures/<consentId>.png`)
+/// so the signature evidence survives an app-container move.
 abstract class SignatureStore {
-  /// Persists [png] for [consentId] and returns the stored path.
-  Future<String> save(String consentId, Uint8List png);
+  /// Persists [png] for [consentId] of a patient and returns the stored
+  /// (store-relative) path.
+  Future<String> save(
+    String consentId,
+    Uint8List png, {
+    required String clinicId,
+    required String patientId,
+  });
 
   /// Reads a stored signature, null when missing.
   Future<Uint8List?> read(String path);
+
+  /// Store-relative path for a consent's signature.
+  static String relativePath(
+    String clinicId,
+    String patientId,
+    String consentId,
+  ) => 'clinics/$clinicId/patients/$patientId/signatures/$consentId.png';
 }
 
 /// Keeps signatures in memory (tests, previews).
@@ -24,8 +40,13 @@ class InMemorySignatureStore implements SignatureStore {
   final Map<String, Uint8List> _files = {};
 
   @override
-  Future<String> save(String consentId, Uint8List png) async {
-    final path = 'memory://signatures/$consentId.png';
+  Future<String> save(
+    String consentId,
+    Uint8List png, {
+    required String clinicId,
+    required String patientId,
+  }) async {
+    final path = SignatureStore.relativePath(clinicId, patientId, consentId);
     _files[path] = png;
     return path;
   }
@@ -34,7 +55,11 @@ class InMemorySignatureStore implements SignatureStore {
   Future<Uint8List?> read(String path) async => _files[path];
 }
 
-/// Writes signatures under the app documents directory.
+/// Writes signatures under the app documents directory and hands out
+/// store-relative paths. Absolute paths written by earlier builds
+/// (`<documents>/signatures/<consentId>.png`) are still readable: they are
+/// re-rooted at the current documents directory when the old container is
+/// gone (see [resolveStoredFile]).
 class FileSignatureStore implements SignatureStore {
   /// Creates the store; [directory] overrides the platform documents dir.
   FileSignatureStore({this.directory});
@@ -42,24 +67,30 @@ class FileSignatureStore implements SignatureStore {
   /// Base directory; the platform documents directory when null.
   final Directory? directory;
 
-  Future<Directory> _dir() async {
-    final base = directory ?? await getApplicationDocumentsDirectory();
-    final dir = Directory('${base.path}${Platform.pathSeparator}signatures');
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return dir;
-  }
+  Future<Directory> _root() async =>
+      directory ?? await getApplicationDocumentsDirectory();
+
+  /// Absolute file for a stored path (relative or legacy absolute).
+  Future<File> resolve(String path) =>
+      resolveStoredFile(path, root: _root, folder: 'signatures');
 
   @override
-  Future<String> save(String consentId, Uint8List png) async {
-    final dir = await _dir();
-    final file = File('${dir.path}${Platform.pathSeparator}$consentId.png');
+  Future<String> save(
+    String consentId,
+    Uint8List png, {
+    required String clinicId,
+    required String patientId,
+  }) async {
+    final rel = SignatureStore.relativePath(clinicId, patientId, consentId);
+    final file = await resolve(rel);
+    await file.parent.create(recursive: true);
     await file.writeAsBytes(png, flush: true);
-    return file.path;
+    return rel;
   }
 
   @override
   Future<Uint8List?> read(String path) async {
-    final file = File(path);
+    final file = await resolve(path);
     if (!await file.exists()) return null;
     return file.readAsBytes();
   }
@@ -171,7 +202,14 @@ class ConsentService {
     }
     final id = newId();
     final png = input.signaturePng;
-    final signaturePath = png == null ? null : await signatures.save(id, png);
+    final signaturePath = png == null
+        ? null
+        : await signatures.save(
+            id,
+            png,
+            clinicId: ctx.clinicId,
+            patientId: patient.id,
+          );
     final note = input.readAloud
         ? '${input.discussionNote.trim()} ${ConsentStrings.readAloudMarker}'
         : input.discussionNote.trim();

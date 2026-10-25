@@ -87,7 +87,9 @@ abstract class ChartRepository {
   );
 
   /// Moves a procedure to [status], stamping `acceptedAt`, `startedAt` or
-  /// `completedAt` as appropriate. `deleted` requires a [reason].
+  /// `completedAt` as appropriate. `deleted` requires a [reason]. Throws
+  /// [StateError] when the procedure is already in [status], so a repeated
+  /// completion never writes a second status change or recall.
   Future<ProcedureRecord> setProcedureStatus(
     ActorContext ctx,
     String id,

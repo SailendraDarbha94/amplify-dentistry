@@ -54,6 +54,35 @@ SendDecision reminderSendDecision({
   );
 }
 
+/// Decides whether a message may go to [patient] given the DPDP ledger.
+typedef SendDecider = SendDecision Function({
+  required Patient patient,
+  required Iterable<DataConsent> consents,
+  required DateTime now,
+  MessageCategory category,
+});
+
+/// Opt-in check for a document link about the patient's own care
+/// (prescription, invoice, estimate): the generic [OptInPolicy] rules
+/// (appointment-reminder or treatment-records consent). Unlike
+/// [reminderSendDecision], a recall-reminders consent alone is not enough.
+/// Minors must route to a recorded guardian.
+SendDecision documentSendDecision({
+  required Patient patient,
+  required Iterable<DataConsent> consents,
+  required DateTime now,
+  MessageCategory category = MessageCategory.utility,
+}) {
+  final isMinor = patient.isMinor(now);
+  final toGuardian = isMinor && (patient.guardianPhone ?? '').trim().isNotEmpty;
+  return OptInPolicy.canSend(
+    category: category,
+    consents: consents,
+    isMinorRoutedToGuardian: toGuardian,
+    isMinor: isMinor,
+  );
+}
+
 /// Human text for a denied [SendDecision.reason].
 String sendDenialText(String reason) => switch (reason) {
   'minor_not_routed_to_guardian' =>
@@ -132,16 +161,19 @@ class PatientMessenger {
 
   /// Sends [template] to [patient] (or the guardian for a minor). The
   /// messenger fills `patient_name`, `clinic_name`, `clinic_phone` and
-  /// `link`; [variables] supply the rest.
+  /// `link`; [variables] supply the rest and override those defaults.
+  /// [decide] is the opt-in rule: [reminderSendDecision] for care-plan
+  /// reminders (the default), [documentSendDecision] for document links.
   Future<PatientMessageResult> send({
     required Patient patient,
     required Clinic clinic,
     required MessageTemplate template,
     Map<String, String> variables = const {},
+    SendDecider decide = reminderSendDecision,
   }) async {
     final now = clock();
     final ledger = await consents.dataConsentsForPatient(patient.id);
-    final decision = reminderSendDecision(
+    final decision = decide(
       patient: patient,
       consents: ledger,
       now: now,

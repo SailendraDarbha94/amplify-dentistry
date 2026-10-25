@@ -291,6 +291,23 @@ void main() {
           ),
           isNull,
         );
+        // Idempotent: a repeated completion returns the same recall instead
+        // of opening a duplicate that would double the overdue KPI.
+        final again = await env.repos.recalls.createFromProcedure(
+          ctx,
+          completed,
+          completedOn: t1,
+        );
+        expect(again!.id, r.id);
+        expect(again.dueAt, r.dueAt);
+        expect(
+          (await env.repos.recalls.forPatient(patientId))
+              .where((x) => x.triggeredByProcedureId == completed.id)
+              .length,
+          1,
+        );
+        expect((await env.repos.recalls.forProcedure(completed.id))!.id, r.id);
+        expect(await env.repos.recalls.forProcedure('nope'), isNull);
       },
     );
   });

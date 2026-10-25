@@ -1,13 +1,20 @@
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_mobile/core/app_strings.dart';
 import 'package:ampdent_mobile/core/formatting.dart';
+import 'package:ampdent_terminology/ampdent_terminology.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 
 import 'medical_history_model.dart';
 
+/// Shown when the entry is saved without a group.
+const String allergyGroupRequiredText =
+    'Choose a group so prescribing checks can run; pick Other if none fits.';
+
 /// Bottom sheet that records one allergy: substance, reaction, severity and
-/// the normalised group used for prescribing checks.
+/// the normalised group used for prescribing checks. The group is suggested
+/// from the substance text as it is typed (`Augmentin` -> Penicillin) and is
+/// required before saving, with `Other` as the explicit escape.
 class AllergyEntrySheet extends StatefulWidget {
   /// Creates the sheet; [existing] pre-fills it.
   const AllergyEntrySheet({super.key, this.existing});
@@ -39,24 +46,59 @@ class _AllergyEntrySheetState extends State<AllergyEntrySheet> {
   );
   late AllergySeverity _severity =
       widget.existing?.severity ?? AllergySeverity.unknown;
-  late String? _group = widget.existing?.allergyGroup;
+  late String? _group =
+      widget.existing?.allergyGroup ??
+      inferAllergyGroup(widget.existing?.substance ?? '');
+
+  /// Set once the dentist taps a chip; the suggestion then stops following
+  /// the substance text.
+  late bool _groupChosen = widget.existing?.allergyGroup != null;
+  String? _groupError;
+
+  @override
+  void initState() {
+    super.initState();
+    _substance.addListener(_suggestGroup);
+  }
 
   @override
   void dispose() {
+    _substance.removeListener(_suggestGroup);
     _substance.dispose();
     _reaction.dispose();
     super.dispose();
   }
 
+  void _suggestGroup() {
+    if (_groupChosen) return;
+    final suggested = inferAllergyGroup(_substance.text);
+    if (suggested == _group) return;
+    setState(() {
+      _group = suggested;
+      if (suggested != null) _groupError = null;
+    });
+  }
+
+  void _pickGroup(String group, bool selected) => setState(() {
+    _group = selected ? group : null;
+    _groupChosen = selected;
+    if (selected) _groupError = null;
+  });
+
   void _save() {
     final substance = _substance.text.trim();
     if (substance.isEmpty) return;
+    final group = _group ?? inferAllergyGroup(substance);
+    if (group == null) {
+      setState(() => _groupError = allergyGroupRequiredText);
+      return;
+    }
     Navigator.of(context).pop(
       AllergyEntry(
         substance: substance,
         reaction: _reaction.text.trim().isEmpty ? null : _reaction.text.trim(),
         severity: _severity,
-        allergyGroup: _group,
+        allergyGroup: group,
       ),
     );
   }
@@ -127,10 +169,20 @@ class _AllergyEntrySheetState extends State<AllergyEntrySheet> {
                     key: ValueKey('allergy-group-$g'),
                     label: Text(allergyGroupLabel(g)),
                     selected: _group == g,
-                    onSelected: (v) => setState(() => _group = v ? g : null),
+                    onSelected: (v) => _pickGroup(g, v),
                   ),
               ],
             ),
+            if (_groupError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  _groupError!,
+                  key: const ValueKey('allergy-group-error'),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
             const SizedBox(height: AppSpacing.lg),
             BigActionButton(
               key: const ValueKey('allergy-save'),

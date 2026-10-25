@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 /// Minimum length of an override reason.
 const int minOverrideReasonLength = 5;
 
-/// Red blocking dialog shown when a drug's allergy group matches the
-/// patient's recorded allergies. Returns the override reason, or null when
+/// Red blocking dialog shown when a drug matches one of the patient's
+/// recorded allergies (by group or by substance name). Returns the override reason, or null when
 /// the dentist backs out. The confirm button stays disabled until a reason
 /// of at least [minOverrideReasonLength] characters is typed.
 class AllergyBlockDialog extends StatefulWidget {
@@ -21,7 +21,7 @@ class AllergyBlockDialog extends StatefulWidget {
   /// Drug being added.
   final Drug drug;
 
-  /// Allergy entries that match the drug's group.
+  /// Allergy entries that match the drug.
   final List<AllergyEntry> matches;
 
   /// Shows the dialog; resolves to the reason or null.
@@ -70,8 +70,13 @@ class _AllergyBlockDialogState extends State<AllergyBlockDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '${widget.drug.genericName.toUpperCase()} belongs to the '
-              '${widget.drug.allergyGroup} group. This patient has recorded:',
+              widget.drug.allergyGroup == null ||
+                      widget.drug.allergyGroup!.isEmpty
+                  ? '${widget.drug.genericName.toUpperCase()} matches an '
+                        'allergy this patient has recorded:'
+                  : '${widget.drug.genericName.toUpperCase()} belongs to the '
+                        '${widget.drug.allergyGroup} group. This patient has '
+                        'recorded:',
             ),
             const SizedBox(height: AppSpacing.sm),
             for (final a in widget.matches)

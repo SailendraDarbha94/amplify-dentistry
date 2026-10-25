@@ -8,24 +8,24 @@ enum ToothNotation {
   palmer;
 
   String get label => switch (this) {
-        ToothNotation.fdi => 'FDI (ISO 3950)',
-        ToothNotation.universal => 'Universal (ADA)',
-        ToothNotation.palmer => 'Palmer',
-      };
+    ToothNotation.fdi => 'FDI (ISO 3950)',
+    ToothNotation.universal => 'Universal (ADA)',
+    ToothNotation.palmer => 'Palmer',
+  };
 
   /// Renders a tooth in this notation. Palmer uses box-drawing glyphs; use
   /// [formatPlain] where glyphs are not wanted (PDF fonts, logs).
   String format(ToothId tooth) => switch (this) {
-        ToothNotation.fdi => tooth.storageKey,
-        ToothNotation.universal => tooth.universal,
-        ToothNotation.palmer => tooth.palmer,
-      };
+    ToothNotation.fdi => tooth.storageKey,
+    ToothNotation.universal => tooth.universal,
+    ToothNotation.palmer => tooth.palmer,
+  };
 
   String formatPlain(ToothId tooth) => switch (this) {
-        ToothNotation.fdi => tooth.storageKey,
-        ToothNotation.universal => tooth.universal,
-        ToothNotation.palmer => tooth.palmerText,
-      };
+    ToothNotation.fdi => tooth.storageKey,
+    ToothNotation.universal => tooth.universal,
+    ToothNotation.palmer => tooth.palmerText,
+  };
 
   /// Renders a list of teeth joined by `, ` in this notation, FDI-sorted.
   String formatAll(Iterable<ToothId> teeth, {bool plain = false}) {
@@ -35,10 +35,10 @@ enum ToothNotation {
 
   /// Parses a tooth written in this notation.
   ToothId? tryParse(String input) => switch (this) {
-        ToothNotation.fdi => ToothId.tryParse(input),
-        ToothNotation.universal => ToothId.tryParseUniversal(input),
-        ToothNotation.palmer => _tryParsePalmer(input),
-      };
+    ToothNotation.fdi => ToothId.tryParse(input),
+    ToothNotation.universal => ToothId.tryParseUniversal(input),
+    ToothNotation.palmer => _tryParsePalmer(input),
+  };
 
   static ToothId? _tryParsePalmer(String input) {
     final s = input.trim().toUpperCase().replaceAll(' ', '');
@@ -77,7 +77,8 @@ List<ToothId> parseToothList(
       .where((t) => t.isNotEmpty);
   final out = <ToothId>[];
   for (final token in tokens) {
-    final id = preferred.tryParse(token) ??
+    final id =
+        preferred.tryParse(token) ??
         ToothNotation.fdi.tryParse(token) ??
         ToothNotation.palmer.tryParse(token) ??
         ToothNotation.universal.tryParse(token);

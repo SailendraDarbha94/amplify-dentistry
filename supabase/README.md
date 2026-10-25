@@ -9,6 +9,7 @@ migrations/0001_schema.sql     tables, domains, indexes, counter tables (schema 
 migrations/0002_rls.sql        membership helpers + policies on every table
 migrations/0003_functions.sql  audit trigger, updated_at touch, hard-delete guard, invoice/patient numbering
 migrations/0004_storage.sql    private bucket clinic-media + object policies
+migrations/0005_invoice_dentist_and_number.sql  treating dentist frozen on issued invoices; minted invoice numbers immutable
 seed.sql                       intentionally empty (catalogue/drug seeds ship in the app)
 tests/local_supabase_stub.sql  auth/storage shims so the migrations run on plain PostgreSQL
 tests/smoke.sql                behavioural checks (isolation, roles, numbering, append-only, audit)

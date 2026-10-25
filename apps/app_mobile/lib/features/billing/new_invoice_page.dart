@@ -1,4 +1,5 @@
 import 'package:ampdent_core/ampdent_core.dart';
+import 'package:ampdent_data/ampdent_data.dart';
 import 'package:ampdent_mobile/core/app_strings.dart';
 import 'package:ampdent_mobile/core/formatting.dart';
 import 'package:ampdent_mobile/core/providers.dart';
@@ -180,6 +181,12 @@ class _NewInvoicePageState extends ConsumerState<NewInvoicePage> {
       );
       context.pushReplacement(
         '/patients/${widget.patientId}/billing/invoice/${issued.id}?pdf=1',
+      );
+    } on NoRegisteredClinician {
+      if (!mounted) return;
+      setState(() => _issuing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(BillingStrings.noRegisteredClinician)),
       );
     } catch (e, st) {
       const Logger('billing').error('Issue failed', error: e, stackTrace: st);

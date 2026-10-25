@@ -50,8 +50,8 @@ class GstRate {
 /// Resolves the GST rate for a class at a point in time.
 class GstRateTable {
   GstRateTable(Iterable<GstRate> rates)
-      : _rates = rates.toList()
-          ..sort((a, b) => a.effectiveFrom.compareTo(b.effectiveFrom));
+    : _rates = rates.toList()
+        ..sort((a, b) => a.effectiveFrom.compareTo(b.effectiveFrom));
 
   /// Defaults as of October 2026: exempt 0%, cosmetic 18% with ITC (the
   /// contested 5%-without-ITC reading is opt-in), goods 5%, standard 18%.
@@ -109,7 +109,7 @@ class Money implements Comparable<Money> {
 
   /// Builds from whole rupees (and optional paise) without floating point.
   const Money.rupees(int rupees, [int extraPaise = 0])
-      : paise = rupees * 100 + extraPaise;
+    : paise = rupees * 100 + extraPaise;
 
   /// Parses `1,250`, `1250.50`, `₹ 1,250.5`. Returns null if unparseable.
   static Money? tryParse(String input) {
@@ -165,8 +165,9 @@ class Money implements Comparable<Money> {
     final negative = paise < 0;
     final absRupees = paise.abs() ~/ 100;
     final grouped = _groupIndian(absRupees.toString());
-    final paiseText =
-        showPaise ? '.${(paise.abs() % 100).toString().padLeft(2, '0')}' : '';
+    final paiseText = showPaise
+        ? '.${(paise.abs() % 100).toString().padLeft(2, '0')}'
+        : '';
     final body = '$grouped$paiseText';
     return '${negative ? '-' : ''}${symbol ? '₹' : ''}$body';
   }

@@ -2,14 +2,15 @@ import 'dart:typed_data';
 
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_documents/ampdent_documents.dart';
+import 'package:ampdent_messaging/ampdent_messaging.dart';
 import 'package:ampdent_mobile/core/app_strings.dart';
 import 'package:ampdent_mobile/core/formatting.dart';
 import 'package:ampdent_mobile/core/providers.dart';
+import 'package:ampdent_mobile/features/recall/patient_messenger.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'prescription_providers.dart';
 import 'rx_document_service.dart';
@@ -42,17 +43,32 @@ class _PrescriptionDetailPageState
     extends ConsumerState<PrescriptionDetailPage> {
   bool _busy = false;
 
-  ClinicMember? _prescriber(Prescription rx) {
-    final members = ref.read(clinicMembersProvider).value ?? const [];
-    return members.where((m) => m.id == rx.prescriberId).firstOrNull ??
-        ref.read(currentMemberProvider).value;
+  /// The member who issued [rx] (inactive members stay on record), falling
+  /// back to the acting member when the prescriber row is gone.
+  Future<ClinicMember?> _prescriber(Prescription rx) async {
+    final clinics = ref.read(clinicRepositoryProvider);
+    return await clinics.getMember(rx.prescriberId) ??
+        await clinics.getMember(ref.read(actorContextProvider).actorId);
+  }
+
+  /// Clinic and patient read straight from the repositories, so the actions
+  /// do not depend on a provider some other page happens to be watching.
+  Future<(Clinic, Patient)?> _parties() async {
+    final clinic = await ref
+        .read(clinicRepositoryProvider)
+        .getClinic(ref.read(actorContextProvider).clinicId);
+    final patient = await ref
+        .read(patientRepositoryProvider)
+        .getById(widget.patientId);
+    if (clinic == null || patient == null) return null;
+    return (clinic, patient);
   }
 
   Future<Uint8List?> _pdf(Prescription rx) async {
-    final clinic = ref.read(currentClinicProvider).value;
-    final patient = ref.read(rxPatientProvider(widget.patientId)).value;
-    final dentist = _prescriber(rx);
-    if (clinic == null || patient == null || dentist == null) return null;
+    final parties = await _parties();
+    final dentist = await _prescriber(rx);
+    if (parties == null || dentist == null) return null;
+    final (clinic, patient) = parties;
     final fonts = await ref.read(documentFontsProvider.future);
     return buildPrescriptionPdf(
       clinic: clinic,
@@ -100,23 +116,34 @@ class _PrescriptionDetailPageState
     );
   });
 
+  /// Sends the PRESCRIPTION_LINK through [PatientMessenger]: DPDP opt-in
+  /// check ([documentSendDecision]), guardian routing for minors, and the
+  /// message log row marked sent or cancelled after the launch.
   Future<void> _sendLink(Prescription rx) => _run(() async {
-    final clinic = ref.read(currentClinicProvider).value;
-    final patient = ref.read(rxPatientProvider(widget.patientId)).value;
-    final dentist = _prescriber(rx);
-    if (clinic == null || patient == null || dentist == null) return;
-    final uri = await sendPrescriptionLink(
-      messaging: ref.read(messagingProvider),
-      request: prescriptionLinkRequest(
-        clinic: clinic,
-        dentist: dentist,
-        patient: patient,
-        prescription: rx,
-        now: ref.read(clockProvider)(),
-      ),
-    );
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) _toast('WhatsApp is not available on this phone');
+    final parties = await _parties();
+    final dentist = await _prescriber(rx);
+    if (parties == null || dentist == null) return;
+    final (clinic, patient) = parties;
+    final result = await ref
+        .read(patientMessengerProvider)
+        .send(
+          patient: patient,
+          clinic: clinic,
+          template: templateByCode(prescriptionLinkTemplateCode)!,
+          variables: prescriptionLinkVariables(
+            dentist: dentist,
+            clinic: clinic,
+            patient: patient,
+            prescription: rx,
+          ),
+          decide: documentSendDecision,
+        );
+    if (!mounted) return;
+    if (!result.decision.allowed) {
+      _toast(sendDenialText(result.decision.reason));
+    } else if (!result.launched) {
+      _toast('WhatsApp is not available on this phone');
+    }
   });
 
   void _toast(String text) =>

@@ -44,6 +44,7 @@ class ChartProcedureList extends StatelessWidget {
     super.key,
     required this.procedures,
     required this.notation,
+    this.busy = false,
     required this.onMarkDone,
     required this.onAddToBill,
   });
@@ -53,6 +54,10 @@ class ChartProcedureList extends StatelessWidget {
 
   /// Display notation.
   final ToothNotation notation;
+
+  /// A quick action is running: every button renders disabled so a second
+  /// tap cannot start another transition.
+  final bool busy;
 
   /// Advance or complete a procedure.
   final ValueChanged<ProcedureRecord> onMarkDone;
@@ -84,6 +89,7 @@ class ChartProcedureList extends StatelessWidget {
                   _ProcedureRow(
                     procedure: p,
                     notation: notation,
+                    busy: busy,
                     onMarkDone: onMarkDone,
                     onAddToBill: onAddToBill,
                   ),
@@ -97,12 +103,14 @@ class _ProcedureRow extends StatelessWidget {
   const _ProcedureRow({
     required this.procedure,
     required this.notation,
+    required this.busy,
     required this.onMarkDone,
     required this.onAddToBill,
   });
 
   final ProcedureRecord procedure;
   final ToothNotation notation;
+  final bool busy;
   final ValueChanged<ProcedureRecord> onMarkDone;
   final ValueChanged<ProcedureRecord> onAddToBill;
 
@@ -162,7 +170,7 @@ class _ProcedureRow extends StatelessWidget {
                   if (canMarkDone(p))
                     FilledButton.tonalIcon(
                       key: ValueKey('proc-done-${p.id}'),
-                      onPressed: () => onMarkDone(p),
+                      onPressed: busy ? null : () => onMarkDone(p),
                       icon: const Icon(Icons.check),
                       label: Text(
                         p.isMultiSitting &&
@@ -174,7 +182,7 @@ class _ProcedureRow extends StatelessWidget {
                   if (p.status.isBillable)
                     OutlinedButton.icon(
                       key: ValueKey('proc-bill-${p.id}'),
-                      onPressed: () => onAddToBill(p),
+                      onPressed: busy ? null : () => onAddToBill(p),
                       icon: const Icon(Icons.receipt_long_outlined),
                       label: Text(ChartStrings.addToBill),
                     ),

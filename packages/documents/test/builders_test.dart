@@ -60,7 +60,6 @@ void main() {
     test('renders an invoice-cum-bill of supply on one page', () async {
       final builder = InvoicePdf(
         clinic: clinic,
-        dentist: dentist,
         patient: patient,
         invoice: sampleInvoice(),
         payments: samplePayments,
@@ -75,25 +74,50 @@ void main() {
       expect(builder.suggestedFileName, endsWith('.pdf'));
     });
 
-    test('draft receipt gets a DRAFT watermark', () async {
+    test('prints the dentist frozen on the invoice, not a device member', () {
       final builder = InvoicePdf(
-        clinic: unregisteredClinic,
-        dentist: dentist,
+        clinic: clinic,
         patient: patient,
-        invoice: sampleReceipt(),
+        invoice: sampleInvoice(),
         theme: testTheme(),
       );
-      expect(builder.title, 'RECEIPT');
-      expect(builder.watermark, 'DRAFT');
-      expectPdf(await builder.build());
-      expect(builder.pageCount, 1);
+      final who = builder.signatory!;
+      expect(who.displayName, dentist.displayName);
+      expect(who.registrationNumber, 'A-12345');
+      expect(who.registrationCouncil, 'TSDC');
+      expect(who.qualifications, dentist.qualifications);
+      expect(
+        testTheme().signatoryRegistrationLine(who),
+        'Reg. No. TSDC A-12345',
+      );
+      expect(builder.footerNote, contains('DCI Code of Ethics 3.4.1'));
+      // The issuer (front desk) is not who the document names.
+      expect(sampleInvoice().issuedBy, isNot(dentist.id));
+      expect(sampleInvoice().hasRegisteredDentist, isTrue);
     });
+
+    test(
+      'draft receipt gets a DRAFT watermark and no registration claim',
+      () async {
+        final builder = InvoicePdf(
+          clinic: unregisteredClinic,
+          patient: patient,
+          invoice: sampleReceipt(),
+          theme: testTheme(),
+        );
+        expect(builder.title, 'RECEIPT');
+        expect(builder.watermark, 'DRAFT');
+        expect(builder.signatory, isNull);
+        expect(builder.footerNote, isNot(contains('DCI')));
+        expectPdf(await builder.build());
+        expect(builder.pageCount, 1);
+      },
+    );
 
     test('every document type renders', () async {
       for (final type in InvoiceDocumentType.values) {
         final builder = InvoicePdf(
           clinic: clinic,
-          dentist: dentist,
           patient: patient,
           invoice: sampleInvoice(type: type),
           theme: testTheme(),

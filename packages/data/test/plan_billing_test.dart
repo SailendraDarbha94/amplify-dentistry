@@ -171,6 +171,16 @@ void main() {
       expect(issued.status, InvoiceStatus.issued);
       expect(issued.number, draft.number);
       expect(issued.documentType, InvoiceDocumentType.invoiceCumBillOfSupply);
+      // No procedure row behind the lines: the owner dentist is frozen.
+      expect(issued.dentistId, dentistId);
+      expect(issued.dentistName, 'Dr. A. Rao');
+      expect(issued.dentistRegistrationNumber, 'A-12345');
+      expect(
+        issued.dentistRegistrationCouncil,
+        'Telangana State Dental Council',
+      );
+      expect(issued.dentistQualifications, ['BDS', 'MDS (Endodontics)']);
+      expect(issued.hasRegisteredDentist, isTrue);
       expect(issued.lines.first.taxRatePercent, 0);
       expect(issued.lines.last.taxRatePercent, 18);
       expect(issued.taxableTotal, const Money.rupees(15000));
@@ -188,6 +198,147 @@ void main() {
         await billing.patientBalance(patientId),
         const Money.rupees(16800),
       );
+    });
+
+    test('issue freezes the treating dentist from the billed procedure, not '
+        'the acting member', () async {
+      final clinics = env.repos.clinics;
+      await clinics.upsertMember(
+        ctx,
+        dentist(id: 'member-2').copyWith(
+          displayName: 'Dr. B. Sen',
+          role: ClinicRole.associateDentist,
+          registrationNumber: 'B-99',
+          registrationCouncil: 'Karnataka State Dental Council',
+          qualifications: const ['BDS'],
+        ),
+      );
+      await clinics.upsertMember(
+        ctx,
+        dentist(id: 'member-3').copyWith(
+          displayName: 'Rekha',
+          role: ClinicRole.receptionist,
+          registrationNumber: '',
+          qualifications: const [],
+        ),
+      );
+      await env.repos.chart.createProcedure(
+        ctx,
+        procedure(
+          id: 'proc-assoc',
+          status: ProcedureStatus.completed,
+        ).copyWith(providerId: 'member-2'),
+      );
+      const frontDesk = ActorContext(
+        clinicId: clinicId,
+        actorId: 'member-3',
+        deviceId: deviceId,
+      );
+      final billing = env.repos.billing;
+      final draft = await billing.saveDraft(
+        frontDesk,
+        draftInvoice(
+          id: 'inv-assoc',
+          lines: [
+            InvoiceLine(
+              id: 'il-a',
+              procedureId: 'proc-assoc',
+              description: 'Root canal',
+              unitPrice: const Money.rupees(6000),
+              gstClass: GstClass.exemptHealthcare,
+              sacHsnCode: '999312',
+            ),
+          ],
+        ),
+      );
+      final issued = await billing.issueInvoice(frontDesk, draft.id, at: t0);
+      expect(issued.dentistId, 'member-2');
+      expect(issued.dentistName, 'Dr. B. Sen');
+      expect(issued.dentistRegistrationNumber, 'B-99');
+      expect(
+        issued.dentistRegistrationCouncil,
+        'Karnataka State Dental Council',
+      );
+      expect(issued.hasRegisteredDentist, isTrue);
+      // Reprinting later as any other member reads the same frozen fields.
+      expect(
+        (await billing.getInvoice(issued.id))!.dentistRegistrationNumber,
+        'B-99',
+      );
+    });
+
+    test('issue refuses when no registered clinician can be named', () async {
+      await env.repos.clinics.upsertMember(
+        ctx,
+        dentist().copyWith(registrationNumber: ''),
+      );
+      final billing = env.repos.billing;
+      final draft = await billing.saveDraft(ctx, draftInvoice());
+      await expectLater(
+        billing.issueInvoice(ctx, draft.id, at: t0),
+        throwsA(isA<NoRegisteredClinician>()),
+      );
+      // Nothing was posted: the draft is intact and the ledger empty.
+      expect((await billing.getInvoice(draft.id))!.status, InvoiceStatus.draft);
+      expect(await billing.ledger(patientId), isEmpty);
+    });
+
+    test('applyServerNumber replaces the DRAFT number exactly once', () async {
+      final billing = env.repos.billing;
+      final draft = await billing.saveDraft(ctx, draftInvoice());
+      await expectLater(
+        billing.applyServerNumber(ctx, draft.id, 'INV/2026-27/0001'),
+        throwsStateError,
+        reason: 'a draft has no server number yet',
+      );
+      await billing.issueInvoice(ctx, draft.id, at: t0);
+      await expectLater(
+        billing.applyServerNumber(ctx, draft.id, 'DRAFT-INV-202610-0009'),
+        throwsArgumentError,
+      );
+
+      final minted = await billing.applyServerNumber(
+        ctx,
+        draft.id,
+        'INV/2026-27/0001',
+        at: t1,
+      );
+      expect(minted.number, 'INV/2026-27/0001');
+      expect(minted.isDraftNumber, isFalse);
+      expect(minted.status, InvoiceStatus.issued);
+      final events = await env.repos.audit.forEntity(
+        clinicId,
+        'Invoice',
+        draft.id,
+      );
+      final mint = events.where(
+        (e) => e.reason?.startsWith('Server minted invoice number') ?? false,
+      );
+      expect(mint.single.action, AuditAction.statusChange);
+      expect(mint.single.before?['number'], draft.number);
+      expect(mint.single.after?['number'], 'INV/2026-27/0001');
+
+      // Idempotent on the same number, refused for a different one.
+      final again = await billing.applyServerNumber(
+        ctx,
+        draft.id,
+        'INV/2026-27/0001',
+      );
+      expect(again.number, 'INV/2026-27/0001');
+      expect(
+        (await env.repos.audit.forEntity(clinicId, 'Invoice', draft.id)).length,
+        events.length,
+      );
+      await expectLater(
+        billing.applyServerNumber(ctx, draft.id, 'INV/2026-27/0002'),
+        throwsStateError,
+      );
+
+      // Later local writes carry the minted number, never the draft one.
+      await billing.recordPayment(ctx, payment());
+      final afterPayment = (await billing.getInvoice(draft.id))!;
+      expect(afterPayment.number, 'INV/2026-27/0001');
+      expect(afterPayment.status, InvoiceStatus.partiallyPaid);
     });
 
     test('payments reduce the balance and move the status', () async {
@@ -358,6 +509,7 @@ void main() {
       final db = AppDatabase.inMemory();
       final repos = DriftRepositories(db);
       await repos.clinics.createClinic(ctx, clinic(gstin: null));
+      await repos.clinics.upsertMember(ctx, dentist());
       await repos.patients.upsert(ctx, patient());
       await repos.billing.saveDraft(ctx, draftInvoice());
       final issued = await repos.billing.issueInvoice(ctx, 'inv-1');

@@ -65,18 +65,22 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
     final number = before.number.isEmpty
         ? await mintDraftNumber(ctx, now)
         : before.number;
+    final dentist = await _treatingDentist(before);
+    if (dentist == null) throw const NoRegisteredClinician();
     final issued = computeInvoiceTotals(
-      before.copyWith(
-        number: number,
-        lines: lines,
-        documentType: suggestDocumentType(
-          clinicGstRegistered: clinic?.isGstRegistered ?? false,
-          lineClasses: lines.map((l) => l.gstClass),
-        ),
-        status: InvoiceStatus.issued,
-        issuedAt: now,
-        updatedAt: now,
-      ),
+      before
+          .copyWith(
+            number: number,
+            lines: lines,
+            documentType: suggestDocumentType(
+              clinicGstRegistered: clinic?.isGstRegistered ?? false,
+              lineClasses: lines.map((l) => l.gstClass),
+            ),
+            status: InvoiceStatus.issued,
+            issuedAt: now,
+            updatedAt: now,
+          )
+          .withDentist(dentist),
     );
     final saved = await writeInvoice(
       ctx,
@@ -94,6 +98,79 @@ class DriftBillingRepository extends DatabaseAccessor<AppDatabase>
       at: now,
     );
     return saved;
+  });
+
+  /// The clinician named on an invoice: the provider of the billed
+  /// procedures (first line first), else the clinic's owner dentist; only a
+  /// clinician with a registration number qualifies. Null when none does.
+  Future<ClinicMember?> _treatingDentist(Invoice invoice) async {
+    final candidateIds = <String>[];
+    for (final line in invoice.lines) {
+      final procedureId = line.procedureId;
+      if (procedureId == null) continue;
+      final procedure = await (select(
+        attachedDatabase.procedures,
+      )..where((t) => t.id.equals(procedureId))).getSingleOrNull();
+      if (procedure != null && !candidateIds.contains(procedure.providerId)) {
+        candidateIds.add(procedure.providerId);
+      }
+    }
+    final members = attachedDatabase.clinicMembers;
+    for (final id in candidateIds) {
+      final member = await (select(
+        members,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
+      if (member != null && _isRegisteredClinician(member)) return member;
+    }
+    final owners =
+        await (select(members)
+              ..where(
+                (t) =>
+                    t.clinicId.equals(invoice.clinicId) &
+                    t.role.equalsValue(ClinicRole.ownerDentist) &
+                    t.isActive.equals(true),
+              )
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
+    for (final owner in owners) {
+      if (_isRegisteredClinician(owner)) return owner;
+    }
+    return null;
+  }
+
+  static bool _isRegisteredClinician(ClinicMember m) =>
+      m.isClinician && (m.registrationNumber ?? '').trim().isNotEmpty;
+
+  @override
+  Future<Invoice> applyServerNumber(
+    ActorContext ctx,
+    String invoiceId,
+    String number, {
+    DateTime? at,
+  }) => writeTransaction(() async {
+    final minted = number.trim();
+    if (minted.isEmpty || isDraftNumber(minted)) {
+      throw ArgumentError.value(number, 'number', 'must be a minted number');
+    }
+    final before = await getInvoice(invoiceId);
+    if (before == null) throw StateError('Invoice $invoiceId not found');
+    checkTenant(ctx, before.clinicId, 'invoice.clinicId');
+    if (before.status == InvoiceStatus.draft) {
+      throw StateError('Invoice $invoiceId is still a draft');
+    }
+    if (before.number == minted) return before;
+    if (!before.isDraftNumber) {
+      throw StateError(
+        'Invoice $invoiceId already carries number ${before.number}',
+      );
+    }
+    return writeInvoice(
+      ctx,
+      before,
+      before.copyWith(number: minted, updatedAt: nowUtc(at)),
+      action: AuditAction.statusChange,
+      reason: 'Server minted invoice number $minted for ${before.number}',
+    );
   });
 
   @override
