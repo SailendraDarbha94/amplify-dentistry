@@ -65,13 +65,17 @@ class MessageRequest {
     category: category ?? _category,
   );
 
-  /// Builds the [MessageLog] row for this request.
+  /// Builds the [MessageLog] row for this request. [provider] names the
+  /// backend that owns delivery and [optInReason] the rule that allowed the
+  /// send; both land on the row's real fields.
   MessageLog toLog({
     required String id,
     required DateTime now,
     MessageStatus status = MessageStatus.queued,
     String? providerMessageId,
     DateTime? sentAt,
+    MessageProvider? provider,
+    String? optInReason,
   }) => MessageLog(
     id: id,
     clinicId: clinicId,
@@ -87,6 +91,8 @@ class MessageRequest {
     costPaise: estimateCostPaise(category),
     createdAt: now,
     sentAt: sentAt,
+    provider: provider,
+    optInReason: optInReason,
   );
 }
 

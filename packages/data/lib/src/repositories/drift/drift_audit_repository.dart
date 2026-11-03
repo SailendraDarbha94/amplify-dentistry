@@ -7,6 +7,10 @@ import '../actor_context.dart';
 import '../audit_repository.dart';
 import 'audited_writer.dart';
 
+/// `device_id` the server stamps on audit events it writes itself
+/// (`app.audit_row()` without an `app.device_id` setting, cron jobs).
+const String serverDeviceId = 'server';
+
 /// Drift implementation of [AuditRepository].
 class DriftAuditRepository extends DatabaseAccessor<AppDatabase>
     with AuditedWriter
@@ -96,14 +100,18 @@ class DriftAuditRepository extends DatabaseAccessor<AppDatabase>
     DateTime from,
     DateTime to, {
     int? limit,
+    bool includeServer = false,
   }) {
     final q = select(_t)
-      ..where(
-        (t) =>
+      ..where((t) {
+        final own =
             t.clinicId.equals(clinicId) &
             t.occurredAt.isBiggerOrEqualValue(encodeIsoUtc(from)) &
-            t.occurredAt.isSmallerThanValue(encodeIsoUtc(to)),
-      )
+            t.occurredAt.isSmallerThanValue(encodeIsoUtc(to));
+        return includeServer
+            ? own
+            : own & t.deviceId.equals(serverDeviceId).not();
+      })
       ..orderBy([
         (t) => OrderingTerm.desc(t.occurredAt),
         (t) => OrderingTerm.desc(t.rowId),
@@ -113,9 +121,18 @@ class DriftAuditRepository extends DatabaseAccessor<AppDatabase>
   }
 
   @override
-  Stream<List<AuditEvent>> watchRecent(String clinicId, {int limit = 100}) =>
+  Stream<List<AuditEvent>> watchRecent(
+    String clinicId, {
+    int limit = 100,
+    bool includeServer = false,
+  }) =>
       (select(_t)
-            ..where((t) => t.clinicId.equals(clinicId))
+            ..where((t) {
+              final own = t.clinicId.equals(clinicId);
+              return includeServer
+                  ? own
+                  : own & t.deviceId.equals(serverDeviceId).not();
+            })
             ..orderBy([
               (t) => OrderingTerm.desc(t.occurredAt),
               (t) => OrderingTerm.desc(t.rowId),

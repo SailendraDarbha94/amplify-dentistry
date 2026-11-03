@@ -195,15 +195,38 @@ void main() {
       expect(rows.where((r) => r.targetTable == 'clinics').single.attempts, 2);
     });
 
-    test('a 4xx rejection stops the push without retrying', () async {
+    test('a 4xx rejection quarantines the row without retrying', () async {
       s.fake.failNext.add(409);
       final engine = s.engine();
       await engine.pushPending();
-      expect(engine.current.status, SyncStatus.error);
-      expect(engine.current.error, contains('23503'));
+      // The push itself completes: the poison row is held, not retried.
+      expect(engine.current.status, SyncStatus.idle);
+      expect(engine.current.error, isNull);
       expect(s.fake.requestsFor('clinics'), hasLength(1));
       expect(s.sleeps, isEmpty);
+      expect(engine.lastPushReport!.rowsQuarantined, 1);
+      // Everything references the clinic, so it all waits behind it.
+      expect(await s.pendingCount(), 0);
+      expect(await s.repos.outbox.heldCount(clinicId), greaterThan(1));
+      final clinicEntry = (await s.repos.outbox.held(clinicId))
+          .firstWhere((e) => e.targetTable == 'clinics');
+      expect(clinicEntry.status, OutboxStatus.quarantined);
+      expect(clinicEntry.lastError, contains('23503'));
+      expect(clinicEntry.serverStatusCode, 409);
+      expect(clinicEntry.attempts, 1);
+      expect(s.fake.rows('clinics'), isEmpty);
+      expect(s.fake.rows('patients'), isEmpty);
+    });
+
+    test('a 401 stops the push and asks for a new session', () async {
+      s.fake.failNext.add(401);
+      final engine = s.engine();
+      await engine.pushPending();
+      expect(engine.current.status, SyncStatus.offline);
+      expect(engine.current.error, contains('sign in again'));
+      expect(s.sleeps, isEmpty);
       expect(await s.pendingCount(), greaterThan(0));
+      expect(await s.repos.outbox.heldCount(clinicId), 0);
     });
 
     test('defers cyclic foreign keys to a fix-up step', () async {

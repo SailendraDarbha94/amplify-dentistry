@@ -54,6 +54,10 @@ abstract final class MobileStrings {
   /// Path of the founder's setup guide in the repository.
   static const String setupGuidePath = 'docs/SETUP-CLOUD.md';
 
+  /// Banner and account-page copy for rejected sync rows.
+  static String changesNeedAttention(int count) =>
+      count == 1 ? '1 change needs attention' : '$count changes need attention';
+
   /// Data-ownership statement shown on the About page.
   static const String dataOwnership =
       'Your clinic owns its data. A full export of every patient record, '

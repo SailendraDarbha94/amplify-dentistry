@@ -1,19 +1,20 @@
 import 'package:ampdent_core/ampdent_core.dart';
 
-/// Reserved keys inside `MessageLog.variables`.
+/// Provider and opt-in bookkeeping on a [MessageLog].
 ///
-/// `MessageLog` (in `ampdent_core`) has no `provider` field yet, so the
-/// provider that queued a row and the opt-in reason that allowed it travel
-/// inside `variables` under keys that start with `_`. Template placeholders
-/// never start with `_` (see the catalogue tests), so the keys cannot collide
-/// with a body variable, and the Edge Function reads only the template's
-/// declared `bodyParams`, so they never reach Meta.
+/// Since `MessageLog.provider` and `MessageLog.optInReason` exist, new rows
+/// carry both as real fields. Rows queued by older builds stamped the same
+/// facts inside `variables` under keys that start with `_`
+/// ([LegacyMessageLogKeys]); every reader here falls back to those stamps,
+/// so old rows keep their meaning. Template placeholders never start with
+/// `_` (see the catalogue tests), and [templateOnly] strips the legacy keys
+/// before rendering.
 abstract final class MessageLogKeys {
-  /// Which backend owns delivery: [cloudApiProvider] or [deepLinkProvider].
-  static const String provider = '_provider';
+  /// Legacy `variables` key of the provider stamp (`_provider`).
+  static const String provider = LegacyMessageLogKeys.provider;
 
-  /// `SendDecision.reason` that allowed the send (DPDP audit trail).
-  static const String optInReason = '_opt_in_reason';
+  /// Legacy `variables` key of the opt-in reason stamp (`_opt_in_reason`).
+  static const String optInReason = LegacyMessageLogKeys.optInReason;
 
   /// Rows the sync worker hands to the Meta Cloud API Edge Function.
   static const String cloudApiProvider = 'cloud_api';
@@ -21,9 +22,12 @@ abstract final class MessageLogKeys {
   /// Rows launched from the dentist's own phone via wa.me / sms:.
   static const String deepLinkProvider = 'deeplink';
 
-  /// Provider recorded on [log], or null for rows queued before this key
-  /// existed (treat those as [cloudApiProvider] when draining the outbox).
-  static String? providerOf(MessageLog log) => log.variables[provider];
+  /// Provider wire name recorded on [log]: the `provider` field, else the
+  /// legacy stamp, else null for rows queued before either existed (treat
+  /// those as [cloudApiProvider] when draining the outbox).
+  static String? providerOf(MessageLog log) =>
+      log.provider?.wireName ??
+      MessageProvider.tryParse(log.variables[provider])?.wireName;
 
   /// Whether [log] is for the Cloud API worker (unstamped rows included).
   static bool isCloudApi(MessageLog log) {
@@ -31,11 +35,13 @@ abstract final class MessageLogKeys {
     return p == null || p == cloudApiProvider;
   }
 
-  /// Opt-in reason recorded on [log], if any.
-  static String? optInReasonOf(MessageLog log) => log.variables[optInReason];
+  /// Opt-in reason recorded on [log]: the field, else the legacy stamp.
+  static String? optInReasonOf(MessageLog log) =>
+      log.optInReason ?? log.variables[optInReason];
 
-  /// [variables] plus the reserved keys; template values win no conflicts
-  /// because reserved keys are not valid template placeholders in practice.
+  /// [variables] plus the legacy reserved keys. Kept for callers that still
+  /// build rows for older readers; new rows should set `MessageLog.provider`
+  /// and `MessageLog.optInReason` instead.
   static Map<String, String> stamp(
     Map<String, String> variables, {
     required String providerName,

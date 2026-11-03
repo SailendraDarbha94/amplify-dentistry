@@ -41,16 +41,26 @@ const String onboardingLocation = '/onboarding';
 /// also reachable later from Settings > Account).
 const String signInLocation = '/sign-in';
 
+/// Repair screen for changes the server rejected (Settings > Account &
+/// sync, and the shell banner's target).
+const String syncRepairLocation = '/settings/account/sync-repair';
+
+/// Prefix of the invite deep link route (`/invite/<code>`, reached through
+/// `ampdent://app/invite/<code>`); it hands over to the sign-in page.
+const String inviteLinkLocation = '/invite';
+
 /// Decides where a navigation must be redirected given whether a clinic
 /// exists and whether the sign-in gate is up (cloud configured, nobody
 /// signed in, no clinic, "continue offline" not chosen). Returns null to
-/// allow [location] unchanged. The sign-in page is always reachable.
+/// allow [location] unchanged. The sign-in page and the invite link route
+/// are always reachable.
 String? sessionRedirect({
   required bool hasClinic,
   required String location,
   bool signInGate = false,
 }) {
   if (location.startsWith(signInLocation)) return null;
+  if (location.startsWith('$inviteLinkLocation/')) return null;
   final onOnboarding = location.startsWith(onboardingLocation);
   if (!hasClinic) {
     if (signInGate) return signInLocation;

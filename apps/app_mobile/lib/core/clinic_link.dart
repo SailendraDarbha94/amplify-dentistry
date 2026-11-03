@@ -21,6 +21,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 
 import 'cloud_config.dart';
 import 'local_store_wipe.dart';
+import 'member_invites.dart';
 import 'providers.dart';
 import 'remote_devices.dart' show devicePlatformName;
 import 'session.dart' show listLocalClinics;
@@ -135,7 +136,11 @@ class ClinicLinkController extends Notifier<ClinicLinkState> {
     ref.listen(cloudAuthProvider, (previous, next) {
       final was = previous?.isSignedIn ?? false;
       if (next.isSignedIn && !was) unawaited(run());
-      if (!next.isSignedIn && was) state = const ClinicLinkState();
+      if (!next.isSignedIn && was) {
+        state = const ClinicLinkState();
+        ref.read(createClinicChoiceProvider.notifier).reset();
+        ref.read(inviteClaimProvider.notifier).clear();
+      }
     });
     return const ClinicLinkState();
   }
@@ -163,6 +168,17 @@ class ClinicLinkController extends Notifier<ClinicLinkState> {
     }
     state = state.copyWith(phase: LinkPhase.checking, clearError: true);
     try {
+      // An invite code typed on the sign-in page is redeemed first; the
+      // membership it creates is then adopted by the rules below. A refusal
+      // is kept in the invite state (the code field shows it) and the rules
+      // run as if no code had been typed.
+      final invites = ref.read(inviteClaimProvider.notifier);
+      if (ref.read(inviteClaimProvider).hasPendingCode) {
+        if (await invites.claimPending(client)) {
+          _log.info('invite claimed; adopting the clinic');
+        }
+      }
+      if (!ref.mounted) return;
       final linker = _linker(client);
       final session = ref.read(appSessionProvider);
       final existing = await linker.currentLink();
@@ -260,7 +276,10 @@ class ClinicLinkController extends Notifier<ClinicLinkState> {
         }
         state = state.copyWith(pulledRows: engine.lastPullReport?.applied ?? 0);
       } finally {
-        await engine.dispose();
+        // Not awaited: the one-off engine is never reused, and its stream
+        // teardown (drift cancels through a zero timer) must not hold up
+        // the activation that follows.
+        unawaited(engine.dispose());
       }
       if (await _clinics.getClinic(membership.clinicId) == null) {
         throw StateError('clinic row did not arrive in the first pull');
@@ -315,6 +334,7 @@ class ClinicLinkController extends Notifier<ClinicLinkState> {
       await syncState.write(SyncStateKeys.deviceId, session.deviceId);
     }
     unawaited(ref.read(continueOfflineProvider.notifier).clear());
+    ref.read(createClinicChoiceProvider.notifier).reset();
     state = state.copyWith(
       phase: LinkPhase.linked,
       link: link,

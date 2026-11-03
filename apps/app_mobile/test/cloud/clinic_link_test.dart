@@ -154,6 +154,11 @@ void main() {
       addTearDown(env.close);
       await signIn(env.container, fake);
       expect((await runLink(env.container)).phase, LinkPhase.unlinked);
+      // The gate holds until the user explicitly chooses to create a
+      // clinic: an account with no membership never lands in onboarding
+      // by itself (a second clinic cannot be merged later).
+      expect(env.container.read(signInGateProvider), isTrue);
+      env.container.read(createClinicChoiceProvider.notifier).choose();
       expect(env.container.read(signInGateProvider), isFalse);
 
       // Onboarding creates the clinic; the controller then pushes it.
@@ -170,6 +175,8 @@ void main() {
       final state = await waitForLink(env.container);
       expect(state.phase, LinkPhase.linked, reason: state.error);
       expect(fake.row('clinics', testClinicId), isNotNull);
+      // Linked: the choice is spent.
+      expect(env.container.read(createClinicChoiceProvider), isFalse);
     },
   );
 

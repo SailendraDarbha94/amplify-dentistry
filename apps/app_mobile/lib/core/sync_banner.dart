@@ -7,6 +7,7 @@ import 'package:ampdent_data/ampdent_data.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 
+import 'app_strings.dart' show MobileStrings;
 import 'formatting.dart';
 
 /// Which banner is up.
@@ -25,6 +26,9 @@ enum SyncBannerKind {
 
   /// The last run was rejected; tap retries.
   error,
+
+  /// Rows the server refused wait for the user; tap opens the repair screen.
+  attention,
 }
 
 /// What the banner shows.
@@ -53,6 +57,9 @@ class SyncBannerSpec {
   /// Whether tapping retries the sync.
   bool get canRetry => kind == SyncBannerKind.error;
 
+  /// Whether tapping opens the repair screen.
+  bool get opensRepair => kind == SyncBannerKind.attention;
+
   @override
   String toString() => 'SyncBannerSpec($kind, $text)';
 }
@@ -63,12 +70,24 @@ const Duration syncedBannerWindow = Duration(seconds: 45);
 /// Banner for [state] at [now], or null when nothing needs saying (idle with
 /// an empty outbox and no recent sync). Returns null for
 /// [SyncStatus.disabled]: the shell keeps the offline-only banner for that.
+/// With [SyncState.quarantinedCount] > 0 (rows the server rejected for
+/// good, see `sync_repair.dart`) the banner points at the repair screen
+/// instead of repeating the error, whatever else the engine is doing.
 SyncBannerSpec? syncBannerSpec(
   SyncState state, {
   required AppStrings strings,
   required DateTime now,
 }) {
   final pending = state.pendingCount;
+  final held = state.quarantinedCount;
+  if (held > 0 && state.status != SyncStatus.disabled) {
+    return SyncBannerSpec(
+      kind: SyncBannerKind.attention,
+      text: MobileStrings.changesNeedAttention(held),
+      icon: Icons.sync_problem_outlined,
+      tone: BadgeTone.danger,
+    );
+  }
   switch (state.status) {
     case SyncStatus.disabled:
       return null;
@@ -134,13 +153,21 @@ Duration? syncedBannerRemaining(SyncState state, DateTime now) {
 /// `OfflineBanner` but driven by a [SyncBannerSpec].
 class CloudSyncBanner extends StatelessWidget {
   /// Creates the banner.
-  const CloudSyncBanner({super.key, required this.spec, this.onRetry});
+  const CloudSyncBanner({
+    super.key,
+    required this.spec,
+    this.onRetry,
+    this.onOpenRepair,
+  });
 
   /// What to show.
   final SyncBannerSpec spec;
 
   /// Called on tap when [SyncBannerSpec.canRetry].
   final VoidCallback? onRetry;
+
+  /// Called on tap when [SyncBannerSpec.opensRepair].
+  final VoidCallback? onOpenRepair;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +180,11 @@ class CloudSyncBanner extends StatelessWidget {
           alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14,
         ),
         child: InkWell(
-          onTap: spec.canRetry ? onRetry : null,
+          onTap: spec.canRetry
+              ? onRetry
+              : spec.opensRepair
+              ? onOpenRepair
+              : null,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
@@ -172,6 +203,8 @@ class CloudSyncBanner extends StatelessWidget {
                   ),
                 ),
                 if (spec.canRetry) Icon(Icons.refresh, size: 18, color: color),
+                if (spec.opensRepair)
+                  Icon(Icons.chevron_right, size: 18, color: color),
               ],
             ),
           ),

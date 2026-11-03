@@ -7,12 +7,16 @@ import 'package:ampdent_core/ampdent_core.dart';
 import 'package:supabase/supabase.dart';
 
 import '../db/app_database.dart';
+import '../repositories/audit_repository.dart';
+import '../repositories/drift/drift_audit_repository.dart';
 import 'async_mutex.dart';
+import 'device_heartbeat.dart';
 import 'outbox_repository.dart';
 import 'sync_engine.dart';
 import 'sync_errors.dart';
 import 'sync_puller.dart';
 import 'sync_pusher.dart';
+import 'sync_repair_service.dart';
 import 'sync_state_repository.dart';
 
 /// Returns the current access token, or null when signed out.
@@ -27,6 +31,12 @@ typedef AccessTokenProvider = Future<String?> Function();
 /// * Push and pull share one mutex, so concurrent calls serialise.
 /// * Nothing runs while [accessTokenProvider] returns null (signed out) or
 ///   the device is not linked to [clinicId] (`RemoteClinicLinker`).
+/// * A row the server rejects for good is quarantined (with the rows that
+///   depend on it blocked) and the push carries on; [repair] lists and
+///   resolves those rows. [SyncState.quarantinedCount] mirrors them.
+/// * After a successful push the device heartbeat (`devices` row) is
+///   refreshed at most once per [heartbeatInterval] when [deviceInfo] is
+///   given.
 ///
 /// The engine does no sign-in: the app owns auth and builds the
 /// [SupabaseClient] (with `accessToken:` or Supabase auth); only
@@ -47,6 +57,10 @@ class SupabaseSyncEngine implements SyncEngine {
     int pullPageSize = 1000,
     this.requireLink = true,
     DateTime Function()? clock,
+    this.deviceInfo,
+    this.heartbeatInterval = const Duration(minutes: 15),
+    this.includeServerAudit = false,
+    AuditRepository? audit,
   }) : outbox = outbox ?? DriftOutboxRepository(db),
        syncState = syncState ?? DriftSyncStateRepository(db),
        _clock = clock ?? _utcNow {
@@ -66,12 +80,36 @@ class SupabaseSyncEngine implements SyncEngine {
       outbox: this.outbox,
       clinicId: clinicId,
       pageSize: pullPageSize,
+      includeServerAuthored: includeServerAudit,
+    );
+    final info = deviceInfo;
+    _heartbeat = info == null
+        ? null
+        : DeviceHeartbeat(
+            client: client,
+            syncState: this.syncState,
+            clinicId: clinicId,
+            info: info,
+            interval: heartbeatInterval,
+            clock: _clock,
+          );
+    repair = SyncRepairService(
+      db: db,
+      client: client,
+      clinicId: clinicId,
+      outbox: this.outbox,
+      syncState: this.syncState,
+      audit: audit ?? DriftAuditRepository(db),
+      clock: _clock,
     );
     _controller = StreamController<SyncState>.broadcast(
       onListen: () => _controller.add(_current),
     );
     _pendingSub = this.outbox.watchPendingCount(clinicId).listen((n) {
       _emit(_current.copyWith(pendingCount: n));
+    });
+    _heldSub = this.outbox.watchHeldCount(clinicId).listen((n) {
+      _emit(_current.copyWith(quarantinedCount: n));
     });
   }
 
@@ -100,12 +138,27 @@ class SupabaseSyncEngine implements SyncEngine {
   /// Whether a recorded clinic link is required before any network call.
   final bool requireLink;
 
+  /// What the heartbeat reports about this install; null disables it.
+  final DeviceInfo? deviceInfo;
+
+  /// Minimum gap between two heartbeats.
+  final Duration heartbeatInterval;
+
+  /// Whether pulls of `audit_events` include the rows the server wrote
+  /// itself (off by default; see `SyncTable.skipServerAuthored`).
+  final bool includeServerAudit;
+
+  /// Lists, retries and discards quarantined rows.
+  late final SyncRepairService repair;
+
   final DateTime Function() _clock;
   final AsyncMutex _lock = AsyncMutex();
   late final OutboxPusher _pusher;
   late final TablePuller _puller;
+  late final DeviceHeartbeat? _heartbeat;
   late final StreamController<SyncState> _controller;
   StreamSubscription<int>? _pendingSub;
+  StreamSubscription<int>? _heldSub;
   SyncState _current = const SyncState();
   bool _disposed = false;
 
@@ -120,6 +173,9 @@ class SupabaseSyncEngine implements SyncEngine {
 
   /// Last pull report, for diagnostics screens.
   PullReport? lastPullReport;
+
+  /// Heartbeats written so far (diagnostics and tests).
+  int get heartbeats => _heartbeat?.beats ?? 0;
 
   void _emit(SyncState next) {
     _current = next;
@@ -159,8 +215,12 @@ class SupabaseSyncEngine implements SyncEngine {
       _log.warning('${busy.name} stopped: ${f.message}');
       _emit(
         _current.copyWith(
-          status: f.isTransient ? SyncStatus.offline : SyncStatus.error,
-          error: f.message,
+          status: f.kind == SyncFailureKind.rejected
+              ? SyncStatus.error
+              : SyncStatus.offline,
+          error: f.kind == SyncFailureKind.notReady
+              ? '${f.message} (sign in again)'
+              : f.message,
         ),
       );
     } catch (e, st) {
@@ -172,10 +232,17 @@ class SupabaseSyncEngine implements SyncEngine {
   }
 
   Future<void> _push() async {
-    lastPushReport = await _pusher.push();
+    final report = lastPushReport = await _pusher.push();
+    if (report.rowsQuarantined > 0) {
+      _log.warning(
+        '${report.rowsQuarantined} rows quarantined, '
+        '${report.entriesBlocked} entries blocked; see repair',
+      );
+    }
     final at = _clock();
     await syncState.writeInstant(SyncStateKeys.lastPushAt, at);
     _emit(_current.copyWith(lastPushedAt: at));
+    await _heartbeat?.beat();
   }
 
   Future<void> _pull(DateTime? since) async {
@@ -218,6 +285,7 @@ class SupabaseSyncEngine implements SyncEngine {
   Future<void> dispose() async {
     _disposed = true;
     await _pendingSub?.cancel();
+    await _heldSub?.cancel();
     await _controller.close();
   }
 }

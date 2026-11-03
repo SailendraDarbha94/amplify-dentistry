@@ -34,6 +34,18 @@ abstract final class SyncStateKeys {
   /// Completion time of the last successful pull.
   static const String lastPullAt = 'last_pull_at';
 
+  /// When this device last upserted its `devices` heartbeat row.
+  static const String lastHeartbeatAt = 'last_heartbeat_at';
+
+  /// Prefix of the notes left by `SyncRepairService.discardLocalChange` on
+  /// rows the server rejected that could not be replaced by a server copy
+  /// (`rejected.<table>.<row id>`, JSON: error, statusCode, outboxId, at).
+  static const String rejectedPrefix = 'rejected.';
+
+  /// Rejected-row note key for [table] / [rowId].
+  static String rejected(String table, String rowId) =>
+      '$rejectedPrefix$table.$rowId';
+
   /// Watermark key for [table].
   static String watermark(String table) => 'watermark.$table';
 
@@ -97,6 +109,9 @@ abstract class SyncStateRepository {
 
   /// Stores an instant under [key].
   Future<void> writeInstant(String key, DateTime at);
+
+  /// Every `rejected.*` note with a value, keyed by state key.
+  Future<Map<String, Map<String, Object?>>> rejectedNotes();
 }
 
 /// Drift implementation of [SyncStateRepository].
@@ -179,4 +194,19 @@ class DriftSyncStateRepository extends DatabaseAccessor<AppDatabase>
   @override
   Future<void> writeInstant(String key, DateTime at) =>
       write(key, at.toUtc().toIso8601String());
+
+  @override
+  Future<Map<String, Map<String, Object?>>> rejectedNotes() async {
+    final rows =
+        await (select(_t)..where(
+              (t) =>
+                  t.stateKey.like('${SyncStateKeys.rejectedPrefix}%') &
+                  t.value.isNotNull(),
+            ))
+            .get();
+    return {
+      for (final r in rows)
+        r.stateKey: (jsonDecode(r.value!) as Map).cast<String, Object?>(),
+    };
+  }
 }

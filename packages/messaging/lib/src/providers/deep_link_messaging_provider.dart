@@ -1,7 +1,6 @@
 import 'package:ampdent_core/ampdent_core.dart';
 
 import '../phone/phone_numbers.dart';
-import 'message_log_keys.dart';
 import 'messaging_provider.dart';
 
 /// `https://wa.me/<digits>?text=<encoded>` for [e164Phone] and [text].
@@ -59,16 +58,14 @@ class DeepLinkMessagingProvider implements MessagingProvider {
   final Logger _log = const Logger('messaging.deeplink');
 
   /// Renders [request] and builds the URIs without changing any state. The
-  /// log is stamped `_provider: deeplink` so the sync worker never re-sends
-  /// it through the Cloud API.
+  /// log carries `provider: deeplink` so the sync worker never re-sends it
+  /// through the Cloud API.
   DeepLinkMessage prepare(MessageRequest request) {
-    final stamped = request.copyWith(
-      variables: MessageLogKeys.stamp(
-        request.variables,
-        providerName: MessageLogKeys.deepLinkProvider,
-      ),
+    final log = request.toLog(
+      id: _idGenerator(),
+      now: _clock(),
+      provider: MessageProvider.deeplink,
     );
-    final log = stamped.toLog(id: _idGenerator(), now: _clock());
     return DeepLinkMessage(
       log: log,
       whatsappUri: whatsappDeepLink(log.toPhone, log.renderedPreview),

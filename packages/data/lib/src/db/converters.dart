@@ -160,6 +160,20 @@ class StringMapConverter extends TypeConverter<Map<String, String>, String>
   Object? toJson(Map<String, String> value) => value;
 }
 
+/// Stores [MessageProvider] as its wire name (`cloud_api`), the value the
+/// server's `message_logs.provider` check constraint accepts.
+class MessageProviderConverter extends TypeConverter<MessageProvider, String>
+    with JsonTypeConverter<MessageProvider, String> {
+  /// Const constructor.
+  const MessageProviderConverter();
+
+  @override
+  MessageProvider fromSql(String fromDb) => MessageProvider.parse(fromDb);
+
+  @override
+  String toSql(MessageProvider value) => value.wireName;
+}
+
 /// Stores `Map<String, int>` as a JSON object.
 class IntMapConverter extends TypeConverter<Map<String, int>, String>
     with JsonTypeConverter2<Map<String, int>, String, Object?> {

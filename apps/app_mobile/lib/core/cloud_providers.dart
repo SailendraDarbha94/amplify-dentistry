@@ -14,7 +14,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'clinic_link.dart';
 import 'cloud_messaging.dart';
+import 'device_info.dart';
 import 'providers.dart';
+import 'reachability.dart' show reachabilityProvider;
 import 'whatsapp_cloud.dart';
 
 /// Sync engine: `SupabaseSyncEngine` when the cloud is configured, a user is
@@ -43,6 +45,8 @@ final Provider<SyncEngine> syncEngineProvider = Provider<SyncEngine>((ref) {
     clinicId: clinicId,
     accessTokenProvider: ref.watch(accessTokenProvider),
     outbox: outbox,
+    // Platform and version for the `devices` heartbeat after each push.
+    deviceInfo: ref.watch(deviceInfoProvider),
   );
   unawaited(engine.restoreLastSyncTimes());
   ref.onDispose(engine.dispose);
@@ -64,6 +68,9 @@ final Provider<SyncScheduler?> syncSchedulerProvider = Provider<SyncScheduler?>(
       engine: engine,
       pendingCount: engine.outbox.watchPendingCount(engine.clinicId),
       accessTokenProvider: ref.watch(accessTokenProvider),
+      // Behind `probeReachability`, run by `CloudLifecycle` on resume and
+      // every minute in the foreground.
+      reachability: ref.watch(reachabilityProvider),
     );
     ref.onDispose(() => unawaited(scheduler.dispose()));
     return scheduler;

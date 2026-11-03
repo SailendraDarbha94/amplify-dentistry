@@ -107,6 +107,23 @@ class Settings extends Table {
 /// rows are never hard-deleted, so soft deletes travel as updates.
 enum OutboxOperation { insert, update }
 
+/// Lifecycle of an unacknowledged outbox row.
+enum OutboxStatus {
+  /// Waiting to be pushed (the only status the pusher sends).
+  pending,
+
+  /// The server rejected the row with a permanent error; it is held until
+  /// `SyncRepairService.retry` or `discardLocalChange`.
+  quarantined,
+
+  /// Held because a row it references (`blockedBy` names the quarantined
+  /// outbox entry) cannot reach the server; released with its parent.
+  blockedBy,
+
+  /// Dropped by `SyncRepairService.discardLocalChange`; never sent.
+  discarded,
+}
+
 /// Append-only queue of local writes awaiting upload. One row per entity
 /// write, carrying the full JSON payload of the row after the write.
 @TableIndex(
@@ -142,6 +159,17 @@ class SyncOutbox extends IdTable {
   /// When the server acknowledged this row; null while pending.
   TextColumn get ackedAt =>
       text().map(const IsoUtcDateTimeConverter()).nullable()();
+
+  /// Hold state (v6): only `pending` rows are pushed.
+  TextColumn get status =>
+      textEnum<OutboxStatus>().withDefault(const Constant('pending'))();
+
+  /// HTTP status the server answered the last failed push with (inferred
+  /// from the Postgres error class when PostgREST returned one).
+  IntColumn get serverStatusCode => integer().nullable()();
+
+  /// Outbox id of the quarantined parent entry this row waits for.
+  TextColumn get blockedBy => text().nullable()();
 }
 
 /// Immutable audit log.

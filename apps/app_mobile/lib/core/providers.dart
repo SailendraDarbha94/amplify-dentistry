@@ -17,6 +17,7 @@ export 'cloud_auth.dart'
         accessTokenProvider,
         cloudAuthProvider,
         continueOfflineProvider,
+        createClinicChoiceProvider,
         signInGateProvider;
 export 'cloud_config.dart'
     show

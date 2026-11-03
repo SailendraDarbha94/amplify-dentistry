@@ -42,6 +42,9 @@ class SyncTable {
     this.scopeNullable = false,
     this.deferredColumns = const {},
     this.jsonTextColumns = const {},
+    this.localOnlyColumns = const {},
+    this.serverDefaultColumns = const {},
+    this.skipServerAuthored = false,
   });
 
   /// SQL table name (identical locally and on the server).
@@ -69,6 +72,23 @@ class SyncTable {
 
   /// Plain text columns locally that are `jsonb` on the server.
   final Set<String> jsonTextColumns;
+
+  /// Columns the server table does not have (yet): never pushed, and left
+  /// alone by pulls (`SyncRowCodec.fromServer` only writes what the server
+  /// sent). `test/sync/sync_plan_codec_test.dart` skips them in the column
+  /// parity check.
+  final Set<String> localOnlyColumns;
+
+  /// Columns left out of the payload while null locally, so the server's
+  /// column default (and its before-write triggers) applies instead of an
+  /// explicit null that would violate `NOT NULL`.
+  final Set<String> serverDefaultColumns;
+
+  /// Whether pulls skip rows the server wrote itself (`device_id =
+  /// 'server'` or no actor): the server audits every phone's upsert, so
+  /// pulling those back would duplicate each local audit event. The
+  /// engine's `includeServerAudit` flag overrides this per pull.
+  final bool skipServerAuthored;
 
   /// Column used with `updated_at` for keyset paging.
   String get orderKey =>
@@ -151,14 +171,20 @@ const List<SyncTable> syncTables = [
   // must reach every phone, so this is LWW rather than append-only. A local
   // cancel still wins until pushed, and the server never regresses a sent
   // row on replay.
-  SyncTable('message_logs', policy: _lww),
+  // `provider` is nullable locally (rows from before v6) but `NOT NULL
+  // DEFAULT 'deeplink'` on the server, so a null is omitted rather than
+  // sent; `opt_in_reason` (the DPDP trail) is a server column since 0011
+  // and travels with the row.
+  SyncTable('message_logs', policy: _lww, serverDefaultColumns: {'provider'}),
   SyncTable(
     'sterilisation_cycles',
     policy: _append,
     ignoreDuplicatesOnPush: true,
   ),
   SyncTable('licences', policy: _lww),
-  SyncTable('audit_events', policy: _append),
+  // Server-authored events (trigger audits of our own upserts, cron jobs)
+  // are not pulled by default: every local write already has its own event.
+  SyncTable('audit_events', policy: _append, skipServerAuthored: true),
 ];
 
 /// Lookup by table name.

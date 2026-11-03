@@ -19,9 +19,14 @@ Patient communication for AmpDent, with no network code.
   statuses and patient replies), `parseMetaSendResponse` / `MetaApiError`,
   and `TemplateExport` (the `supabase/functions/_shared/templates.json`
   contract).
-- `MessageLogKeys`: reserved `_provider` (`cloud_api` | `deeplink`) and
-  `_opt_in_reason` keys carried in `MessageLog.variables` until `MessageLog`
-  grows first-class fields.
+- `MessageLogKeys`: readers for `MessageLog.provider` (`MessageProvider`:
+  `deeplink` | `cloudApi`, wire names `deeplink` | `cloud_api`) and
+  `MessageLog.optInReason`. Both providers set the real fields on the rows
+  they queue; rows written by older builds stamped the same facts inside
+  `variables` as `_provider` / `_opt_in_reason`, and `providerOf`,
+  `optInReasonOf`, `isCloudApi` and `templateOnly` still read and strip
+  those legacy keys (`stamp` only exists for callers that must produce rows
+  an older reader understands).
 
 ## Template export
 

@@ -121,24 +121,35 @@ void main() {
       expect(env.container.read(cloudAuthProvider).isSignedIn, isFalse);
     });
 
-    testWidgets('sign-in with no clinic anywhere continues to onboarding', (
-      tester,
-    ) async {
-      await env.pumpApp(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('sign-in-email')),
-        fake.email,
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('sign-in-password')),
-        fake.password,
-      );
-      await tester.tap(find.byKey(const ValueKey('sign-in-submit')));
-      await settle(tester, frames: 20);
-      expect(env.container.read(cloudAuthProvider).isSignedIn, isTrue);
-      expect(env.location, '/onboarding');
-      expect(find.text(MobileStrings.setUpYourClinic), findsOneWidget);
-    });
+    testWidgets(
+      'sign-in with no clinic anywhere offers a choice; create goes to '
+      'onboarding',
+      (tester) async {
+        await env.pumpApp(tester);
+        await tester.enterText(
+          find.byKey(const ValueKey('sign-in-email')),
+          fake.email,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('sign-in-password')),
+          fake.password,
+        );
+        await tester.tap(find.byKey(const ValueKey('sign-in-submit')));
+        await settle(tester, frames: 20);
+        expect(env.container.read(cloudAuthProvider).isSignedIn, isTrue);
+        // No membership and no local clinic: never a silent onboarding.
+        expect(env.location, '/sign-in');
+        expect(find.byKey(const ValueKey('link-unlinked')), findsOneWidget);
+        expect(env.container.read(signInGateProvider), isTrue);
+        expect(find.byKey(const ValueKey('link-invite-code')), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('link-create-clinic')));
+        await settle(tester, frames: 10);
+        expect(env.location, '/onboarding');
+        expect(find.text(MobileStrings.setUpYourClinic), findsOneWidget);
+        expect(env.container.read(createClinicChoiceProvider), isTrue);
+      },
+    );
 
     testWidgets('phone OTP: send code, verify, signed in', (tester) async {
       await env.pumpApp(tester);
@@ -158,7 +169,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('sign-in-verify')));
       await settle(tester, frames: 20);
       expect(env.container.read(cloudAuthProvider).isSignedIn, isTrue);
-      expect(env.location, '/onboarding');
+      expect(env.location, '/sign-in');
+      expect(find.byKey(const ValueKey('link-unlinked')), findsOneWidget);
     });
   });
 }

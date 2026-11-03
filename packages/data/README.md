@@ -158,7 +158,10 @@ used. Everything lives in `lib/src/sync/`:
 | `sync_state_repository.dart` | `sync_state` table: watermarks, device id, clinic link, last sync |
 | `sync_scheduler.dart` | `SyncScheduler`: on demand, debounced after writes, interval, app hooks |
 | `remote_clinic_linker.dart` | `RemoteClinicLinker`: first-device push / second-device adopt |
-| `sync_errors.dart` | `SyncFailure`, `classifySyncError`, `BackoffPolicy` |
+| `sync_errors.dart` | `SyncFailure`, `classifySyncError`, `inferHttpStatus`, `BackoffPolicy` |
+| `sync_repair_service.dart` | `SyncRepairService`: list, retry and discard quarantined rows (`SyncProblem`) |
+| `device_heartbeat.dart` | `DeviceInfo` value object and `DeviceHeartbeat`: the `devices` row, once per 15 minutes |
+| `reachability.dart` | `Reachability`: `HEAD`/`GET` probe of `<SUPABASE_URL>/auth/v1/health` |
 
 ### Wiring (the app owns sign-in)
 
@@ -172,15 +175,22 @@ final engine = SupabaseSyncEngine(
   db: db,
   clinicId: clinicId,
   accessTokenProvider: () async => session?.accessToken,
+  deviceInfo: const DeviceInfo(
+    appVersion: '1.2.0+45',
+    platform: DevicePlatform.android,
+  ),
 );
 await engine.restoreLastSyncTimes();
 final scheduler = SyncScheduler(
   engine: engine,
   pendingCount: repos.outbox.watchPendingCount(clinicId),
   accessTokenProvider: () async => session?.accessToken,
+  reachability: Reachability(supabaseUrl: Uri.parse(supabaseUrl)),
 )..start();
 // app hooks: scheduler.onConnectivityChanged(online: ...), scheduler.onAppResumed(),
+// scheduler.probeReachability() (on resume and on a timer),
 // scheduler.syncNow(), scheduler.pause() / resume()
+// repair: engine.repair.listProblems() / retry(id) / discardLocalChange(id, ctx)
 ```
 
 The engine only calls `client.from(...)`; it never signs in or touches
@@ -215,11 +225,93 @@ skips its automatic runs too.
    backoff (`BackoffPolicy`: 1 s, 2 s, 4 s, ... capped, four attempts by
    default) and each attempt increments the rows' `attempts` counter and
    stores the error class in `last_error`; the push then stops with
-   `SyncStatus.offline`. A 4xx or Postgres error code (constraint, RLS) is not
-   retried: the push stops with `SyncStatus.error` and nothing after the
-   failing table is attempted, because children would violate foreign keys.
-   Platform-wide `catalog_items`/`drugs` rows (`clinic_id` null) are
-   acknowledged without being sent; they ship in the app.
+   `SyncStatus.offline`. A 401 (or a `PGRST30x` JWT code) stops the push at
+   once with `SyncStatus.offline` and "sign in again": the session, not the
+   payload, needs fixing. Any other 4xx or Postgres error code (constraint,
+   RLS) is permanent and **quarantines** the row instead of stopping the
+   push (next section). Platform-wide `catalog_items`/`drugs` rows
+   (`clinic_id` null) are acknowledged without being sent; they ship in the
+   app.
+6. `message_logs.provider` is omitted from the payload while null locally
+   (rows from before schema v6) so the server default and its before-write
+   trigger apply (`SyncTable.serverDefaultColumns`); `opt_in_reason` is a
+   server column since migration 0011 and travels with the row. No synced
+   table keeps a local-only column today (`SyncTable.localOnlyColumns` stays
+   for the next one; the column parity test skips whatever it lists).
+7. After a successful push the **device heartbeat** runs when
+   `SupabaseSyncEngine(deviceInfo: DeviceInfo(appVersion:, platform:))` was
+   given: one upsert of `devices` (`id` = the sync-state device id,
+   `clinic_id`, `platform`, `app_version`, `last_seen_at` = the device clock)
+   at most once per `heartbeatInterval` (15 minutes), with the last time kept
+   in `sync_state` (`last_heartbeat_at`) so a restart does not repeat it. A
+   heartbeat failure is logged and never fails the push.
+
+### Quarantine and repair
+
+A push used to stop at the first permanently rejected row and retry it on
+every run, which left every later table unsynced. Now an unacknowledged
+outbox entry carries a `status` (`OutboxStatus`, schema v6): `pending`,
+`quarantined`, `blockedBy` or `discarded`; only `pending` rows are pushed,
+`SyncState.pendingCount` counts those, and `SyncState.quarantinedCount`
+counts the held ones (`quarantined` + `blockedBy`).
+
+When a batch fails with a permanent error (`SyncFailure.isPermanent`: 4xx
+other than 401/408/429, or a Postgres code such as `23503`, `23505`,
+`42501`), the pusher re-sends the batch row by row to find the poison rows
+(PostgREST upserts are one statement, so the server names no row), then for
+each of them:
+
+* every unacknowledged entry of that (table, row id) becomes `quarantined`,
+  with `last_error` = error class plus the server's message (never its
+  `details`, which can quote the row), `server_status_code` = the HTTP
+  status (inferred from the Postgres code class when PostgREST hid it:
+  `23xxx` -> 409, `42501` -> 403, `22xxx` -> 400; `inferHttpStatus`) and one
+  more attempt;
+* every `pending` entry whose local row references the quarantined row
+  through a foreign key (read from SQLite's own `PRAGMA foreign_key_list`,
+  so `clinic_id` -> `clinics`, `patient_id` -> `patients`) becomes
+  `blockedBy` the quarantined entry's id, transitively, so a child is never
+  sent ahead of a parent the server does not hold;
+* the rest of the batch, the table and every later table carry on; the push
+  ends `idle`, the report carries `rowsQuarantined` / `entriesBlocked`, and
+  the held rows are not touched by later pushes.
+
+A held row still protects the local copy on pull (local-pending-wins), and a
+**new local write** of a quarantined row goes out as a normal `pending`
+entry: if the server accepts it the older held entries of that row are
+acknowledged (`ackHeldRows`), the entries blocked behind them go back to
+`pending` (`releaseBlocked`) and the same push sends them in its next pass.
+
+`SyncRepairService` (`engine.repair`) is the UI's handle:
+
+* `listProblems()`: one `SyncProblem` per held row, oldest change first:
+  table, entity type and a short label (patient name, invoice number,
+  appointment start; never clinical text), status, error, status code, when
+  the change was made, the blocking parent; `description` is one safe line.
+* `retry(id)`: puts the row's entries and everything blocked behind them
+  back to `pending`; the next push sends the rows' current local state.
+* `discardLocalChange(id, ctx)`: marks the chain `discarded` (acknowledged,
+  never sent) and makes each affected local row match the server: a
+  last-writer-wins row the server holds is overwritten with the server copy
+  (no audit event, no outbox row, like a pull); a row the server does not
+  hold, or an append-only row, cannot be replaced (nothing is ever deleted
+  locally), so it is noted in `sync_state` as `rejected.<table>.<row id>`
+  (JSON: error, status code, outbox id, time; `rejectedRows()`,
+  `clearRejected`) and an `AuditEvent` (`statusChange`, reason "sync: local
+  change rejected by the server ...") is appended on the entity so the audit
+  log keeps it visible.
+
+### Reachability
+
+`Reachability(supabaseUrl:)` is a pure-Dart probe: `HEAD
+<SUPABASE_URL>/auth/v1/health` with a 3 s timeout (`GET` when the server
+answers 405/404/501 to `HEAD`); any response below 500 means reachable, a
+timeout, socket error or 5xx means not. `SyncScheduler(reachability: ...)
+.probeReachability()` runs it and feeds the answer to
+`onConnectivityChanged`, so coming back online triggers one run and an
+unreachable server pauses the automatic ones; the app calls it on resume and
+on a timer. Without a configured probe the run is the probe: an engine that
+last reported `offline` is given one run.
 
 ### Pull
 
@@ -292,6 +384,29 @@ names its `clinicId`.
    `pushLocalClinic` throws `StateError`; the app must ask the user to keep
    the local clinic and sign in with its account, or wipe and adopt.
 
+### Audit de-duplication
+
+The server audits every upsert a phone sends (`app.audit_row()`, `device_id
+= 'server'`, nil actor), so pulling those rows back would give each local
+write a second audit event. `audit_events` is flagged
+`SyncTable.skipServerAuthored`: the pull adds `device_id=neq.server` and
+`actor_id=not.is.null` unless the engine was built with `includeServerAudit:
+true`. Locally, `AuditRepository.watchRecent(clinicId, includeServer:
+false)` (the default) hides events whose `deviceId` is `server`, so the
+audit screen can toggle them.
+
+### Message log provider
+
+`MessageLog.provider` (`MessageProvider.deeplink` | `cloudApi`, stored and
+sent as the wire name `deeplink` | `cloud_api`; `smsGateway` mirrors the
+server constraint) and `MessageLog.optInReason` are columns since schema v6.
+The upgrade backfills both from the legacy `variables._provider` /
+`variables._opt_in_reason` stamps (`AppDatabase
+.migrateLegacyMessageLogStamps`, idempotent; the stamps stay in `variables`
+because the server trigger still reads them into `provider` and, since
+0011, `opt_in_reason`) and `MessageLog.fromJson` falls back to the stamps
+for rows that carry no field.
+
 ### Logging
 
 Logs name tables, row counts, attempt numbers and error classes
@@ -331,7 +446,16 @@ booleans, dates), pull paging and watermarks, append-only, LWW,
 local-pending-wins, DRAFT number replacement, full first pull,
 `pullSince`/`resetWatermarks`, concurrency, state stream, scheduler debounce
 and interval (`fake_async`), linker rules, and a column-level parity check of
-every synced Drift column against the SQL migrations.
+every synced Drift column against the SQL migrations. `sync_quarantine_test
+.dart` covers the hold states (409 and 403 quarantine with row isolation,
+children blocked, other tables continuing, retry after the server accepts,
+a new local write releasing the chain, discard restoring the server row or
+noting a rejected one, a held row protected on pull);
+`sync_heartbeat_test.dart` the 15-minute heartbeat and its persistence;
+`sync_audit_filter_test.dart` the server-authored audit filter on pull and
+in `watchRecent`; `reachability_test.dart` the probe (`MockClient`) and the
+scheduler hook; `message_log_sync_test.dart` the provider / opt-in columns,
+the v6 backfill and their push and pull shape.
 
 ## Server parity
 

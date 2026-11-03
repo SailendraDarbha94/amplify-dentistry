@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 
+import 'member_invites.dart' show inviteClaimProvider;
 import 'providers.dart';
 
 /// The signed-in user, reduced to what the app shows and stores.
@@ -96,6 +97,12 @@ class CloudAuthController extends Notifier<CloudAuthState> {
   /// it a moment later, which changes nothing.
   void _apply(Session? session) {
     if (!ref.mounted) return;
+    if (session == null) {
+      // Signed out: a pending invite code and the "create a new clinic"
+      // choice belong to the account that is gone.
+      ref.read(inviteClaimProvider.notifier).clear();
+      ref.read(createClinicChoiceProvider.notifier).reset();
+    }
     state = session == null
         ? state.copyWith(clearUser: true)
         : state.copyWith(
@@ -154,6 +161,7 @@ class CloudAuthController extends Notifier<CloudAuthState> {
     final client = ref.read(cloudClientProvider);
     if (client == null) return;
     await client.auth.signOut();
+    _apply(null);
     state = const CloudAuthState();
     _log.info('signed out');
   }
@@ -212,12 +220,37 @@ final NotifierProvider<ContinueOfflineNotifier, bool> continueOfflineProvider =
       ContinueOfflineNotifier.new,
     );
 
-/// Whether a fresh install must pass the sign-in page first: the cloud is
-/// configured, nobody is signed in, no clinic exists yet and the user has
-/// not chosen to continue offline.
+/// Whether the signed-in user explicitly chose to create a new clinic on
+/// this phone (the sign-in page's "Create a new clinic" button). In memory
+/// only: next launch the link check runs again and offers the choice again.
+class CreateClinicChoiceNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  /// Records the choice; onboarding becomes reachable.
+  void choose() => state = true;
+
+  /// Forgets it (sign-out, or a clinic was adopted after all).
+  void reset() => state = false;
+}
+
+/// The "create a new clinic" choice of a signed-in user with no clinic.
+final NotifierProvider<CreateClinicChoiceNotifier, bool>
+createClinicChoiceProvider = NotifierProvider<CreateClinicChoiceNotifier, bool>(
+  CreateClinicChoiceNotifier.new,
+);
+
+/// Whether a fresh install must stay on the sign-in page: the cloud is
+/// configured, no clinic exists on this phone yet and the user has not chosen
+/// to continue offline. Signed out, that means sign in first. Signed in, it
+/// holds until the link check adopted a clinic, an invite code was claimed,
+/// or the user explicitly chose to create a new clinic
+/// ([createClinicChoiceProvider]), so onboarding never makes a second clinic
+/// for an account that already belongs to one.
 final Provider<bool> signInGateProvider = Provider<bool>((ref) {
   if (!ref.watch(cloudActiveProvider)) return false;
-  if (ref.watch(cloudAuthProvider.select((s) => s.isSignedIn))) return false;
   if (ref.watch(continueOfflineProvider)) return false;
-  return !ref.watch(appSessionProvider.select((s) => s.hasClinic));
+  if (ref.watch(appSessionProvider.select((s) => s.hasClinic))) return false;
+  if (!ref.watch(cloudAuthProvider.select((s) => s.isSignedIn))) return true;
+  return !ref.watch(createClinicChoiceProvider);
 });

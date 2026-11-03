@@ -16,6 +16,9 @@ migrations/0007_estimate_binding_rx_snapshot.sql  Drift v4 parity: estimate plan
 migrations/0008_sync_and_whatsapp.sql  server-owned updated_at + pull indexes, devices, message_logs delivery columns and replay guards,
                                clinic_whatsapp_configs (token in Vault), send queue + claim/result/status/reply RPCs and public wrappers
 migrations/0009_whatsapp_cron.sql  app.runtime_config, pg_cron + pg_net, app.invoke_whatsapp_send() every minute
+migrations/0010_member_invites.sql  staff invite codes: member_invites table (owner select/insert), create_member_invite / claim_member_invite RPCs
+migrations/0011_message_log_opt_in_reason.sql  message_logs.opt_in_reason (DPDP rule that allowed the send), backfilled from variables._opt_in_reason
+migrations/0012_unlink_member.sql  unlink_member RPC: the owner clears a member's account binding (lost phone/number) so a new code can be minted
 config.toml                    CLI config: Postgres 17, Edge Function entries (verify_jwt per function)
 functions/deno.json            import map + tasks for the functions (deno test / deno check)
 functions/_shared/templates.json  template export written by packages/messaging/tool/export_templates.dart
@@ -157,6 +160,10 @@ patient-scoped table and `clinic_members (user_id)` for the RLS lookup.
   unique index).
 - `clinic_whatsapp_configs` (0008): owners may select; there is no insert/update/delete policy at all. Writes
   go through `set_whatsapp_config` / `set_whatsapp_enabled` (SECURITY DEFINER, owner check inside).
+- `member_invites` (0010): owners select and insert their clinic's invites (`created_by` must be the caller);
+  no update/delete policy. Claims go through `claim_member_invite` (SECURITY DEFINER), which never writes the
+  code to the audit trail (an explicit `member_invites` audit row carries member and claimer only). The owner
+  undoes a binding with `unlink_member` (0012), which also retires the member's live code.
 - Role names in policies are the Dart `ClinicRole.name` values (`ownerDentist`, not `owner_dentist`).
 
 ## Triggers and functions (0003)
@@ -178,7 +185,8 @@ patient-scoped table and `clinic_members (user_id)` for the RLS lookup.
 - RPC wrappers for the client: `public.mint_invoice_number(p_clinic uuid, p_issued_at timestamptz default now())`
   (billing roles) and `public.mint_patient_number(p_clinic uuid)` (any member).
 - 0008 guards against phones replaying stale rows (the pusher upserts whole local rows):
-  `app.message_logs_before_write()` copies `variables._provider` into `provider` and, for `cloud_api` rows
+  `app.message_logs_before_write()` copies `variables._provider` into `provider` (and, since 0011,
+  `variables._opt_in_reason` into `opt_in_reason` when the column is null) and, for `cloud_api` rows
   written by `authenticated`, keeps the server's delivery columns and accepts only `queued -> cancelled`;
   `app.appointments_keep_confirmed()` keeps `confirmed` when a phone replays `scheduled`.
 
@@ -250,6 +258,9 @@ phone (CloudQueueMessagingProvider)            server                           
 | `apply_whatsapp_status(p_provider_message_id, p_status, p_timestamp, p_error, p_payload)` | service role | boolean (known id) |
 | `confirm_appointment_from_reply(p_phone, p_text, p_phone_number_id, p_context_message_id)` | service role | appointment uuid or null |
 | `whatsapp_verify_token_matches(p_token)` | service role | boolean |
+| `create_member_invite(p_member)` | owner of the member's clinic | text: an 8-character code (alphabet without 0/O, 1/I, L), valid 72 h; retires the member's earlier live code; refuses a member who already has an account |
+| `claim_member_invite(p_code)` | any signed-in user | clinic uuid; binds `clinic_members.user_id` to the caller (that binding is the membership RLS reads), marks the invite claimed; refuses unknown, expired, used or mismatched codes (`invalid_parameter_value` / `insufficient_privilege`) |
+| `unlink_member(p_member)` | owner of the member's clinic | boolean; sets `clinic_members.user_id` to null (the account stops seeing the clinic), retires the member's live code, leaves a `clinic_members` / `statusChange` audit row; refuses an unbound member and the caller's own row (`invalid_parameter_value`) |
 
 Function secrets and deployment steps: `docs/SETUP-CLOUD.md`.
 

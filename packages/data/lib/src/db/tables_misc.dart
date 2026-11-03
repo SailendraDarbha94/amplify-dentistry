@@ -83,6 +83,16 @@ class MessageLogs extends TenantTable {
       text().map(const IsoUtcDateTimeConverter()).nullable()();
   TextColumn get deliveredAt =>
       text().map(const IsoUtcDateTimeConverter()).nullable()();
+
+  /// Delivery backend as its wire name (`deeplink`, `cloud_api`); null on
+  /// rows queued before v6 whose variables carried no stamp (the server
+  /// default is `deeplink`).
+  TextColumn get provider =>
+      text().map(const MessageProviderConverter()).nullable()();
+
+  /// Opt-in rule that allowed the send (DPDP audit trail; a server column
+  /// since migration 0011, pushed and pulled with the row).
+  TextColumn get optInReason => text().nullable()();
 }
 
 /// Sterilisation register.

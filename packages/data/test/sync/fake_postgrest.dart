@@ -49,6 +49,17 @@ class FakePostgrest {
   /// Status codes to answer the next requests with (each consumed once).
   final Queue<int> failNext = Queue<int>();
 
+  /// Rows (by `id`) every upsert containing them is rejected with, keyed to
+  /// the status code to answer: a poison row. The whole batch fails, as
+  /// PostgREST's single-statement upsert does.
+  final Map<String, int> rejectRows = {};
+
+  /// Tables whose upserts are rejected outright with the given status.
+  final Map<String, int> rejectTables = {};
+
+  /// Number of upsert requests answered per table (diagnostics).
+  final Map<String, int> upserts = {};
+
   /// Extra latency per request (for concurrency tests).
   Duration latency = Duration.zero;
   int inFlight = 0;
@@ -120,11 +131,7 @@ class FakePostgrest {
       final http.Response res;
       if (failNext.isNotEmpty) {
         final code = failNext.removeFirst();
-        res = _error(
-          code,
-          'injected failure',
-          pgCode: code == 409 ? '23503' : null,
-        );
+        res = _error(code, 'injected failure', pgCode: _pgCodeFor(code));
       } else {
         res = switch (req.method) {
           'POST' => _upsert(table, req, body is List ? body : [body]),
@@ -145,6 +152,14 @@ class FakePostgrest {
     }
   }
 
+  /// The Postgres code PostgREST would put in the body for [status].
+  static String? _pgCodeFor(int status) => switch (status) {
+    409 => '23503',
+    403 => '42501',
+    401 => 'PGRST301',
+    _ => null,
+  };
+
   http.Response _error(int status, String message, {String? pgCode}) =>
       http.Response(
         jsonEncode({
@@ -161,6 +176,29 @@ class FakePostgrest {
     final keys = (req.url.queryParameters['on_conflict'] ?? 'id').split(',');
     final prefer = req.headers['Prefer'] ?? req.headers['prefer'] ?? '';
     final ignore = prefer.contains('ignore-duplicates');
+    upserts[table] = (upserts[table] ?? 0) + 1;
+    final tableStatus = rejectTables[table];
+    if (tableStatus != null) {
+      return _error(
+        tableStatus,
+        'injected table failure',
+        pgCode: _pgCodeFor(tableStatus),
+      );
+    }
+    for (final raw in body) {
+      final status = rejectRows[(raw as Map)['id']];
+      if (status != null) {
+        return _error(
+          status,
+          status == 409
+              ? 'insert or update on table "$table" violates foreign key '
+                    'constraint'
+              : 'new row violates row-level security policy for table '
+                    '"$table"',
+          pgCode: _pgCodeFor(status),
+        );
+      }
+    }
     final store = tables[table] ??= [];
     for (final raw in body) {
       final row = (raw as Map).cast<String, Object?>();
@@ -318,6 +356,8 @@ class FakePostgrest {
         return actual != null && '$actual'.compareTo(value) <= 0;
       case 'is':
         return value == 'null' ? actual == null : '$actual' == value;
+      case 'not':
+        return !_filter(column, value, row);
       default:
         throw UnsupportedError('operator $op');
     }

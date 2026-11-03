@@ -196,11 +196,21 @@ void main() {
         final serverCols = sql[table.name];
         expect(serverCols, isNotNull, reason: table.name);
         for (final c in info.$columns) {
+          // Declared local-only columns are never pushed (see SyncTable).
+          if (table.localOnlyColumns.contains(c.$name)) continue;
           final name = SyncRowCodec.serverColumnName(c);
           if (!serverCols!.contains(name)) missing.add('${table.name}.$name');
         }
       }
       expect(missing, isEmpty, reason: 'local columns the server lacks');
+      // No synced table keeps a local-only column today: the DPDP opt-in
+      // reason on message logs became a server column in 0011 (`provider`
+      // came with 0008).
+      for (final table in syncTables) {
+        expect(table.localOnlyColumns, isEmpty, reason: table.name);
+      }
+      expect(sql['message_logs'], contains('provider'));
+      expect(sql['message_logs'], contains('opt_in_reason'));
       // 0008 adds updated_at to every public table dynamically (audit_events
       // had none), so the pull cursor exists everywhere.
       final all = Directory('../../supabase/migrations')
@@ -363,11 +373,24 @@ void main() {
       );
     });
 
-    test('schema v5 migration creates sync_state', () async {
+    test('schema v6 keeps sync_state and the v6 columns', () async {
       driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
       final db = AppDatabase.inMemory(seedOnOpen: false);
       addTearDown(db.close);
-      expect(db.schemaVersion, 5);
+      expect(db.schemaVersion, 6);
+      final outboxCols =
+          (await db.customSelect('PRAGMA table_info(sync_outbox)').get())
+              .map((r) => r.read<String>('name'))
+              .toSet();
+      expect(
+        outboxCols,
+        containsAll(['status', 'server_status_code', 'blocked_by']),
+      );
+      final logCols =
+          (await db.customSelect('PRAGMA table_info(message_logs)').get())
+              .map((r) => r.read<String>('name'))
+              .toSet();
+      expect(logCols, containsAll(['provider', 'opt_in_reason']));
       final rows = await db
           .customSelect(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sync_state'",
@@ -390,6 +413,46 @@ void main() {
         table: 't',
       );
       expect(f403.kind, SyncFailureKind.rejected);
+      expect(f403.isPermanent, isTrue);
+      expect(f403.statusCode, 403);
+      final f409 = classifySyncError(
+        const PostgrestException(message: 'fk', code: '23503'),
+        table: 't',
+      );
+      expect(f409.isPermanent, isTrue);
+      expect(f409.statusCode, 409);
+      expect(f409.serverMessage, 'fk');
+      final f401 = classifySyncError(
+        const PostgrestException(message: 'jwt expired', code: 'PGRST301'),
+        table: 't',
+      );
+      expect(f401.kind, SyncFailureKind.notReady);
+      expect(f401.isPermanent, isFalse);
+      expect(f401.statusCode, 401);
+      expect(
+        classifySyncError(
+          const PostgrestException(message: 'x', code: '401'),
+          table: 't',
+        ).kind,
+        SyncFailureKind.notReady,
+      );
+      expect(
+        classifySyncError(
+          const PostgrestException(message: 'x', code: '408'),
+          table: 't',
+        ).isTransient,
+        isTrue,
+      );
+      expect(
+        classifySyncError(
+          const PostgrestException(message: 'x', code: '400'),
+          table: 't',
+        ).isPermanent,
+        isTrue,
+      );
+      expect(inferHttpStatus('22P02'), 400);
+      expect(inferHttpStatus('PGRST116'), 400);
+      expect(inferHttpStatus('zzz'), isNull);
       expect(
         classifySyncError(
           const PostgrestException(message: 'x', code: '429'),

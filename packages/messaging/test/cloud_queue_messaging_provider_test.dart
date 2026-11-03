@@ -68,6 +68,8 @@ void main() {
         expect(log.createdAt, _now);
         expect(log.costPaise, estimateCostPaise(MessageCategory.utility));
 
+        expect(log.provider, MessageProvider.cloudApi);
+        expect(log.optInReason, 'appointment_reminders_consent');
         expect(MessageLogKeys.providerOf(log), MessageLogKeys.cloudApiProvider);
         expect(MessageLogKeys.isCloudApi(log), isTrue);
         expect(
@@ -75,6 +77,8 @@ void main() {
           'appointment_reminders_consent',
         );
         expect(log.variables['patient_name'], 'Ravi');
+        // Nothing is stamped into variables any more.
+        expect(log.variables.keys, isNot(anyElement(startsWith('_'))));
         expect(
           MessageLogKeys.templateOnly(log.variables).keys,
           isNot(anyElement(startsWith('_'))),
@@ -182,18 +186,24 @@ void main() {
   });
 
   group('MessageLogKeys', () {
-    test('deep-link rows are stamped so sync skips them', () async {
-      final provider = DeepLinkMessagingProvider(clock: () => _now);
-      final log = await provider.send(_request());
-      expect(MessageLogKeys.providerOf(log), MessageLogKeys.deepLinkProvider);
-      expect(MessageLogKeys.isCloudApi(log), isFalse);
-      expect(MessageLogKeys.optInReasonOf(log), isNull);
-    });
+    test(
+      'deep-link rows carry provider: deeplink so sync skips them',
+      () async {
+        final provider = DeepLinkMessagingProvider(clock: () => _now);
+        final log = await provider.send(_request());
+        expect(log.provider, MessageProvider.deeplink);
+        expect(log.variables.keys, isNot(anyElement(startsWith('_'))));
+        expect(MessageLogKeys.providerOf(log), MessageLogKeys.deepLinkProvider);
+        expect(MessageLogKeys.isCloudApi(log), isFalse);
+        expect(MessageLogKeys.optInReasonOf(log), isNull);
+      },
+    );
 
     test(
       'unstamped rows count as cloud_api; stamp adds without clobbering',
       () {
         final plain = _request().toLog(id: 'x', now: _now);
+        expect(plain.provider, isNull);
         expect(MessageLogKeys.providerOf(plain), isNull);
         expect(MessageLogKeys.isCloudApi(plain), isTrue);
         final stamped = MessageLogKeys.stamp(
@@ -207,6 +217,29 @@ void main() {
         expect(MessageLogKeys.templateOnly(stamped), plain.variables);
       },
     );
+
+    test('legacy rows stamped inside variables still read the same', () {
+      final legacy = _request()
+          .copyWith(
+            variables: MessageLogKeys.stamp(
+              _request().variables,
+              providerName: MessageLogKeys.cloudApiProvider,
+              reason: 'transactional',
+            ),
+          )
+          .toLog(id: 'legacy', now: _now);
+      expect(legacy.provider, isNull, reason: 'no real field on the row');
+      expect(
+        MessageLogKeys.providerOf(legacy),
+        MessageLogKeys.cloudApiProvider,
+      );
+      expect(MessageLogKeys.isCloudApi(legacy), isTrue);
+      expect(MessageLogKeys.optInReasonOf(legacy), 'transactional');
+      // The real field wins over the stamp once both are present.
+      final both = legacy.copyWith(provider: MessageProvider.deeplink);
+      expect(MessageLogKeys.providerOf(both), MessageLogKeys.deepLinkProvider);
+      expect(MessageLogKeys.isCloudApi(both), isFalse);
+    });
 
     test('no default template declares a reserved (underscore) variable', () {
       for (final t in defaultTemplates) {

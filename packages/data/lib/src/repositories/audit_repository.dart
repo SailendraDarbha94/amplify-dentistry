@@ -33,16 +33,25 @@ abstract class AuditRepository {
     int? limit,
   });
 
-  /// Events in `[from, to)`, newest first.
+  /// Events in `[from, to)`, newest first. Events the server wrote itself
+  /// (`deviceId == 'server'`) are left out unless [includeServer] is true,
+  /// as in [watchRecent].
   Future<List<AuditEvent>> inRange(
     String clinicId,
     DateTime from,
     DateTime to, {
     int? limit,
+    bool includeServer = false,
   });
 
-  /// Stream of the most recent events.
-  Stream<List<AuditEvent>> watchRecent(String clinicId, {int limit = 100});
+  /// Stream of the most recent events. Events the server wrote itself
+  /// (`deviceId == 'server'`: trigger audits of synced upserts, cron jobs)
+  /// are left out unless [includeServer] is true.
+  Stream<List<AuditEvent>> watchRecent(
+    String clinicId, {
+    int limit = 100,
+    bool includeServer = false,
+  });
 
   /// Number of events for the clinic.
   Future<int> count(String clinicId);

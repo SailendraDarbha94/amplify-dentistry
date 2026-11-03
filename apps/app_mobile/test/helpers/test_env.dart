@@ -1,6 +1,8 @@
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_data/ampdent_data.dart';
 import 'package:ampdent_mobile/core/providers.dart';
+import 'package:ampdent_mobile/core/reachability.dart'
+    show reachabilityProvider;
 import 'package:ampdent_mobile/core/router.dart';
 import 'package:ampdent_mobile/core/session.dart';
 import 'package:ampdent_mobile/main.dart';
@@ -32,14 +34,18 @@ class AppTestEnv {
     this.db,
     this.session, {
     this.cloudClient,
+    Reachability? reachability,
     List<Override> overrides = const [],
   }) : repos = DriftRepositories(db),
        container = ProviderContainer(
          overrides: [
            databaseProvider.overrideWithValue(db),
            initialSessionProvider.overrideWithValue(session),
-           // Never start the sync scheduler's timers under the test binding.
+           // Never start the sync scheduler's timers under the test binding,
+           // and never probe a real host from a test (null, or the probe a
+           // test passes over a mock client).
            schedulerEnabledProvider.overrideWithValue(false),
+           reachabilityProvider.overrideWithValue(reachability),
            if (cloudClient != null) ...[
              cloudConfigProvider.overrideWithValue(
                const CloudConfig(
@@ -71,11 +77,13 @@ class AppTestEnv {
   /// Opens a fresh environment. With [withClinic] a clinic, owner dentist and
   /// one chair exist; with [withPatient] an adult patient as well. With
   /// [cloudClient] the cloud counts as configured (sign-in gate, Supabase
-  /// engine once linked); [overrides] are appended to the container's.
+  /// engine once linked); [reachability] replaces the null probe;
+  /// [overrides] are appended to the container's.
   static Future<AppTestEnv> open({
     bool withClinic = true,
     bool withPatient = false,
     SupabaseClient? cloudClient,
+    Reachability? reachability,
     List<Override> overrides = const [],
   }) async {
     await initializeDateFormatting('en_IN');
@@ -108,6 +116,7 @@ class AppTestEnv {
       db,
       session,
       cloudClient: cloudClient,
+      reachability: reachability,
       overrides: overrides,
     );
   }

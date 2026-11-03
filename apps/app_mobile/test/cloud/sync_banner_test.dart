@@ -98,6 +98,20 @@ void main() {
       expect(error.text, contains('Tap to retry'));
     });
 
+    test('held rows take precedence over every other state', () {
+      final held = spec(
+        const SyncState(
+          status: SyncStatus.error,
+          error: 'PostgrestException 403 on patients',
+          quarantinedCount: 1,
+        ),
+      )!;
+      expect(held.kind, SyncBannerKind.attention);
+      expect(held.text, '1 change needs attention');
+      expect(held.opensRepair, isTrue);
+      expect(held.canRetry, isFalse);
+    });
+
     test('synced at hh:mm only right after a run, else nothing', () {
       final recent = SyncState(
         lastPulledAt: now.subtract(const Duration(seconds: 10)),
@@ -186,6 +200,14 @@ void main() {
       await settle(tester);
       expect(engine.pushes, 1, reason: 'tap retried through the engine');
       expect(engine.pulls, 1);
+
+      engine.emit(const SyncState(quarantinedCount: 3));
+      await settle(tester);
+      expect(find.text('3 changes need attention'), findsOneWidget);
+      await tester.tap(banner());
+      await settle(tester, frames: 12);
+      expect(env.location, '/settings/account/sync-repair');
+      expect(engine.pushes, 1, reason: 'attention taps open the page');
     });
   });
 }

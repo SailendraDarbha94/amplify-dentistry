@@ -160,6 +160,32 @@ begin
   if p1 <> 'cloud_api' or p2 <> 'deeplink' then raise exception 'provider should follow variables._provider, got % / %', p1, p2; end if;
 end
 $$;
+
+-- 0011: opt_in_reason follows variables._opt_in_reason when the phone stamped it and the column is empty;
+-- an explicit column value wins over the stamp.
+do $$
+declare
+  r1 text; r2 text; r3 text;
+begin
+  select opt_in_reason into r1 from public.message_logs where id = 'aaaaaaaa-0000-0000-0000-0000000000a1';
+  select opt_in_reason into r2 from public.message_logs where id = 'aaaaaaaa-0000-0000-0000-0000000000a2';
+  if r1 is distinct from 'transactional' or r2 is not null then
+    raise exception 'opt_in_reason should follow variables._opt_in_reason, got % / %', r1, r2;
+  end if;
+  update public.message_logs set opt_in_reason = 'appointment_reminders_consent'
+   where id = 'aaaaaaaa-0000-0000-0000-0000000000a1';
+  select opt_in_reason into r3 from public.message_logs where id = 'aaaaaaaa-0000-0000-0000-0000000000a1';
+  if r3 <> 'appointment_reminders_consent' then
+    raise exception 'an explicit opt_in_reason should be kept, got %', r3;
+  end if;
+  begin
+    update public.message_logs set opt_in_reason = repeat('x', 121)
+     where id = 'aaaaaaaa-0000-0000-0000-0000000000a1';
+    raise exception 'opt_in_reason longer than 120 characters should be rejected';
+  exception when check_violation then null;
+  end;
+end
+$$;
 insert into public.message_logs (id, clinic_id, patient_id, channel, category, template_code, to_phone, variables,
                                  rendered_preview, status, provider, next_attempt_at)
 values

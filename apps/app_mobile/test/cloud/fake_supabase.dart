@@ -1,7 +1,8 @@
 /// In-memory Supabase stand-in for the app tests: GoTrue (password sign-in,
-/// phone OTP, sign-out), PostgREST (eq filters, upsert on conflict) and the
-/// WhatsApp RPCs, all behind `package:http`'s `MockClient`. Enough for the
-/// linker rules, the sign-in gate, the provider switch and the config form.
+/// phone OTP, sign-out), PostgREST (eq filters, upsert on conflict),
+/// the WhatsApp RPCs and the member-invite RPCs, all behind `package:http`'s
+/// `MockClient`. Enough for the linker rules, the sign-in gate, the provider
+/// switch, the config form and invites.
 library;
 
 import 'dart:convert';
@@ -73,8 +74,20 @@ class FakeSupabase {
   /// When set, every REST and RPC request fails with this status.
   int? failAllWith;
 
+  /// Codes `create_member_invite` hands out, in order (then cycling).
+  static const List<String> inviteCodes = [
+    'ABCDEFGH',
+    'JKMNPQRS',
+    'TUVWXYZ2',
+    'A2B3C4D5',
+  ];
+
   bool signedIn = false;
   int _micros = DateTime.utc(2026, 10, 20, 8).microsecondsSinceEpoch;
+  int _inviteSeq = 0;
+
+  /// The fake server clock (monotonic, advanced by [nextTimestamp]).
+  DateTime get now => DateTime.fromMicrosecondsSinceEpoch(_micros, isUtc: true);
 
   /// A client over this fake; auto refresh off so tests leave no timers.
   SupabaseClient client() => SupabaseClient(
@@ -116,6 +129,17 @@ class FakeSupabase {
     stored['created_at'] ??= stored['updated_at'];
     (tables[table] ??= []).add(stored);
     return stored;
+  }
+
+  /// Marks every live invite as expired (the clock moved past 72 h).
+  void expireInvites() {
+    for (final r in rows('member_invites')) {
+      if (r['claimed_at'] == null) {
+        r['expires_at'] = now
+            .subtract(const Duration(minutes: 1))
+            .toIso8601String();
+      }
+    }
   }
 
   /// Copies every sync table of [db] to the server as PostgREST would
@@ -267,9 +291,124 @@ class FakeSupabase {
           'enabled': params['p_enabled'] == true,
         };
         return http.Response('', 204);
+      case 'create_member_invite':
+        return _createMemberInvite('${params['p_member']}');
+      case 'claim_member_invite':
+        return _claimMemberInvite('${params['p_code']}');
+      case 'unlink_member':
+        return _unlinkMember('${params['p_member']}');
       default:
         return _pgError(404, 'function $fn not found');
     }
+  }
+
+  bool _isOwnerOf(String clinicId) => rows('clinic_members').any(
+    (m) =>
+        m['clinic_id'] == clinicId &&
+        m['user_id'] == userId &&
+        m['role'] == 'ownerDentist',
+  );
+
+  /// Mirrors `app.create_member_invite` (migration 0010).
+  http.Response _createMemberInvite(String memberId) {
+    if (!signedIn) return _pgError(401, 'sign in to create an invite');
+    final member = row('clinic_members', memberId);
+    if (member == null || !_isOwnerOf('${member['clinic_id']}')) {
+      return _pgError(403, 'only the clinic owner may invite member $memberId');
+    }
+    if (member['is_active'] == false) {
+      return _pgError(400, 'member $memberId is deactivated');
+    }
+    if (member['user_id'] != null) {
+      return _pgError(
+        400,
+        'member $memberId is already signed in with an account',
+      );
+    }
+    for (final r in rows('member_invites')) {
+      if (r['member_id'] == memberId && r['claimed_at'] == null) {
+        r['expires_at'] = now.toIso8601String();
+      }
+    }
+    final code = inviteCodes[_inviteSeq++ % inviteCodes.length];
+    seed('member_invites', {
+      'id': 'invite-$_inviteSeq',
+      'clinic_id': member['clinic_id'],
+      'member_id': memberId,
+      'code': code,
+      'created_by': userId,
+      'expires_at': now.add(const Duration(hours: 72)).toIso8601String(),
+      'claimed_by': null,
+      'claimed_at': null,
+    });
+    return _json(code);
+  }
+
+  /// Mirrors `app.unlink_member` (migration 0012).
+  http.Response _unlinkMember(String memberId) {
+    if (!signedIn) return _pgError(401, 'sign in to unlink a member');
+    final member = row('clinic_members', memberId);
+    if (member == null || !_isOwnerOf('${member['clinic_id']}')) {
+      return _pgError(403, 'only the clinic owner may unlink member $memberId');
+    }
+    if (member['user_id'] == null) {
+      return _pgError(400, 'member $memberId has no account to unlink');
+    }
+    if (member['user_id'] == userId) {
+      return _pgError(400, 'you cannot unlink your own account');
+    }
+    member['user_id'] = null;
+    member['updated_at'] = nextTimestamp();
+    for (final r in rows('member_invites')) {
+      if (r['member_id'] == memberId && r['claimed_at'] == null) {
+        r['expires_at'] = now.toIso8601String();
+      }
+    }
+    return _json(true);
+  }
+
+  /// Mirrors `app.claim_member_invite` (migration 0010).
+  http.Response _claimMemberInvite(String raw) {
+    if (!signedIn) return _pgError(401, 'sign in to use an invite code');
+    final code = raw.toUpperCase().replaceAll(RegExp(r'[\s-]'), '');
+    if (!RegExp(r'^[A-HJKMNP-Z2-9]{8}$').hasMatch(code)) {
+      return _pgError(400, 'invite code not recognised');
+    }
+    final invite = rows('member_invites')
+        .cast<Map<String, Object?>?>()
+        .firstWhere((r) => r!['code'] == code, orElse: () => null);
+    if (invite == null) return _pgError(400, 'invite code not recognised');
+    if (invite['claimed_at'] != null) {
+      return _pgError(400, 'invite code already used');
+    }
+    final expires = DateTime.parse('${invite['expires_at']}');
+    if (!expires.isAfter(now)) {
+      return _pgError(
+        400,
+        'invite code expired; ask the clinic owner for a new one',
+      );
+    }
+    final member = row('clinic_members', '${invite['member_id']}');
+    if (member == null || member['is_active'] == false) {
+      return _pgError(400, 'the invited member row is no longer active');
+    }
+    if (member['user_id'] != null && member['user_id'] != userId) {
+      return _pgError(403, 'this invite belongs to another account');
+    }
+    final clinicId = member['clinic_id'];
+    if (rows('clinic_members').any(
+      (m) =>
+          m['clinic_id'] == clinicId &&
+          m['user_id'] == userId &&
+          m['id'] != member['id'],
+    )) {
+      return _pgError(403, 'you are already a member of this clinic');
+    }
+    member['user_id'] = userId;
+    member['updated_at'] = nextTimestamp();
+    invite['claimed_by'] = userId;
+    invite['claimed_at'] = nextTimestamp();
+    return _json(clinicId);
   }
 
   http.Response _select(String table, Map<String, String> query) {

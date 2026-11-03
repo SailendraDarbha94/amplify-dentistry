@@ -28,6 +28,7 @@ class SyncState {
   const SyncState({
     this.status = SyncStatus.idle,
     this.pendingCount = 0,
+    this.quarantinedCount = 0,
     this.lastPushedAt,
     this.lastPulledAt,
     this.error,
@@ -38,6 +39,10 @@ class SyncState {
 
   /// Outbox rows awaiting upload.
   final int pendingCount;
+
+  /// Outbox rows held back: rejected by the server for good (quarantined)
+  /// or blocked behind such a row. They need `SyncRepairService`.
+  final int quarantinedCount;
 
   /// Last successful push.
   final DateTime? lastPushedAt;
@@ -66,6 +71,7 @@ class SyncState {
   SyncState copyWith({
     SyncStatus? status,
     int? pendingCount,
+    int? quarantinedCount,
     DateTime? lastPushedAt,
     DateTime? lastPulledAt,
     String? error,
@@ -73,13 +79,16 @@ class SyncState {
   }) => SyncState(
     status: status ?? this.status,
     pendingCount: pendingCount ?? this.pendingCount,
+    quarantinedCount: quarantinedCount ?? this.quarantinedCount,
     lastPushedAt: lastPushedAt ?? this.lastPushedAt,
     lastPulledAt: lastPulledAt ?? this.lastPulledAt,
     error: clearError ? null : (error ?? this.error),
   );
 
   @override
-  String toString() => 'SyncState($status, pending: $pendingCount)';
+  String toString() =>
+      'SyncState($status, pending: $pendingCount, '
+      'quarantined: $quarantinedCount)';
 }
 
 /// Replicates the local store with a server. `SupabaseSyncEngine` is the

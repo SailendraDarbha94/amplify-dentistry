@@ -9,8 +9,14 @@ import 'audit_diff.dart';
 /// Sentinel for "clear this optional field" in [AuditFilter.copyWith].
 const Object clearFilterField = Object();
 
+/// `device_id` the server's own audit trigger stamps on rows it writes
+/// (`app.audit_row`, migration 0003); those rows arrive through sync and
+/// duplicate the phone's own entries for the same write.
+const String serverAuditDeviceId = 'server';
+
 /// What the audit viewer shows: a date range plus optional entity type,
-/// actor and action.
+/// actor and action, and whether the server's own trigger rows are included
+/// (off by default: they repeat every synced write).
 @immutable
 class AuditFilter {
   /// Creates a filter over `[from, to)`.
@@ -20,6 +26,7 @@ class AuditFilter {
     this.entityType,
     this.actorId,
     this.action,
+    this.includeServer = false,
   });
 
   /// Default window: the last 30 days up to the end of today.
@@ -47,6 +54,10 @@ class AuditFilter {
   /// Action, or null for all.
   final AuditAction? action;
 
+  /// Whether rows written by the server's audit trigger
+  /// ([serverAuditDeviceId]) are shown.
+  final bool includeServer;
+
   /// Whether any optional filter is set.
   bool get hasNarrowing =>
       entityType != null || actorId != null || action != null;
@@ -57,6 +68,7 @@ class AuditFilter {
       (entityType == null || event.entityType == entityType) &&
       (actorId == null || event.actorId == actorId) &&
       (action == null || event.action == action) &&
+      (includeServer || event.deviceId != serverAuditDeviceId) &&
       !event.occurredAt.isBefore(from) &&
       event.occurredAt.isBefore(to);
 
@@ -71,6 +83,7 @@ class AuditFilter {
     Object? entityType = clearFilterField,
     Object? actorId = clearFilterField,
     Object? action = clearFilterField,
+    bool? includeServer,
   }) => AuditFilter(
     from: from ?? this.from,
     to: to ?? this.to,
@@ -83,6 +96,7 @@ class AuditFilter {
     action: identical(action, clearFilterField)
         ? this.action
         : action as AuditAction?,
+    includeServer: includeServer ?? this.includeServer,
   );
 }
 

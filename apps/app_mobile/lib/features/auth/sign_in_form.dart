@@ -1,5 +1,6 @@
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_mobile/core/app_strings.dart';
+import 'package:ampdent_mobile/core/member_invites.dart';
 import 'package:ampdent_mobile/core/providers.dart';
 import 'package:ampdent_mobile/features/onboarding/onboarding_draft.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
@@ -30,9 +31,21 @@ class _SignInFormState extends ConsumerState<SignInForm> {
   final TextEditingController _password = TextEditingController();
   final TextEditingController _phone = TextEditingController();
   final TextEditingController _code = TextEditingController();
+  final TextEditingController _invite = TextEditingController();
   _Method _method = _Method.email;
   bool _busy = false;
+  bool _showInvite = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final pending = ref.read(inviteClaimProvider).pendingCode;
+    if (pending != null) {
+      _invite.text = InviteCodes.display(pending);
+      _showInvite = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -40,7 +53,23 @@ class _SignInFormState extends ConsumerState<SignInForm> {
     _password.dispose();
     _phone.dispose();
     _code.dispose();
+    _invite.dispose();
     super.dispose();
+  }
+
+  /// Records the typed code so the link check claims it right after
+  /// sign-in; a malformed code is not recorded (the field says why).
+  void _onInviteChanged(String value) {
+    final notifier = ref.read(inviteClaimProvider.notifier);
+    notifier.setPendingCode(InviteCodes.isWellFormed(value) ? value : null);
+  }
+
+  void _toggleInvite() {
+    setState(() => _showInvite = !_showInvite);
+    if (!_showInvite) {
+      _invite.clear();
+      ref.read(inviteClaimProvider.notifier).setPendingCode(null);
+    }
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -106,6 +135,43 @@ class _SignInFormState extends ConsumerState<SignInForm> {
             'records sync and WhatsApp messages are sent for you.',
             style: theme.textTheme.bodyMedium,
           ),
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('sign-in-have-invite'),
+              onPressed: _busy ? null : _toggleInvite,
+              icon: Icon(
+                _showInvite ? Icons.expand_less : Icons.vpn_key_outlined,
+              ),
+              label: Text(
+                _showInvite
+                    ? 'Joining with an invite code'
+                    : 'I have an invite code',
+              ),
+            ),
+          ),
+          if (_showInvite) ...[
+            TextFormField(
+              key: const ValueKey('sign-in-invite-code'),
+              controller: _invite,
+              decoration: const InputDecoration(
+                labelText: 'Invite code',
+                hintText: 'ABCD-EFGH',
+                helperText:
+                    'From your clinic owner (Settings > Members). Sign in '
+                    'below with your own account; the code is used right '
+                    'after.',
+                helperMaxLines: 3,
+              ),
+              textCapitalization: TextCapitalization.characters,
+              autocorrect: false,
+              // Blank means "no code after all"; anything typed must be a code.
+              validator: (v) =>
+                  (v ?? '').trim().isEmpty ? null : InviteCodes.validate(v),
+              onChanged: _onInviteChanged,
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg),
           SegmentedButton<_Method>(
             segments: const [

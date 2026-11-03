@@ -27,6 +27,9 @@ const Set<String> serverOnlyTables = {
   'devices',
   // Per-clinic WhatsApp credentials (0008): server-side only, token in Vault.
   'clinic_whatsapp_configs',
+  // Staff invite codes (0010): minted and claimed through RPCs, never
+  // replicated to a phone (the code is a capability).
+  'member_invites',
 };
 
 void main() {

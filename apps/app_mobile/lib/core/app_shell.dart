@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import 'app_strings.dart';
 import 'providers.dart';
+import 'router.dart' show syncRepairLocation;
 import 'sync_banner.dart';
 
 /// Key for the app's root [ScaffoldMessenger] (the one `MaterialApp.router`
@@ -82,6 +83,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       key: shellSyncBannerKey,
       spec: spec,
       onRetry: () => unawaited(ref.read(syncNowProvider)()),
+      onOpenRepair: () => context.push(syncRepairLocation),
     );
   }
 

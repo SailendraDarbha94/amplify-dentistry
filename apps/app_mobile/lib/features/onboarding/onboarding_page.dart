@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:ampdent_core/ampdent_core.dart';
 import 'package:ampdent_mobile/core/app_strings.dart';
+import 'package:ampdent_mobile/core/clinic_link.dart';
 import 'package:ampdent_mobile/core/router.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +61,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     try {
       await ref.read(onboardingControllerProvider.notifier).submit();
       _log.info('onboarding complete');
+      // Signed in: push the new clinic to the server right away (the link
+      // controller only reacts to sign-in transitions by itself).
+      unawaited(ref.read(clinicLinkProvider.notifier).afterOnboarding());
       if (mounted) context.go(homeLocation);
     } on Object catch (error, stackTrace) {
       _log.error('onboarding failed', error: error, stackTrace: stackTrace);

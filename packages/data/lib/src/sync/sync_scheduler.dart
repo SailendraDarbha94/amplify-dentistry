@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:ampdent_core/ampdent_core.dart';
 
+import 'reachability.dart';
 import 'supabase_sync_engine.dart';
 import 'sync_engine.dart';
 
@@ -21,6 +22,7 @@ class SyncScheduler {
     required this.accessTokenProvider,
     this.debounce = const Duration(seconds: 5),
     this.interval = const Duration(minutes: 5),
+    this.reachability,
   });
 
   static const Logger _log = Logger('SyncScheduler');
@@ -36,6 +38,10 @@ class SyncScheduler {
 
   /// Period of the background run.
   final Duration interval;
+
+  /// Server probe behind [probeReachability]; null leaves connectivity to
+  /// the app's own [onConnectivityChanged] calls.
+  final Reachability? reachability;
 
   /// Pending outbox count; a growth restarts the debounce timer.
   final Stream<int> pendingCount;
@@ -84,6 +90,28 @@ class SyncScheduler {
 
   /// App hook: the app came to the foreground.
   void onAppResumed() => _trigger('resume');
+
+  /// Probes the server with [reachability] and feeds the answer to
+  /// [onConnectivityChanged] (so a device that just came back online runs
+  /// once, and an unreachable one stops its automatic runs). The app calls
+  /// this on resume and on a timer. Returns the probe result.
+  ///
+  /// Without a configured probe the run itself is the probe: an engine
+  /// that last reported `offline` is given one run (a success flips the
+  /// state back and drains the outbox), and the current flag is returned.
+  Future<bool> probeReachability() async {
+    final probe = reachability;
+    if (probe == null) {
+      if (engine.current.status == SyncStatus.offline) {
+        await _trigger('probe');
+      }
+      return _online;
+    }
+    final online = await probe.probe();
+    _log.debug('reachability: ${online ? 'online' : 'offline'}');
+    onConnectivityChanged(online: online);
+    return online;
+  }
 
   /// Stops automatic runs (sign-out, settings toggle).
   void pause() => _paused = true;

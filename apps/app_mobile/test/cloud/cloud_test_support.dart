@@ -88,13 +88,16 @@ ClinicMember remoteOwner(String id, String clinicId) {
   );
 }
 
-/// Builds a scratch database holding [clinic] and [owner] (written by the
-/// device [deviceId]) and copies it to [fake] with [owner] bound to
-/// [fake.userId].
+/// Builds a scratch database holding [clinic], [owner] and [staff] (written
+/// by the device [deviceId]) and copies it to [fake] with [owner] bound to
+/// [ownerUserId] (default [fake.userId]); staff rows stay unbound, as rows
+/// created on the owner's phone are.
 Future<void> seedRemoteClinic(
   FakeSupabase fake, {
   required Clinic clinic,
   required ClinicMember owner,
+  List<ClinicMember> staff = const [],
+  String? ownerUserId,
   String deviceId = 'device-other',
 }) async {
   final scratch = AppDatabase.inMemory(seedOnOpen: false);
@@ -107,12 +110,50 @@ Future<void> seedRemoteClinic(
     );
     await repos.clinics.createClinic(ctx, clinic);
     await repos.clinics.upsertMember(ctx, owner);
+    for (final m in staff) {
+      await repos.clinics.upsertMember(ctx, m);
+    }
     await fake.seedFromDatabase(
       scratch,
-      memberUserIds: {owner.id: fake.userId},
+      memberUserIds: {owner.id: ownerUserId ?? fake.userId},
     );
   } finally {
     await scratch.close();
+  }
+}
+
+/// A staff member (no account yet) of [clinicId].
+ClinicMember remoteStaff(
+  String id,
+  String clinicId, {
+  String displayName = 'Priya',
+  ClinicRole role = ClinicRole.receptionist,
+}) {
+  final t = DateTime.utc(2026, 9, 2);
+  return ClinicMember(
+    id: id,
+    clinicId: clinicId,
+    displayName: displayName,
+    role: role,
+    phone: '+919000000004',
+    createdAt: t,
+    updatedAt: t,
+  );
+}
+
+/// Copies the local rows of [table] in [db] to [fake] as PostgREST would
+/// return them (one table; `seedFromDatabase` copies every table).
+Future<void> seedTableFromDatabase(
+  FakeSupabase fake,
+  AppDatabase db,
+  String table,
+) async {
+  final sync = syncTablesByName[table]!;
+  final info = db.allTables.firstWhere((t) => t.actualTableName == table);
+  final codec = SyncRowCodec(info, jsonTextColumns: sync.jsonTextColumns);
+  final local = await db.customSelect('SELECT * FROM "$table"').get();
+  for (final r in local) {
+    fake.seed(table, codec.toServer(r.data));
   }
 }
 

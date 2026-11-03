@@ -4,8 +4,9 @@
 #   1. initdb a scratch cluster in a temp dir and start it on a private port
 #   2. apply tests/local_supabase_stub.sql (auth/storage shims and Supabase default grants)
 #   3. apply migrations/*.sql in order, then seed.sql
-#   4. run tests/smoke.sql (RLS isolation, numbering, append-only guards, audit trail)
+#   4. run tests/smoke.sql (RLS isolation, numbering, append-only guards, audit trail),
 #      and tests/smoke_sync_whatsapp.sql (server-owned updated_at, devices, WhatsApp config/queue/webhook RPCs)
+#      and tests/smoke_member_invites.sql (staff invite codes: mint, claim, expiry, mismatch, RLS, owner unlink)
 #   5. run the Deno tests of the Edge Functions when deno is on PATH (AMPDENT_SKIP_DENO=1 to skip)
 # Requires PostgreSQL 15+ binaries (initdb, pg_ctl, psql) on PATH; Homebrew's postgresql@17 is added below.
 # Environment: AMPDENT_PG_PORT (default 54329), AMPDENT_PG_SCRATCH (default mktemp -d), AMPDENT_KEEP=1 to keep the cluster.
@@ -63,6 +64,9 @@ echo "smoke     tests/smoke.sql"
 
 echo "smoke     tests/smoke_sync_whatsapp.sql"
 "${PSQL[@]}" -d "$DB" -f "$SUPABASE_DIR/tests/smoke_sync_whatsapp.sql"
+
+echo "smoke     tests/smoke_member_invites.sql"
+"${PSQL[@]}" -d "$DB" -f "$SUPABASE_DIR/tests/smoke_member_invites.sql"
 
 TABLES=$("${PSQL[@]}" -d "$DB" -At -c "select count(*) from pg_tables where schemaname = 'public'")
 POLICIES=$("${PSQL[@]}" -d "$DB" -At -c "select count(*) from pg_policies where schemaname in ('public', 'storage')")

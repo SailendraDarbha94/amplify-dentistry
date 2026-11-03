@@ -55,14 +55,25 @@ and a one-time code) or continue offline.
 
 | | `env.json` absent or empty | `env.json` present |
 |---|---|---|
-| Sync engine | `NoopSyncEngine`; the outbox fills, banner says "Not synced yet - N changes waiting" | `SupabaseSyncEngine` once signed in and the device is linked; banner shows offline / N waiting / syncing / synced at hh:mm / error (tap to retry); `SyncScheduler` runs after writes (5 s debounce), every 5 min and on resume |
-| Sign-in | not offered; Settings > Account says "Cloud not configured" | step 0 of a fresh install (skippable: "Continue offline", remembered in `sync_state`), or later from Settings > Account |
-| Clinic link | none | after sign-in `ClinicLinkController` applies the `RemoteClinicLinker` rules: local clinic and no server clinic -> push; server clinic and empty phone -> adopt (full pull, onboarding skipped); same clinic on both -> link only; different clinics -> chooser (keep local and sign out, or discard local and adopt). The device is registered in `public.devices`, primary when `device.primary` names it |
-| WhatsApp | deep link (wa.me) from the phone, logged with `_provider = deeplink` | Settings > WhatsApp reads `get_whatsapp_status`; the owner saves the Meta credentials through `set_whatsapp_config` (token to Vault, never stored locally) and can pause sending; while enabled the `CloudQueueMessagingProvider` queues rows (`_provider = cloud_api`) for the `whatsapp-send` Edge Function and the patient timeline shows queued / sent / delivered / read / failed |
+| Sync engine | `NoopSyncEngine`; the outbox fills, banner says "Not synced yet - N changes waiting" | `SupabaseSyncEngine` once signed in and the device is linked (with this install's `DeviceInfo` for the `devices` heartbeat after each push); banner shows offline / N waiting / syncing / synced at hh:mm / error (tap to retry) / *N changes need attention* (tap opens the repair screen); `SyncScheduler` runs after writes (5 s debounce), every 5 min and on resume; `CloudLifecycle` asks it to probe reachability (`Reachability`, one request to `/auth/v1/health`) on resume and every 60 s in the foreground, never in the background |
+| Sign-in | not offered; Settings > Account says "Cloud not configured" | step 0 of a fresh install (skippable: "Continue offline", remembered in `sync_state`), or later from Settings > Account; "I have an invite code" takes a staff member's code, claimed right after sign-in |
+| Clinic link | none | after sign-in `ClinicLinkController` first claims a pending invite code (`claim_member_invite` binds the member row to the account), then applies the `RemoteClinicLinker` rules: local clinic and no server clinic -> push; server clinic and empty phone -> adopt (full pull, onboarding skipped); same clinic on both -> link only; different clinics -> chooser (keep local and sign out, or discard local and adopt); nothing anywhere -> the sign-in page offers *join with an invite code* or *Create a new clinic*, and the router's sign-in gate holds until one is chosen (never a silent second clinic). The device is registered in `public.devices`, primary when `device.primary` names it |
+| Staff invites | not offered | Settings > Members > *Invite to sign in* (owner, linked phone) calls `create_member_invite` and shows the 8-character code with its 72-hour expiry, copy and share (`share_plus`; the share text carries the code and the `ampdent://app/invite/<code>` link, which opens the app on the sign-in page with the code prefilled through the `/invite/:code` route); *Unlink account* calls `unlink_member` so a member who lost their phone or number can be invited again; the code is never stored on the phone |
+| Sync repair | none needed | Settings > Account & sync > *Changes needing attention* (`/settings/account/sync-repair`) lists the rows the server rejected for good and the rows blocked behind them (`SyncRepairService` of the running engine); *Retry* re-queues the chain and syncs, *Discard my change* (confirmed) drops the local change and restores the server's copy where one exists |
+| Audit log | all local rows | More > Audit log hides the server's own trigger rows (`device_id = 'server'`) unless *Include server entries* is on |
+| WhatsApp | deep link (wa.me) from the phone, logged with `MessageLog.provider = deeplink` | Settings > WhatsApp reads `get_whatsapp_status`; the owner saves the Meta credentials through `set_whatsapp_config` (token to Vault, never stored locally) and can pause sending; while enabled the `CloudQueueMessagingProvider` queues rows (`MessageLog.provider = cloudApi`, `optInReason` = the DPDP rule that allowed the send) for the `whatsapp-send` Edge Function and the patient timeline shows queued / sent / delivered / read / failed |
 
 Everything is testable without a project: `test/cloud/fake_supabase.dart`
-fakes GoTrue, PostgREST and the RPCs behind `package:http`'s `MockClient`,
-and `AppTestEnv.open(cloudClient: ...)` wires it in. The founder's step list
+fakes GoTrue, PostgREST and the RPCs (WhatsApp and member invites) behind
+`package:http`'s `MockClient`, and `AppTestEnv.open(cloudClient: ...)` wires
+it in (with the reachability probe stubbed to null; pass `reachability:` to
+test it over a `MockClient`). Two fake-clock rules for widget tests that
+touch sync: open and close the `AppTestEnv` (and any scratch database) in
+`setUp` / `tearDown`, never inside the `testWidgets` body, and read outbox
+counts with a query rather than awaiting a drift stream's `.first` (drift's
+teardown runs through zero timers that the widget test's fake clock only
+fires while frames are pumped; a database opened in the body can stall the
+adopt path for good). The founder's step list
 for a real project (Mumbai, `ap-south-1`) and a Meta app is
 `docs/SETUP-CLOUD.md`. The four
 tabs are Today, Patients, Schedule and More; every feature registers its own
@@ -142,10 +153,12 @@ test injects a real directory (see `test/features/notes/photo_store_test.dart`).
 lib/main.dart                 database, session bootstrap, ProviderScope, MaterialApp.router
 lib/core/                     providers (database, repositories, messaging, fonts, clock),
                               router, shell, session, AppStrings hook, formatting, logging,
-                              cloud: config, auth, clinic link, sync/messaging switch,
-                              WhatsApp RPCs, sync banner, lifecycle hooks
+                              cloud: config, auth, clinic link, member invites, sync/messaging
+                              switch, sync repair providers, WhatsApp RPCs, sync banner,
+                              device info, reachability probe, lifecycle hooks
 lib/features/<feature>/       routes.dart + pages, providers, models and services per feature
-                              (auth: sign-in and account; settings: WhatsApp page)
+                              (auth: sign-in, account and sync repair; settings: WhatsApp page,
+                              member invite sheet; export: audit log with the server toggle)
 integration_test/             on-device smoke test
 test/                         widget and unit tests (see above); test/cloud/ runs against the fake Supabase
 ```

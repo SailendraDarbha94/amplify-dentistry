@@ -42,6 +42,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     _leave();
   }
 
+  /// Signed in with no clinic anywhere (or the check failed): the user chose
+  /// to set a clinic up on this phone. The choice lifts the sign-in gate for
+  /// onboarding; it is never taken on the user's behalf.
+  void _createClinic() {
+    ref.read(createClinicChoiceProvider.notifier).choose();
+    _leave(fallback: onboardingLocation);
+  }
+
   void _onLink(ClinicLinkState? previous, ClinicLinkState next) {
     if (!ref.read(cloudAuthProvider).isSignedIn) return;
     switch (next.phase) {
@@ -50,11 +58,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
         // sees the clinic.
         _leave();
       case LinkPhase.unlinked:
-        _leave(
-          fallback: ref.read(appSessionProvider).hasClinic
-              ? homeLocation
-              : onboardingLocation,
-        );
+        // Nothing on the server: a phone that already holds a clinic simply
+        // goes back; an empty phone stays here and shows the choice (join
+        // with an invite code or create a new clinic).
+        if (ref.read(appSessionProvider).hasClinic) _leave();
       case LinkPhase.idle:
       case LinkPhase.checking:
       case LinkPhase.choosing:
@@ -75,7 +82,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     if (!configured) {
       body = _NotConfigured(onContinue: _leave);
     } else if (auth.isSignedIn) {
-      body = LinkProgressView(onDone: _leave);
+      body = LinkProgressView(onCreateClinic: _createClinic);
     } else {
       body = SignInForm(onContinueOffline: hasClinic ? null : _continueOffline);
     }

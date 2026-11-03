@@ -76,6 +76,7 @@ class TablePuller {
     required this.outbox,
     required this.clinicId,
     this.pageSize = 1000,
+    this.includeServerAuthored = false,
   });
 
   static const Logger _log = Logger('TablePuller');
@@ -97,6 +98,12 @@ class TablePuller {
 
   /// Rows per page.
   final int pageSize;
+
+  /// Whether tables flagged `SyncTable.skipServerAuthored` (`audit_events`)
+  /// also pull the rows the server wrote itself (`device_id = 'server'` or
+  /// no actor). Off by default: the server audits every phone's upsert, so
+  /// those rows would duplicate the local event of the same write.
+  final bool includeServerAuthored;
 
   /// Pulls every table. With [since] non-null every watermark is lowered to
   /// that instant first.
@@ -155,6 +162,9 @@ class TablePuller {
 
   Future<List<Map<String, dynamic>>> _page(SyncTable table, SyncWatermark? wm) {
     var q = client.from(table.name).select().eq(table.scopeColumn, clinicId);
+    if (table.skipServerAuthored && !includeServerAuthored) {
+      q = q.neq('device_id', 'server').not('actor_id', 'is', null);
+    }
     if (wm != null) {
       q = wm.lastKey == null
           ? q.gt('updated_at', wm.updatedAt)

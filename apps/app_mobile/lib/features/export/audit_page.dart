@@ -13,16 +13,29 @@ import 'package:share_plus/share_plus.dart';
 import 'audit_event_sheet.dart';
 import 'audit_filters.dart';
 
-/// Audit events of the clinic in `[from, to)`, newest first (capped).
-final auditEventsProvider =
-    FutureProvider.family<List<AuditEvent>, (DateTime, DateTime)>((ref, range) {
-      final clinicId = ref.watch(currentClinicIdProvider);
-      if (clinicId == null) return Future.value(const []);
-      final (from, to) = range;
-      return ref
-          .watch(auditRepositoryProvider)
-          .inRange(clinicId, from.toUtc(), to.toUtc(), limit: 2000);
-    });
+/// What the audit list is loaded for: a `[from, to)` window and whether the
+/// server's own trigger rows are wanted.
+typedef AuditQuery = ({DateTime from, DateTime to, bool includeServer});
+
+/// Audit events of the clinic in `[from, to)`, newest first (capped). The
+/// server's own trigger rows are left out by the repository unless
+/// `includeServer` is set; [AuditFilter.matches] applies the same rule to
+/// the loaded list so the toggle also governs the export.
+final auditEventsProvider = FutureProvider.family<List<AuditEvent>, AuditQuery>(
+  (ref, query) {
+    final clinicId = ref.watch(currentClinicIdProvider);
+    if (clinicId == null) return Future.value(const []);
+    return ref
+        .watch(auditRepositoryProvider)
+        .inRange(
+          clinicId,
+          query.from.toUtc(),
+          query.to.toUtc(),
+          limit: 2000,
+          includeServer: query.includeServer,
+        );
+  },
+);
 
 /// Audit log viewer: filter by entity type, actor and date range; tap a row
 /// for the before/after diff; share the filtered list as CSV.
@@ -87,7 +100,13 @@ class _AuditPageState extends ConsumerState<AuditPage> {
   Widget build(BuildContext context) {
     final s = context.strings;
     final theme = Theme.of(context);
-    final loaded = ref.watch(auditEventsProvider((_filter.from, _filter.to)));
+    final loaded = ref.watch(
+      auditEventsProvider((
+        from: _filter.from,
+        to: _filter.to,
+        includeServer: _filter.includeServer,
+      )),
+    );
     final all = loaded.value ?? const <AuditEvent>[];
     final events = _filter.apply(all);
     final members = ref.watch(clinicMembersProvider).value ?? const [];
@@ -175,6 +194,20 @@ class _AuditPageState extends ConsumerState<AuditPage> {
                     '${AppFormat.date(_filter.from)} - '
                     '${AppFormat.date(_filter.to.subtract(const Duration(days: 1)))}'
                     '  ·  ${events.length}',
+                  ),
+                ),
+                SwitchListTile.adaptive(
+                  key: const ValueKey('audit-include-server'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Include server entries'),
+                  subtitle: const Text(
+                    'Rows the server\'s own audit trigger wrote for synced '
+                    'changes',
+                  ),
+                  value: _filter.includeServer,
+                  onChanged: (v) => setState(
+                    () => _filter = _filter.copyWith(includeServer: v),
                   ),
                 ),
               ],

@@ -7,6 +7,7 @@ import 'package:ampdent_mobile/core/formatting.dart';
 import 'package:ampdent_mobile/core/providers.dart';
 import 'package:ampdent_mobile/core/remote_devices.dart';
 import 'package:ampdent_mobile/core/router.dart';
+import 'package:ampdent_mobile/core/sync_repair.dart';
 import 'package:ampdent_ui/ampdent_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +42,7 @@ class AccountPage extends ConsumerWidget {
     final sync = ref.watch(syncStateProvider).value;
     final devices = ref.watch(remoteDevicesProvider);
     final session = ref.watch(appSessionProvider);
+    final problems = ref.watch(syncProblemCountProvider).value ?? 0;
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
       body: ListView(
@@ -98,7 +100,7 @@ class AccountPage extends ConsumerWidget {
             const SizedBox(height: AppSpacing.lg),
             _LinkCard(link: link),
             const SizedBox(height: AppSpacing.lg),
-            _SyncCard(sync: sync),
+            _SyncCard(sync: sync, problemCount: problems),
             const SizedBox(height: AppSpacing.lg),
             SectionCard(
               title: 'Devices',
@@ -227,9 +229,10 @@ class _LinkCard extends ConsumerWidget {
 }
 
 class _SyncCard extends ConsumerWidget {
-  const _SyncCard({required this.sync});
+  const _SyncCard({required this.sync, required this.problemCount});
 
   final SyncState? sync;
+  final int problemCount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -268,6 +271,24 @@ class _SyncCard extends ConsumerWidget {
                 : () => unawaited(ref.read(syncNowProvider)()),
             icon: const Icon(Icons.sync),
             label: const Text('Sync now'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ListTile(
+            key: const ValueKey('account-sync-repair'),
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              problemCount > 0
+                  ? Icons.sync_problem_outlined
+                  : Icons.cloud_done_outlined,
+            ),
+            title: const Text('Changes needing attention'),
+            subtitle: Text(
+              problemCount > 0
+                  ? MobileStrings.changesNeedAttention(problemCount)
+                  : 'None',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(syncRepairLocation),
           ),
         ],
       ),

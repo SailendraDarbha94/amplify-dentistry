@@ -13,7 +13,7 @@ conflict policy; Integrations: WhatsApp) and the server contract in `supabase/RE
 
 ```
 phone A (owner)  ──push/pull (PostgREST, anon key + user JWT)──>  Supabase project, ap-south-1
-phone B (staff)  ──push/pull────────────────────────────────────>    Postgres + RLS (0001..0009)
+phone B (staff)  ──push/pull────────────────────────────────────>    Postgres + RLS (0001..0012)
                                                                      pg_cron, every minute
                                                                        -> app.invoke_whatsapp_send()
                                                                        -> Edge Function whatsapp-send ──> graph.facebook.com (Meta Cloud API)
@@ -56,7 +56,7 @@ by the platform; you never set those three as function secrets.
 - Optional, to validate the SQL and the Edge Functions on this Mac before touching the project:
   Homebrew `postgresql@17` and `deno` (`brew install postgresql@17 deno`), then
   `supabase/tests/run_local.sh`. It initdbs a throwaway cluster, applies every migration, runs the two
-  smoke files and the Deno tests, and prints `ok: 38 public tables, ... migrations + smoke tests passed`
+  smoke files and the Deno tests, and prints `ok: 39 public tables, ... migrations + smoke tests passed`
   and `ok: edge function tests passed`. No Docker.
 - The app builds: `flutter pub get && dart run melos run gen` at the repo root (see `apps/app_mobile/README.md`).
 
@@ -82,11 +82,11 @@ fallbacks below apply).
 cd /path/to/amplify-dentistry
 supabase login                                  # opens the browser once
 supabase link --project-ref <project-ref>       # asks for the database password
-supabase db push --dry-run                      # lists 0001_schema.sql ... 0009_whatsapp_cron.sql
+supabase db push --dry-run                      # lists 0001_schema.sql ... 0012_unlink_member.sql
 supabase db push
 ```
 
-If the CLI insists on 14-digit timestamp prefixes, rename the nine files in order
+If the CLI insists on 14-digit timestamp prefixes, rename the ten files in order
 (`20261018000001_schema.sql`, ...) without changing their sequence; `supabase db push` records each file
 in `supabase_migrations.schema_migrations` and never re-runs it, so later changes are new files, never
 edits to applied ones.
@@ -94,7 +94,7 @@ edits to applied ones.
 Check in the SQL editor:
 
 ```sql
-select count(*) from pg_tables where schemaname = 'public';                      -- 38
+select count(*) from pg_tables where schemaname = 'public';                      -- 39
 select jobname, schedule, command from cron.job;                                 -- ampdent-whatsapp-send, * * * * *
 select extname from pg_extension where extname in ('pg_cron', 'pg_net', 'supabase_vault');  -- three rows
 ```
@@ -169,7 +169,8 @@ You can deploy the functions before the Meta side exists; `whatsapp-send` simply
 ## 7. Auth: create the accounts
 
 The app signs in with email + password or phone + one-time code; it has **no sign-up screen**. Accounts
-are created in the dashboard (or later by an invite flow).
+are created in the dashboard; a staff member's account is bound to their member row by an invite code
+(step 9.3), never by hand.
 
 Dashboard > Authentication:
 
@@ -182,8 +183,8 @@ Dashboard > Authentication:
    registration (sender header + template, about ₹5,900 all-in). Until that paperwork is done, leave
    Phone off and sign staff in with email, or enable Phone with Twilio for your own testing.
 3. Users > **Add user > Create new user**: the owner-dentist's email and a password, tick *Auto Confirm
-   User*. Repeat for each staff member who will use their own phone. Copy each user's **UUID** (the
-   `auth.users.id`); staff need it in step 9.3.
+   User*. Repeat for each staff member who will use their own phone (or let them sign in by phone OTP
+   once step 7.2 is done). No UUIDs to copy: the invite code in step 9.3 does the binding.
 
 Settings > API also lists the JWT expiry; the default (1 hour, refreshed automatically by
 `supabase_flutter`) is fine.
@@ -272,27 +273,54 @@ flag is the only switch.
    *Sync now* button. The shell banner shows offline / N waiting / syncing / synced at hh:mm / error (tap
    retries).
 
-### 9.3 Second phone: a staff member (manual step until the invite flow exists)
+### 9.3 Second phone: a staff member (invite code)
 
-The app adds staff in Settings > Members, but a member row made on the phone has **no `user_id`**: the
-app does not know which auth account that person will use. A staff member who signs in on an empty phone
-before the link exists sees "No clinic yet" and would be sent to onboarding, which would create a second
-clinic. So, once per staff member, in the SQL editor:
+A member row made on the owner's phone has **no `user_id`**: the app does not know which auth account
+that person will use. The invite code binds the two (migration `0010_member_invites.sql`):
+
+1. Owner phone (signed in and linked): Settings > Members > the member's menu > **Invite to sign in**.
+   The app calls the `create_member_invite` RPC (owner only); the sheet shows an 8-character code
+   (`ABCD-EFGH`, no 0/O, 1/I or L), its expiry (72 hours) and *Copy* / *Share* (the share text names
+   the clinic and the person, carries the code and the app link `ampdent://app/invite/<code>`, nothing
+   clinical). Minting again retires the earlier code, so one code per member is ever live. A member
+   who already has an account cannot be invited.
+2. Staff phone: install, open the app, tap **I have an invite code** on the sign-in page, type the
+   code (or open the `ampdent://app/invite/<code>` link from the share text once the app is installed:
+   it lands on the sign-in page with the code prefilled; WhatsApp does not turn custom-scheme links into
+   taps, so copy it into the phone's browser or Notes, or just type the code), then sign in with their
+   own email/password or phone OTP (an account from step 7.3, or any account they own). Right after
+   sign-in the app calls `claim_member_invite`, which binds
+   `clinic_members.user_id` to that account (the binding is what makes the clinic visible to them under
+   RLS), marks the invite claimed, and returns the clinic id; the app then finds exactly one membership
+   on an empty phone and **adopts** the clinic (records the clinic and member ids, skips onboarding,
+   runs a full pull, registers the device). Spaces, hyphens and lower case in the code are fine.
+3. A staff member who signed in first and typed nothing sees *No clinic is linked to this account yet*
+   with two choices: enter the invite code, or **Create a new clinic** (only for an owner setting up the
+   first phone). The app never sends an account with no membership to onboarding by itself: a second
+   clinic cannot be merged later. Expired, used, unknown or mismatched codes are refused with the
+   server's message and the code field stays for correction.
+
+Checks in the SQL editor:
 
 ```sql
--- the member row created on the owner's phone (synced):
-select id, display_name, role from public.clinic_members where clinic_id = '<clinic uuid>';
--- bind it to the account created in step 7.3:
-update public.clinic_members set user_id = '<auth user uuid>' where id = '<member uuid>';
+select m.display_name, m.role, m.user_id, i.code is not null as has_live_code, i.expires_at
+  from public.clinic_members m
+  left join public.member_invites i on i.member_id = m.id and i.claimed_at is null and i.expires_at > now()
+ where m.clinic_id = '<clinic uuid>';
+select member_id, claimed_by, claimed_at from public.member_invites where clinic_id = '<clinic uuid>';
 ```
 
-Then on the staff phone: install, sign in with that account; the app finds exactly one membership on an
-empty device and **adopts** the clinic (records the clinic and member ids, skips onboarding, runs a full
-pull, registers the device). A phone that already holds a different clinic is not merged automatically:
-the app offers *keep local and sign out* or *discard local data and adopt*.
+A phone that already holds a different clinic is not merged automatically: the app offers *keep local
+and sign out* or *discard local data and adopt*.
 
-Role matters: only `ownerDentist` may save WhatsApp settings; billing tables are readable by owner,
-receptionist and accountant only (RLS in `0002`).
+Lost phone or new number: on the owner's phone, Settings > Members > the member's menu > **Unlink
+account** (confirmed) calls `unlink_member` (migration `0012_unlink_member.sql`): `clinic_members.user_id`
+is cleared, the member's live code is retired, the old account stops seeing the clinic at its next request,
+nothing that account recorded is touched, and *Invite to sign in* works for that member again. The owner's
+own row cannot be unlinked.
+
+Role matters: only `ownerDentist` may mint invites or save WhatsApp settings; billing tables are readable
+by owner, receptionist and accountant only (RLS in `0002`).
 
 ### 9.4 WhatsApp in the app (owner only)
 
@@ -303,10 +331,12 @@ with the queue depth and failures in the last 24 h (`get_whatsapp_status`). The 
 without re-entering the token; re-saving with a new token rotates the Vault secret in place.
 
 While the status is *enabled*, every send from the app (appointment confirmation, reminder, invoice
-link, recall...) is queued for the server (`CloudQueueMessagingProvider`, `_provider = cloud_api`, after
-the DPDP opt-in check) and the patient timeline shows queued / sent / delivered / read / failed as the
-pulls bring the statuses back. Otherwise, or while loading, the message opens in WhatsApp on the phone
-(`_provider = deeplink`) and the server never touches that row.
+link, recall...) is queued for the server (`CloudQueueMessagingProvider`; the row's `provider` column is
+`cloud_api` and `opt_in_reason` records the DPDP rule that allowed it) and the patient timeline shows
+queued / sent / delivered / read / failed as the pulls bring the statuses back. Otherwise, or while
+loading, the message opens in WhatsApp on the phone (`provider = deeplink`) and the server never touches
+that row. Rows queued by older builds carried the same facts as `variables._provider` /
+`variables._opt_in_reason`; the server trigger still reads those stamps into the columns.
 
 ## 10. End-to-end check
 
@@ -334,10 +364,24 @@ recipient is not a WhatsApp user or blocked the number (permanent, the row goes 
 invalid or revoked, re-enter it in the app; webhook `401 bad signature` means `WHATSAPP_APP_SECRET` is not
 the app secret of the app that owns the webhook; `cron.job_run_details` shows runs but `net._http_response`
 is empty means `functions_base_url` or the Vault bearer is missing (`app.invoke_whatsapp_send()` prints a
-NOTICE). Retries back off 1, 2, 4, ... minutes; the sixth failure is final. `Sync error` on the phone with
-a 4xx: the server rejected a row (RLS, constraint); the row's `sync_outbox.last_error` names it, and the
-table and its children stay blocked until the row is fixed or the server accepts it (there is no repair
-screen yet).
+NOTICE). Retries back off 1, 2, 4, ... minutes; the sixth failure is final.
+
+A row the server rejects for good (4xx: RLS, a check constraint, a unique index) is **quarantined** on the
+phone with the rows that depend on it **blocked** behind it; everything else keeps syncing. The shell
+banner says *N changes need attention* and opens Settings > Account & sync > **Changes needing
+attention**, which lists each held row (entity, label, status code, error class, when it was changed)
+with *Retry* (re-queues the row and its chain, then syncs) and *Discard my change* (confirmed: the local
+change is never sent; where the server holds the row its copy replaces the phone's, otherwise the record
+stays on the phone marked as rejected in the audit log). `sync_outbox.status`, `server_status_code` and
+`blocked_by` carry the same state for `sqlite3` on a device backup.
+
+Reachability: every 60 s in the foreground and on every resume the app asks the scheduler to probe
+`<SUPABASE_URL>/auth/v1/health` (one short request, no connectivity plugin); a phone that just got its
+network back syncs within the minute, and `devices.last_seen_at` is refreshed by the engine's heartbeat
+(platform and app version, at most once per 15 minutes) after each successful push.
+
+The phone's audit log hides the server's own trigger rows (`device_id = 'server'`) by default; More >
+Audit log > **Include server entries** shows them.
 
 ## 11. How sync reconciles (what to expect between phones)
 
@@ -361,27 +405,25 @@ Per table, in `packages/data/lib/src/sync/sync_tables.dart`:
 ## 12. Checklist
 
 - [ ] Project in ap-south-1, Postgres 17, database password stored
-- [ ] `pg_cron`, `pg_net`, Vault enabled; `supabase db push` clean; 38 public tables; `cron.job` has `ampdent-whatsapp-send`
+- [ ] `pg_cron`, `pg_net`, Vault enabled; `supabase db push` clean; 39 public tables; `cron.job` has `ampdent-whatsapp-send`
 - [ ] `app.runtime_config.functions_base_url` set; Vault secret `ampdent_cron_bearer` created
 - [ ] `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` set; both functions deployed; `curl` to `whatsapp-send` returns the zero report
 - [ ] Owner and staff accounts created and auto-confirmed; UUIDs noted
 - [ ] Meta: business verification started, WABA, phone number, system-user token, webhook verified,
       `messages` field subscribed, 23 templates approved under their `metaName`, INR payment method
 - [ ] `env.json` on the build machine; owner signed in; clinic pushed; device listed
-- [ ] Staff member rows bound to their `user_id`; staff phone adopted the clinic
+- [ ] Each staff member invited from Settings > Members and signed in with the code; staff phone adopted the clinic
 - [ ] Owner saved the WhatsApp settings; test message delivered; reply `1` confirmed an appointment
 
 ## 13. Not yet built (known gaps you will meet)
 
-- No invite flow: binding a staff account to its member row is the SQL step in 9.3.
-- No repair screen for a row the server permanently rejects; it is visible in `sync_outbox.last_error`
-  and blocks its table until fixed.
-- No `last_seen_at` heartbeat beyond (re)linking, and no connectivity plugin: offline is detected when a
-  sync fails, and retried on the 5-minute interval, on resume and after the next local write.
-- The server's own audit trigger rows (`device_id = 'server'`) are pulled alongside the phone's audit rows,
-  so a synced write appears twice in the local audit log.
+- The invite link is a custom scheme (`ampdent://app/invite/<code>`), which WhatsApp and most chat apps
+  do not render as a tappable link; the code in the same text is the fallback. A `https://` universal /
+  app link (domain, `assetlinks.json`, `apple-app-site-association`) is a later step.
+- The server's own audit trigger rows are not pulled at all by default (`SyncTable.skipServerAuthored`);
+  the audit toggle only reveals server rows already on the phone (webhook confirmations arrive through
+  the appointment row itself).
 - WhatsApp templates are English only; inbound replies other than a confirmation are logged and dropped;
   Meta's per-message cost is kept raw in `provider_payload`, not totalled.
 - Phone OTP needs an SMS provider on the project (step 7.2); WhatsApp OTP for staff login is a later step.
-- `MessageLog` carries the provider inside `variables._provider` rather than a first-class field.
 - Image bytes are not synced (metadata only); Supabase Storage upload is a later step.

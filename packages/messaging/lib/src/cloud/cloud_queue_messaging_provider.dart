@@ -4,7 +4,6 @@ import 'package:ampdent_core/ampdent_core.dart';
 
 import '../optin/opt_in_policy.dart';
 import '../phone/phone_numbers.dart';
-import '../providers/message_log_keys.dart';
 import '../providers/messaging_provider.dart';
 
 /// Decides opt-in for a request: the app resolves the patient's `DataConsent`
@@ -36,7 +35,8 @@ class OptInRefusedException implements Exception {
 
 /// Offline-first Cloud API provider: renders the template for the preview,
 /// enforces opt-in through the injected [OptInDecider], and emits a `queued`
-/// [MessageLog] stamped `_provider: cloud_api` through the [MessageSink]. The
+/// [MessageLog] with `provider: cloudApi` and the opt-in reason through the
+/// [MessageSink]. The
 /// data layer persists the row; sync uploads it and the Edge Function sends
 /// it with `buildMetaTemplatePayload`'s shape. No network call is made here.
 class CloudQueueMessagingProvider implements MessagingProvider {
@@ -70,14 +70,12 @@ class CloudQueueMessagingProvider implements MessagingProvider {
       );
       throw OptInRefusedException(decision, request.template.code);
     }
-    final stamped = request.copyWith(
-      variables: MessageLogKeys.stamp(
-        request.variables,
-        providerName: MessageLogKeys.cloudApiProvider,
-        reason: decision.reason,
-      ),
+    final log = request.toLog(
+      id: _idGenerator(),
+      now: _clock(),
+      provider: MessageProvider.cloudApi,
+      optInReason: decision.reason,
     );
-    final log = stamped.toLog(id: _idGenerator(), now: _clock());
     await _sink(log);
     _queuedHere[log.id] = log.status;
     _log.info(

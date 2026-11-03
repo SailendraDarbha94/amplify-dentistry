@@ -126,8 +126,39 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// v6 backfill: rows queued before `message_logs.provider` and
+  /// `opt_in_reason` existed stamped both inside `variables` under
+  /// `_provider` / `_opt_in_reason` (`LegacyMessageLogKeys`). Copies the
+  /// stamps into the real columns where those are still null; the stamps
+  /// stay in `variables` (the server trigger still reads them, and an older
+  /// build may read the row). Public only so the rewrite can be tested.
+  Future<int> migrateLegacyMessageLogStamps() async {
+    var changed = 0;
+    for (final (column, key) in [
+      ('provider', LegacyMessageLogKeys.provider),
+      ('opt_in_reason', LegacyMessageLogKeys.optInReason),
+    ]) {
+      final valid = column == 'provider'
+          ? ' AND json_extract(variables, ?) IN '
+                "('deeplink', 'cloud_api', 'sms_gateway')"
+          : '';
+      changed += await customUpdate(
+        'UPDATE message_logs SET $column = json_extract(variables, ?) '
+        'WHERE $column IS NULL AND json_valid(variables) '
+        'AND json_extract(variables, ?) IS NOT NULL$valid',
+        variables: [
+          Variable<String>('\$.$key'),
+          Variable<String>('\$.$key'),
+          if (valid.isNotEmpty) Variable<String>('\$.$key'),
+        ],
+        updates: {messageLogs},
+      );
+    }
+    return changed;
+  }
+
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -165,6 +196,18 @@ class AppDatabase extends _$AppDatabase {
         // v5: per-table pull watermarks, device id and clinic link for the
         // Supabase sync engine.
         await m.createTable(syncStates);
+      }
+      if (from < 6) {
+        // v6: the message provider and opt-in reason become real columns
+        // (backfilled from the legacy variables stamps); the outbox gains a
+        // hold state so a row the server rejects for good is quarantined
+        // instead of retried forever.
+        await m.addColumn(messageLogs, messageLogs.provider);
+        await m.addColumn(messageLogs, messageLogs.optInReason);
+        await migrateLegacyMessageLogStamps();
+        await m.addColumn(syncOutbox, syncOutbox.status);
+        await m.addColumn(syncOutbox, syncOutbox.serverStatusCode);
+        await m.addColumn(syncOutbox, syncOutbox.blockedBy);
       }
     },
     beforeOpen: (details) async {

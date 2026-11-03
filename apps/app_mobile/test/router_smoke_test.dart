@@ -69,6 +69,26 @@ void main() {
         expect(sessionRedirect(hasClinic: true, location: '/patients'), isNull);
       },
     );
+
+    test('the invite link route passes every gate', () {
+      for (final hasClinic in [false, true]) {
+        for (final gate in [false, true]) {
+          expect(
+            sessionRedirect(
+              hasClinic: hasClinic,
+              signInGate: gate,
+              location: '/invite/JKMNPQRS',
+            ),
+            isNull,
+            reason: 'hasClinic=$hasClinic gate=$gate',
+          );
+        }
+      }
+      expect(
+        sessionRedirect(hasClinic: false, signInGate: true, location: '/today'),
+        '/sign-in',
+      );
+    });
   });
 
   group('Router smoke', () {
